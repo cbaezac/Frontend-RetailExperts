@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Descargador · Levantamientos · Retail Experts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #F0E5F2;
+    --ink: #2C1240;
+    --muted: #6E5A7E;
+    --accent: #8B2FC9;
+    --accent-strong: #6D1FA8;
+    --accent-soft: rgba(139,47,201,0.10);
+    --line: rgba(44,18,64,0.16);
+    --card: #FFFFFF;
+  }
+  html { height: 100%; }
+  body {
+    font-family: 'Manrope', system-ui, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(120% 80% at 50% -10%, rgba(139,47,201,0.16) 0%, rgba(0,0,0,0) 55%),
+      var(--bg);
+    min-height: 100vh;
+    padding: clamp(76px, 10vh, 110px) clamp(20px, 4vw, 56px) 72px;
+    overflow-x: hidden;
+  }
+
+  .back {
+    position: fixed;
+    top: clamp(20px, 3vw, 32px);
+    left: clamp(20px, 4vw, 48px);
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--ink);
+    text-decoration: none;
+    padding: 11px 20px 11px 16px;
+    border: 1.5px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 30;
+    transition: gap .25s ease;
+  }
+  .back .arrow { transition: transform .25s ease; }
+  .back:hover { background: var(--accent-strong); color: #fff; gap: 12px; border-color: var(--accent-strong); }
+  .back:hover .arrow { transform: translateX(-3px); }
+  .back:focus-visible { outline: 3px solid rgba(139,47,201,0.4); outline-offset: 3px; }
+
+  .wrap { max-width: 1180px; margin: 0 auto; }
+
+  .head { text-align: center; margin-bottom: clamp(28px, 4vh, 44px); }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2.2rem, 5.4vw, 3.8rem);
+    line-height: 0.98;
+    letter-spacing: -0.02em;
+  }
+  .head p {
+    margin-top: 16px;
+    font-size: clamp(1rem, 1.5vw, 1.15rem);
+    line-height: 1.6;
+    color: var(--muted);
+    max-width: 540px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .section-label {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 600;
+    font-size: 0.82rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    text-align: center;
+  }
+
+  /* ---- Big category buttons ---- */
+  .cats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: clamp(12px, 1.6vw, 18px);
+    margin-bottom: clamp(28px, 4vh, 40px);
+  }
+  .cat {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: clamp(1rem, 1.5vw, 1.35rem);
+    letter-spacing: -0.01em;
+    color: var(--ink);
+    cursor: pointer;
+    background: var(--card);
+    border: 1.5px solid var(--line);
+    border-radius: 18px;
+    padding: clamp(22px, 3vw, 38px) 18px;
+    text-align: center;
+    line-height: 1.15;
+    box-shadow: 0 8px 22px rgba(44,18,64,0.05);
+    transition: transform .2s ease, box-shadow .25s ease;
+  }
+  .cat:hover { transform: translateY(-3px); border-color: var(--accent); box-shadow: 0 12px 28px rgba(139,47,201,0.12); }
+  .cat[aria-pressed="true"] {
+    background: var(--accent-strong);
+    color: #fff;
+    border-color: var(--accent-strong);
+    box-shadow: 0 16px 36px rgba(109,31,168,0.28);
+  }
+  .cat:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+  /* ---- Small filter buttons + dropdowns ---- */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: clamp(30px, 4vh, 44px);
+  }
+  .flabel {
+    font-size: 0.82rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 4px;
+  }
+  .filter-wrap { position: relative; }
+  .filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--ink);
+    cursor: pointer;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 9px 15px;
+    transition: box-shadow .2s ease;
+  }
+  .filter:hover { background: #fff; border-color: var(--accent); }
+  .filter .chev { transition: transform .2s ease; }
+  .filter[aria-expanded="true"] .chev { transform: rotate(180deg); }
+  .filter.has-selection { background: var(--accent-strong); color: #fff; border-color: var(--accent-strong); }
+  .filter .count {
+    font-size: 0.74rem;
+    background: rgba(255,255,255,0.25);
+    color: inherit;
+    border-radius: 999px;
+    padding: 1px 7px;
+    font-weight: 700;
+  }
+  .filter:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-6px);
+    width: 250px;
+    background: #FFFFFF;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 24px 60px rgba(44,18,64,0.18);
+    padding: 12px;
+    z-index: 40;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease, visibility .18s;
+  }
+  .filter-wrap.open .dropdown {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+  }
+  .dd-search {
+    width: 100%;
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.9rem;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 9px 12px;
+    margin-bottom: 10px;
+    outline: none;
+  }
+  .dd-search::placeholder { color: var(--muted); }
+  .dd-search:focus { border-color: var(--accent); }
+  .dd-list { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+  .dd-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 9px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.92rem;
+    color: var(--ink);
+    transition: background .15s ease;
+  }
+  .dd-item:hover { background: rgba(44,18,64,0.06); }
+  .dd-item input { accent-color: var(--accent-strong); width: 16px; height: 16px; cursor: pointer; }
+  .dd-empty { padding: 10px 9px; font-size: 0.88rem; color: var(--muted); }
+
+  /* ---- Date range dropdown ---- */
+  .dropdown-date { width: 240px; }
+  .dd-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .dd-field label { font-size: 0.78rem; letter-spacing: 0.02em; color: var(--muted); font-weight: 600; }
+  .dd-date {
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.9rem;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 9px 11px;
+    outline: none;
+    color-scheme: light;
+  }
+  .dd-date:focus { border-color: var(--accent); }
+  .dd-actions { display: flex; gap: 8px; margin-top: 4px; }
+  .dd-clear, .dd-apply {
+    flex: 1;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 600;
+    font-size: 0.86rem;
+    cursor: pointer;
+    border-radius: 9px;
+    padding: 9px 12px;
+    transition: box-shadow .18s ease;
+  }
+  .dd-clear { color: var(--ink); background: transparent; border: 1px solid var(--line); }
+  .dd-clear:hover { background: rgba(44,18,64,0.06); }
+  .dd-apply { color: #fff; background: var(--accent-strong); border: 1px solid var(--accent-strong); }
+  .dd-apply:hover { background: #5a1790; }
+
+  /* ---- Apply bar ---- */
+  .applybar { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  .apply-summary {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--muted);
+    text-align: center;
+  }
+  .btn-apply {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: 1.06rem;
+    cursor: pointer;
+    color: #fff;
+    background: var(--accent-strong);
+    border: none;
+    border-radius: 999px;
+    padding: 16px 40px;
+    box-shadow: 0 14px 32px rgba(109,31,168,0.28);
+    transition: transform .2s ease, gap .2s ease, box-shadow .2s ease;
+  }
+  .btn-apply svg { display: block; }
+  .btn-apply:hover { transform: translateY(-2px); gap: 14px; box-shadow: 0 18px 40px rgba(109,31,168,0.36); }
+  .btn-apply:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+  @media (max-width: 860px) { .cats { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+  <a class="back" href="descargador.html"><span class="arrow">←</span> Volver</a>
+
+  <div class="wrap">
+    <header class="head">
+      <h1>Levantamientos</h1>
+      <p>Selecciona el tipo de levantamiento y afina los filtros para descargar exactamente lo que necesitas.</p>
+    </header>
+
+    <!-- Big category buttons -->
+    <p class="section-label">Tipo de levantamiento</p>
+    <div class="cats" role="group" aria-label="Tipo de levantamiento">
+      <button class="cat" type="button" aria-pressed="true">Góndola</button>
+      <button class="cat" type="button" aria-pressed="false">Cartelería</button>
+      <button class="cat" type="button" aria-pressed="false">Exhibiciones</button>
+      <button class="cat" type="button" aria-pressed="false">Exhibiciones Adicionales</button>
+    </div>
+
+    <!-- Small filter buttons (dropdowns built by JS) -->
+    <div class="filters" id="filters" role="group" aria-label="Filtros">
+      <span class="flabel">Filtrar por</span>
+    </div>
+
+    <!-- Apply -->
+    <div class="applybar">
+      <span class="apply-summary" id="applySummary">Góndola · sin filtros adicionales</span>
+      <button class="btn-apply" id="applyBtn" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 19h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Aplicar y descargar
+      </button>
+    </div>
+  </div>
+
+  <script>
+    /* ---------- Filters config ---------- */
+    // Opciones de cada subfiltro
+    var OPTIONS = {
+      'Fecha':        { type: 'daterange' },
+      'Cadena':       ['Cencosud', 'Tottus', 'SMU', 'Walmart'],
+      'Formato':      ['Jumbo', 'Hiper Lider', 'Lider Express', 'Santa Isabel', 'Tottus', 'Unimarc'],
+      'Código Local': ['L-001', 'L-002', 'L-003', 'L-004', 'L-005'],
+      'Nombre Local': ['Jumbo Costanera', 'Jumbo Kennedy', 'Jumbo La Florida', 'Hiper Lider Buenaventura', 'Hiper Lider Puente Nuevo'],
+      'Categoría':    ['Aceites', 'Limpieza', 'Mundo Bebe', 'Mundo Bio', 'Preservativos'],
+      'Nombre Ciclo': ['Ciclo 1', 'Ciclo 2', 'Ciclo 3', 'Ciclo 4', 'Ciclo 5'],
+      'Mueble':       ['Isla', 'Cabecera', 'Punta de Góndola', 'Exhibidor', 'Chimenea']
+    };
+
+    // Subfiltros disponibles según el tipo de levantamiento
+    var CATEGORY_FILTERS = {
+      'Góndola':                  ['Fecha', 'Cadena', 'Formato', 'Código Local', 'Nombre Local', 'Categoría'],
+      'Cartelería':               ['Fecha', 'Cadena', 'Formato', 'Código Local', 'Nombre Local', 'Nombre Ciclo'],
+      'Exhibiciones':             ['Fecha', 'Cadena', 'Formato', 'Código Local', 'Nombre Local', 'Nombre Ciclo', 'Mueble'],
+      'Exhibiciones Adicionales': ['Fecha', 'Cadena', 'Formato', 'Código Local', 'Nombre Local', 'Mueble']
+    };
+
+    var filtersEl = document.getElementById('filters');
+
+    function buildFilter(f) {
+      var wrap = document.createElement('div');
+      wrap.className = 'filter-wrap';
+
+      var btn = document.createElement('button');
+      btn.className = 'filter';
+      btn.type = 'button';
+      btn.setAttribute('aria-expanded', 'false');
+      btn.innerHTML = '<span class="fname">' + f.name + '</span>' +
+        '<span class="chev" aria-hidden="true">' +
+        '<svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+
+      var dd = document.createElement('div');
+      dd.className = 'dropdown';
+
+      if (f.type === 'daterange') {
+        dd.classList.add('dropdown-date');
+        dd.innerHTML =
+          '<div class="dd-field"><label>Fecha de inicio</label><input type="date" class="dd-date" data-role="start" /></div>' +
+          '<div class="dd-field"><label>Fecha de término</label><input type="date" class="dd-date" data-role="end" /></div>' +
+          '<div class="dd-actions">' +
+            '<button type="button" class="dd-clear">Limpiar</button>' +
+            '<button type="button" class="dd-apply">Aplicar</button>' +
+          '</div>';
+
+        wrap.appendChild(btn);
+        wrap.appendChild(dd);
+        filtersEl.appendChild(wrap);
+
+        var startEl = dd.querySelector('[data-role="start"]');
+        var endEl = dd.querySelector('[data-role="end"]');
+
+        btn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var isOpen = wrap.classList.contains('open');
+          closeAllDropdowns();
+          if (!isOpen) { wrap.classList.add('open'); btn.setAttribute('aria-expanded', 'true'); }
+        });
+        dd.addEventListener('click', function (e) { e.stopPropagation(); });
+        startEl.addEventListener('change', function () { if (startEl.value) endEl.min = startEl.value; });
+
+        function fmt(v) { var p = v.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+        function applyDate() {
+          var s = startEl.value, en = endEl.value;
+          if (s || en) {
+            btn.classList.add('has-selection');
+            var c = btn.querySelector('.count');
+            if (!c) { c = document.createElement('span'); c.className = 'count'; btn.appendChild(c); }
+            if (s && en)      c.textContent = fmt(s) + ' – ' + fmt(en);
+            else if (s)       c.textContent = 'Desde ' + fmt(s);
+            else              c.textContent = 'Hasta ' + fmt(en);
+          } else {
+            btn.classList.remove('has-selection');
+            var c2 = btn.querySelector('.count'); if (c2) c2.remove();
+          }
+          closeAllDropdowns();
+          updateSummary();
+        }
+        dd.querySelector('.dd-apply').addEventListener('click', applyDate);
+        dd.querySelector('.dd-clear').addEventListener('click', function () {
+          startEl.value = ''; endEl.value = ''; endEl.min = '';
+          btn.classList.remove('has-selection');
+          var c2 = btn.querySelector('.count'); if (c2) c2.remove();
+          closeAllDropdowns();
+          updateSummary();
+        });
+        return;
+      }
+
+      // Standard list filter
+      dd.innerHTML =
+        '<input class="dd-search" type="text" placeholder="Buscar ' + f.name.toLowerCase() + '…" />' +
+        '<div class="dd-list"></div>';
+
+      var list = dd.querySelector('.dd-list');
+      f.options.forEach(function (opt) {
+        var item = document.createElement('label');
+        item.className = 'dd-item';
+        item.innerHTML = '<input type="checkbox" value="' + opt + '" /><span>' + opt + '</span>';
+        list.appendChild(item);
+      });
+
+      wrap.appendChild(btn);
+      wrap.appendChild(dd);
+      filtersEl.appendChild(wrap);
+
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var isOpen = wrap.classList.contains('open');
+        closeAllDropdowns();
+        if (!isOpen) {
+          wrap.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+          dd.querySelector('.dd-search').focus();
+        }
+      });
+
+      var search = dd.querySelector('.dd-search');
+      search.addEventListener('click', function (e) { e.stopPropagation(); });
+      search.addEventListener('input', function () {
+        var q = search.value.toLowerCase().trim();
+        var any = false;
+        list.querySelectorAll('.dd-item').forEach(function (it) {
+          var match = it.textContent.toLowerCase().indexOf(q) !== -1;
+          it.style.display = match ? 'flex' : 'none';
+          if (match) any = true;
+        });
+        var empty = dd.querySelector('.dd-empty');
+        if (!any && !empty) {
+          empty = document.createElement('div');
+          empty.className = 'dd-empty';
+          empty.textContent = 'Sin resultados';
+          list.appendChild(empty);
+        } else if (any && empty) { empty.remove(); }
+      });
+
+      dd.addEventListener('click', function (e) { e.stopPropagation(); });
+      dd.addEventListener('change', function () {
+        var n = dd.querySelectorAll('input[type="checkbox"]:checked').length;
+        if (n > 0) {
+          btn.classList.add('has-selection');
+          var c = btn.querySelector('.count');
+          if (!c) { c = document.createElement('span'); c.className = 'count'; btn.appendChild(c); }
+          c.textContent = n;
+        } else {
+          btn.classList.remove('has-selection');
+          var c2 = btn.querySelector('.count'); if (c2) c2.remove();
+        }
+        updateSummary();
+      });
+    }
+
+    // (Re)construye la fila de filtros según la categoría
+    function renderFilters(catName) {
+      closeAllDropdowns();
+      filtersEl.querySelectorAll('.filter-wrap').forEach(function (w) { w.remove(); });
+      var names = CATEGORY_FILTERS[catName] || [];
+      names.forEach(function (name) {
+        var spec = OPTIONS[name];
+        if (!spec) return;
+        if (spec.type === 'daterange') buildFilter({ name: name, type: 'daterange' });
+        else buildFilter({ name: name, options: spec });
+      });
+      updateSummary();
+    }
+
+    function closeAllDropdowns() {
+      document.querySelectorAll('.filter-wrap.open').forEach(function (w) {
+        w.classList.remove('open');
+        w.querySelector('.filter').setAttribute('aria-expanded', 'false');
+      });
+    }
+    document.addEventListener('click', closeAllDropdowns);
+
+    /* ---------- Big category buttons (single select) ---------- */
+    document.querySelectorAll('.cat').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        document.querySelectorAll('.cat').forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
+        btn.setAttribute('aria-pressed', 'true');
+        renderFilters(btn.textContent.trim());
+      });
+    });
+
+    /* ---------- Summary + Apply ---------- */
+    var applySummary = document.getElementById('applySummary');
+    function updateSummary() {
+      var cat = document.querySelector('.cat[aria-pressed="true"]');
+      var catName = cat ? cat.textContent.trim() : '—';
+      var active = document.querySelectorAll('.filter.has-selection').length;
+      applySummary.textContent = catName + ' · ' +
+        (active === 0 ? 'sin filtros adicionales'
+          : active + (active === 1 ? ' filtro aplicado' : ' filtros aplicados'));
+    }
+
+    document.getElementById('applyBtn').addEventListener('click', function () {
+      var cat = document.querySelector('.cat[aria-pressed="true"]');
+      var catName = cat ? cat.textContent.trim() : '—';
+      var active = document.querySelectorAll('.filter.has-selection').length;
+      alert('Aplicando filtros\nTipo: ' + catName + '\nFiltros adicionales: ' + active);
+    });
+
+    var initialCat = document.querySelector('.cat[aria-pressed="true"]');
+    renderFilters(initialCat ? initialCat.textContent.trim() : 'Góndola');
+  </script>
+  <script src="api.js"></script>
+  <script src="descargador-api.js"></script>
+</body>
+</html>

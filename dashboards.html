@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboards · Retail Experts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #FBEAD6;
+    --ink: #2A1408;
+    --muted: #715D49;
+    --accent: #E0561C;
+    --accent-soft: rgba(224,86,28,0.12);
+    --line: rgba(42,20,8,0.16);
+    --card: #FFFFFF;
+  }
+  html { height: 100%; }
+  body {
+    font-family: 'Manrope', system-ui, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(120% 80% at 50% -10%, rgba(255,90,31,0.18) 0%, rgba(0,0,0,0) 55%),
+      var(--bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: clamp(76px, 10vh, 110px) clamp(20px, 4vw, 56px) clamp(28px, 4vh, 48px);
+    overflow-x: hidden;
+  }
+
+  .back {
+    position: fixed;
+    top: clamp(20px, 3vw, 32px);
+    left: clamp(20px, 4vw, 48px);
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--ink);
+    text-decoration: none;
+    padding: 11px 20px 11px 16px;
+    border: 1.5px solid var(--line);
+    border-radius: 999px;
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(4px);
+    z-index: 10;
+    transition: gap .25s ease;
+  }
+  .back .arrow { transition: transform .25s ease; }
+  .back:hover { background: var(--accent); color: #fff; gap: 12px; border-color: var(--accent); }
+  .back:hover .arrow { transform: translateX(-3px); }
+  .back:focus-visible { outline: 3px solid rgba(224,86,28,0.4); outline-offset: 3px; }
+
+  .head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto clamp(20px, 3vh, 32px);
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    line-height: 0.98;
+    letter-spacing: -0.02em;
+  }
+  .head p {
+    margin-top: 12px;
+    font-size: clamp(0.98rem, 1.4vw, 1.1rem);
+    line-height: 1.55;
+    color: var(--muted);
+    max-width: 520px;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .chip {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 600;
+    font-size: 0.82rem;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid rgba(224,86,28,0.28);
+    padding: 9px 16px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  /* ---- Embed frame ---- */
+  .frame {
+    position: relative;
+    flex: 1;
+    min-height: 460px;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 14px;
+    box-shadow: 0 24px 60px rgba(42,20,8,0.10);
+  }
+  .frame-inner {
+    position: relative;
+    height: 100%;
+    min-height: 432px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #FFFBF5;
+  }
+
+  /* The Looker Studio iframe will be dropped in here later */
+  .frame-inner iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+  }
+
+  /* Placeholder shown until the report is embedded */
+  .placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px;
+    background-image:
+      linear-gradient(rgba(42,20,8,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(42,20,8,0.05) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+  .ph-badge {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 600;
+    font-size: 0.74rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px dashed rgba(224,86,28,0.5);
+    padding: 8px 16px;
+    border-radius: 999px;
+    margin-bottom: 22px;
+  }
+  .placeholder h2 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 700;
+    font-size: clamp(1.4rem, 2.4vw, 2rem);
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  .placeholder p {
+    margin-top: 14px;
+    font-size: 1.02rem;
+    line-height: 1.6;
+    color: var(--muted);
+    max-width: 460px;
+  }
+  .placeholder code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.92rem;
+    color: var(--accent);
+    background: rgba(224,86,28,0.1);
+    padding: 2px 7px;
+    border-radius: 6px;
+  }
+
+  @media (max-width: 640px) {
+    .head { align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+  <a class="back" href="landing.html"><span class="arrow">←</span> Volver</a>
+
+  <header class="head">
+    <div>
+      <h1>Dashboards</h1>
+      <p>Tus indicadores de venta, crecimiento, OSA y venta perdida, en tiempo real.</p>
+    </div>
+    <div class="chips">
+      <span class="chip">Venta</span>
+      <span class="chip">Crecimiento</span>
+      <span class="chip">OSA</span>
+      <span class="chip">Venta perdida</span>
+    </div>
+  </header>
+
+  <main class="frame">
+    <div class="frame-inner">
+      <!--
+        Para incrustar el reporte de Looker Studio, reemplaza este bloque
+        "placeholder" por el iframe que entrega Looker Studio. Ejemplo:
+
+        <iframe src="https://lookerstudio.google.com/embed/reporting/XXXX/page/YYYY"
+                allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+      -->
+      <div class="placeholder">
+        <div class="ph-badge">Marco listo para incrustar</div>
+        <h2>Conecta aquí tu reporte de Looker Studio</h2>
+        <p>Este espacio está preparado para recibir el panel de BI. Pega el <code>iframe</code> de Looker Studio y ocupará todo el marco automáticamente.</p>
+      </div>
+    </div>
+  </main>
+  <script src="api.js"></script>
+  <script src="dashboards-api.js"></script>
+</body>
+</html>

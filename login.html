@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acceso clientes · Retail Experts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --purple: #5A0D74;
+  --purple-deep: #3D0850;
+  --purple-light: #7B1E99;
+  --orange: #FF5A1F;
+  --orange-light: #FF7A45;
+  --cream: #FFF8E7;
+  --cream-dark: #F5EDD4;
+  --white: #FFFFFF;
+  --font-display: 'Bricolage Grotesque', sans-serif;
+  --font-body: 'Manrope', sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--font-body);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: linear-gradient(135deg, var(--purple-deep), var(--purple-light));
+  color: #1a1a1a;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--cream);
+  border-radius: 22px;
+  padding: 44px 40px 40px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.35);
+}
+
+.login-brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 26px;
+}
+.login-brand img { height: 76px; width: auto; display: block; }
+
+.login-card h1 {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--purple);
+  text-align: center;
+  margin-bottom: 6px;
+}
+.login-card .subtitle {
+  text-align: center;
+  font-size: 14px;
+  color: #6a6a6a;
+  margin-bottom: 30px;
+}
+
+.field { margin-bottom: 18px; }
+.field label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3a3a3a;
+  margin-bottom: 7px;
+}
+.field input {
+  width: 100%;
+  padding: 13px 15px;
+  border: 1.5px solid #e2d9c0;
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: #1a1a1a;
+  background: var(--white);
+  outline: none;
+  transition: border-color .2s, box-shadow .2s;
+}
+.field input:focus {
+  border-color: var(--purple-light);
+  box-shadow: 0 0 0 3px rgba(123, 30, 153, 0.15);
+}
+
+.btn-login {
+  width: 100%;
+  margin-top: 8px;
+  padding: 15px;
+  background: var(--purple);
+  color: var(--white);
+  border: 2px solid var(--purple);
+  border-radius: 999px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  cursor: pointer;
+  transition: background .25s, transform .2s, box-shadow .25s;
+  box-shadow: 0 8px 20px rgba(90, 13, 116, 0.3);
+}
+.btn-login:hover {
+  background: var(--purple-deep);
+  border-color: var(--purple-deep);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(61, 8, 80, 0.4);
+}
+
+.back-link {
+  display: block;
+  text-align: center;
+  margin-top: 22px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--purple);
+  text-decoration: none;
+}
+.back-link:hover { color: var(--orange); }
+</style>
+</head>
+<body>
+  <main class="login-card">
+    <div class="login-brand">
+      <a href="index.html"><img src="logo-retail-experts.png" alt="Retail Experts"></a>
+    </div>
+    <h1>Ya soy cliente</h1>
+    <p class="subtitle">Ingresa tus credenciales para continuar</p>
+
+    <form id="login-form" onsubmit="return validarLogin(event);">
+      <div class="field">
+        <label for="usuario">Usuario</label>
+        <input type="text" id="usuario" name="usuario" autocomplete="username" placeholder="Tu usuario" required>
+      </div>
+      <div class="field">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" placeholder="Tu contraseña" required>
+      </div>
+      <p id="login-error" style="display:none; color:#c0392b; font-size:13px; text-align:center; margin:2px 0 12px; font-weight:600;">Usuario o contraseña incorrectos.</p>
+      <button type="submit" class="btn-login">Ingresar</button>
+    </form>
+
+    <a class="back-link" href="index.html">← Volver al inicio</a>
+  </main>
+  <script>
+    function validarLogin(e) {
+      e.preventDefault();
+      var u = document.getElementById('usuario').value.trim();
+      var p = document.getElementById('password').value;
+      if (u === 'admin' && p === '123admin') {
+        window.location.href = 'landing.html';
+      } else {
+        document.getElementById('login-error').style.display = 'block';
+      }
+      return false;
+    }
+  </script>
+  <script src="api.js"></script>
+  <script src="login-api.js"></script>
+</body>
+</html>
