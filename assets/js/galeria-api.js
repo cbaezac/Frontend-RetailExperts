@@ -15,8 +15,8 @@
     'Cliente': 'cliente',
     'Ruta': 'ruta',
     'Categoría': 'categoria',
-    'Nombre Ciclo': 'categoria',
-    'Mueble': 'categoria'
+    'Nombre Ciclo': 'nombre_ciclo',
+    'Mueble': 'mueble'
   };
 
   var gallery = document.getElementById('gallery');
@@ -103,6 +103,8 @@
     if (name === 'Nombre Local') return unique(filterOptions.nombres_local);
     if (name === 'Cliente') return unique(filterOptions.clientes);
     if (name === 'Ruta') return unique(filterOptions.rutas);
+    if (name === 'Nombre Ciclo') return unique(filterOptions.nombres_ciclo);
+    if (name === 'Mueble') return unique(filterOptions.muebles);
     return unique(filterOptions.categorias);
   }
 
