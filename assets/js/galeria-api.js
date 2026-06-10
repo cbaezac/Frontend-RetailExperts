@@ -47,7 +47,7 @@
   dlLabel = document.getElementById('dlLabel');
 
   var style = document.createElement('style');
-  style.textContent = '.photo img{width:100%;height:100%;object-fit:cover;display:block}.photo-meta{position:absolute;left:12px;right:12px;bottom:12px;padding:9px 11px;border-radius:8px;background:rgba(0,0,0,.74);color:#fff;font:800 13px Inter,sans-serif;text-align:left;box-shadow:0 8px 18px rgba(0,0,0,.22)}.photo-meta-main{display:block;font-size:13px;line-height:1.25}.photo-tech-badge{position:absolute;left:10px;top:10px;right:52px;z-index:2;padding:8px 10px;border-radius:8px;background:rgba(0,0,0,.74);color:#fff;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10.5px;line-height:1.25;text-align:left;overflow-wrap:anywhere;box-shadow:0 8px 18px rgba(0,0,0,.22)}.photo-tech-badge strong{font-weight:800;color:#fff8e7}.photo-expand{position:absolute;right:10px;bottom:10px;z-index:3;width:38px;height:38px;border-radius:50%;border:2px solid rgba(255,255,255,.88);background:rgba(0,0,0,.7);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.25)}.photo-expand:hover{background:#e0561c}.gallery-empty{grid-column:1/-1;padding:48px 18px;text-align:center;color:rgba(28,26,20,.58);font-weight:700}.gallery-loading{grid-column:1/-1;padding:48px 18px;text-align:center;color:rgba(28,26,20,.62);font-weight:700}.gallery-pager{display:flex;align-items:center;justify-content:center;gap:16px;margin:34px 0 6px;flex-wrap:wrap}.gallery-pager-info{font:700 14px Inter,sans-serif;color:rgba(28,26,20,.64)}.gallery-load-more{border:0;border-radius:999px;background:#11100b;color:#fff8e7;font:800 15px Inter,sans-serif;padding:14px 28px;cursor:pointer;box-shadow:0 14px 30px rgba(28,26,20,.18)}.gallery-load-more:hover{transform:translateY(-1px)}.gallery-load-more:disabled{opacity:.45;cursor:not-allowed;transform:none}.btn-clear-filters{border:0;border-radius:999px;padding:13px 22px;font:800 14px Inter,sans-serif;background:rgba(28,26,20,.08);color:rgba(28,26,20,.54);cursor:pointer}.btn-clear-filters.active{background:#e0561c;color:#fff8e7;box-shadow:0 12px 26px rgba(224,86,28,.26)}.photo-lightbox{position:fixed;inset:0;z-index:9999;background:rgba(16,14,10,.88);display:none;align-items:center;justify-content:center;padding:28px}.photo-lightbox.open{display:flex}.photo-lightbox-dialog{position:relative;width:min(1180px,96vw);max-height:94vh;display:grid;grid-template-rows:auto minmax(0,1fr);gap:12px}.photo-lightbox-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#fff8e7;font:700 13px Inter,sans-serif}.photo-lightbox-meta{padding:10px 12px;border-radius:8px;background:rgba(0,0,0,.58);overflow-wrap:anywhere}.photo-lightbox-close{border:0;border-radius:50%;width:42px;height:42px;background:#fff8e7;color:#11100b;font:900 22px Inter,sans-serif;cursor:pointer}.photo-lightbox img{max-width:100%;max-height:calc(94vh - 76px);object-fit:contain;justify-self:center;align-self:center;border-radius:4px;box-shadow:0 22px 60px rgba(0,0,0,.38)}';
+  style.textContent = '.photo img{width:100%;height:100%;object-fit:cover;display:block}.photo-meta{position:absolute;left:12px;right:72px;bottom:12px;min-height:48px;display:flex;align-items:center;padding:10px 13px;border-radius:9px;background:linear-gradient(90deg,rgba(0,0,0,.82),rgba(0,0,0,.66));color:#fff;text-align:left;box-shadow:0 8px 18px rgba(0,0,0,.24);backdrop-filter:blur(2px)}.photo-meta-main{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font:900 13px/1.2 Inter,sans-serif;letter-spacing:.01em}.photo-meta-date{font-weight:800;color:#fff1c8}.photo-tech-badge{position:absolute;left:10px;top:10px;right:52px;z-index:2;padding:8px 10px;border-radius:8px;background:rgba(0,0,0,.74);color:#fff;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10.5px;line-height:1.25;text-align:left;overflow-wrap:anywhere;box-shadow:0 8px 18px rgba(0,0,0,.22)}.photo-tech-badge strong{font-weight:800;color:#fff8e7}.photo-expand{position:absolute;right:12px;bottom:12px;z-index:3;width:50px;height:50px;border-radius:14px;border:2px solid rgba(255,255,255,.88);background:rgba(26,25,22,.9);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 22px rgba(0,0,0,.3);transition:transform .18s ease,background .18s ease,border-color .18s ease}.photo-expand:hover{background:#33312b;border-color:#fff;transform:translateY(-1px)}.photo-expand svg{width:27px;height:27px}.gallery-empty{grid-column:1/-1;padding:48px 18px;text-align:center;color:rgba(28,26,20,.58);font-weight:700}.gallery-loading{grid-column:1/-1;padding:48px 18px;text-align:center;color:rgba(28,26,20,.62);font-weight:700}.gallery-pager{display:flex;align-items:center;justify-content:center;gap:16px;margin:34px 0 6px;flex-wrap:wrap}.gallery-pager-info{font:700 14px Inter,sans-serif;color:rgba(28,26,20,.64)}.gallery-load-more{border:0;border-radius:999px;background:#11100b;color:#fff8e7;font:800 15px Inter,sans-serif;padding:14px 28px;cursor:pointer;box-shadow:0 14px 30px rgba(28,26,20,.18)}.gallery-load-more:hover{transform:translateY(-1px)}.gallery-load-more:disabled{opacity:.45;cursor:not-allowed;transform:none}.btn-clear-filters{border:0;border-radius:999px;padding:13px 22px;font:800 14px Inter,sans-serif;background:rgba(28,26,20,.08);color:rgba(28,26,20,.54);cursor:pointer}.btn-clear-filters.active{background:#e0561c;color:#fff8e7;box-shadow:0 12px 26px rgba(224,86,28,.26)}.photo-lightbox{position:fixed;inset:0;z-index:9999;background:rgba(16,14,10,.88);display:none;align-items:center;justify-content:center;padding:28px}.photo-lightbox.open{display:flex}.photo-lightbox-dialog{position:relative;width:min(1180px,96vw);max-height:94vh;display:grid;grid-template-rows:auto minmax(0,1fr);gap:12px}.photo-lightbox-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#fff8e7;font:700 13px Inter,sans-serif}.photo-lightbox-meta{padding:10px 12px;border-radius:8px;background:rgba(0,0,0,.58);overflow-wrap:anywhere}.photo-lightbox-close{border:0;border-radius:50%;width:42px;height:42px;background:#fff8e7;color:#11100b;font:900 22px Inter,sans-serif;cursor:pointer}.photo-lightbox img{max-width:100%;max-height:calc(94vh - 76px);object-fit:contain;justify-self:center;align-self:center;border-radius:4px;box-shadow:0 22px 60px rgba(0,0,0,.38)}';
   document.head.appendChild(style);
 
   var clearFiltersBtn = document.createElement('button');
@@ -173,6 +173,13 @@
       .replace(/'/g, '&#039;');
   }
 
+  function formatPhotoDate(value) {
+    if (!value) return '';
+    var match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) return match[3] + '-' + match[2] + '-' + match[1];
+    return String(value);
+  }
+
   function updatePager() {
     var loaded = photos.length;
     var hasMore = loaded < totalPhotos;
@@ -201,7 +208,9 @@
     newPhotos.forEach(function (photo) {
       var id = String(photo.id_foto || photo.id);
       var rutaArchivo = photo.ruta_archivo || '';
-      var metaMain = [photo.cadena, photo.codigo_local, photo.fecha].filter(Boolean).join(' · ');
+      var formattedDate = formatPhotoDate(photo.fecha);
+      var metaItems = [photo.cadena, photo.codigo_local].filter(Boolean);
+      if (formattedDate) metaItems.push(formattedDate);
       photos.push(photo);
       var card = document.createElement('div');
       card.className = 'photo';
@@ -215,10 +224,15 @@
           '<div><strong>Ruta:</strong> ' + escapeHtml(rutaArchivo) + '</div>' +
         '</div>' +
         '<div class="photo-meta">' +
-          '<span class="photo-meta-main">' + escapeHtml(metaMain) + '</span>' +
+          '<span class="photo-meta-main">' +
+            metaItems.map(function (item, index) {
+              var value = index === metaItems.length - 1 && formattedDate ? '<span class="photo-meta-date">' + escapeHtml(item) + '</span>' : escapeHtml(item);
+              return index ? '<span aria-hidden="true">·</span> ' + value : value;
+            }).join(' ') +
+          '</span>' +
         '</div>' +
         '<button class="photo-expand" type="button" aria-label="Ampliar foto">' +
-          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 3H3v5M3 3l7 7M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7M16 21h5v-5M21 21l-7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+          '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8.5 15.5 4 20m0 0h5.8M4 20v-5.8M15.5 8.5 20 4m0 0h-5.8M20 4v5.8" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
         '</button>' +
         '<div class="check"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="#FFF8E7" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
       card.querySelector('.photo-expand').addEventListener('click', function (event) {
