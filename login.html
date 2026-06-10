@@ -133,8 +133,8 @@ body {
 
     <form id="login-form" onsubmit="return validarLogin(event);">
       <div class="field">
-        <label for="usuario">Usuario</label>
-        <input type="text" id="usuario" name="usuario" autocomplete="username" placeholder="Tu usuario" required>
+        <label for="usuario">Email</label>
+        <input type="email" id="usuario" name="email" autocomplete="email" placeholder="tu@email.com" required>
       </div>
       <div class="field">
         <label for="password">Contraseña</label>
@@ -159,7 +159,7 @@ body {
       return false;
     }
   </script>
-  <script src="api.js"></script>
-  <script src="login-api.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/login-api.js"></script>
 </body>
 </html>
