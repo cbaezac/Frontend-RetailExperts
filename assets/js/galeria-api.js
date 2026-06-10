@@ -199,6 +199,17 @@
     return parts.day + '-' + parts.month + '-' + parts.year + ' ' + parts.hour + ':' + parts.minute;
   }
 
+  function fileSafeSegment(value, fallback) {
+    var text = String(value || fallback || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    return text || fallback || 'sin-dato';
+  }
+
   function updatePager() {
     var loaded = photos.length;
     var hasMore = loaded < totalPhotos;
@@ -452,7 +463,15 @@
     var id = String(photo.id_foto || photo.id || index + 1);
     var ruta = String(photo.ruta_archivo || '');
     var original = ruta.split('/').pop() || ('foto-' + id + '.jpg');
-    return id + '-' + original.replace(/[^a-zA-Z0-9._-]/g, '_');
+    var extensionMatch = original.match(/\.([a-zA-Z0-9]+)$/);
+    var extension = extensionMatch ? extensionMatch[1].toLowerCase() : 'jpg';
+    var timestamp = fileSafeSegment(formatPhotoDateTime(photo.creado_en) || formatPhotoDate(photo.fecha), 'sin-fecha');
+    return [
+      fileSafeSegment(photo.cadena, 'sin-cadena'),
+      fileSafeSegment(photo.codigo_local || photo.id_local, 'sin-local'),
+      timestamp,
+      'foto-' + id
+    ].join('-') + '.' + extension;
   }
 
   function downloadBlob(blob, filename) {
