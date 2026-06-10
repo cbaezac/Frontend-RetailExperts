@@ -180,6 +180,25 @@
     return String(value);
   }
 
+  function formatPhotoDateTime(value) {
+    if (!value) return '';
+    var date = new Date(value);
+    if (Number.isNaN(date.getTime())) return formatPhotoDate(value);
+    var parts = new Intl.DateTimeFormat('es-CL', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+      timeZone: 'America/Santiago'
+    }).formatToParts(date).reduce(function (acc, part) {
+      acc[part.type] = part.value;
+      return acc;
+    }, {});
+    return parts.day + '-' + parts.month + '-' + parts.year + ' ' + parts.hour + ':' + parts.minute;
+  }
+
   function updatePager() {
     var loaded = photos.length;
     var hasMore = loaded < totalPhotos;
@@ -208,7 +227,7 @@
     newPhotos.forEach(function (photo) {
       var id = String(photo.id_foto || photo.id);
       var rutaArchivo = photo.ruta_archivo || '';
-      var formattedDate = formatPhotoDate(photo.fecha);
+      var formattedDate = formatPhotoDateTime(photo.creado_en) || formatPhotoDate(photo.fecha);
       var metaItems = [photo.cadena, photo.codigo_local].filter(Boolean);
       if (formattedDate) metaItems.push(formattedDate);
       photos.push(photo);
@@ -366,7 +385,7 @@
     lightboxMeta.textContent = [
       'ID foto: ' + id,
       'Ruta: ' + (photo.ruta_archivo || ''),
-      [photo.clientes, photo.cadena, photo.codigo_local, photo.fecha].filter(Boolean).join(' · ')
+      [photo.clientes, photo.cadena, photo.codigo_local, formatPhotoDateTime(photo.creado_en) || formatPhotoDate(photo.fecha)].filter(Boolean).join(' · ')
     ].filter(Boolean).join(' | ');
     lightbox.classList.add('open');
   }
