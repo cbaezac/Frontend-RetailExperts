@@ -30,10 +30,10 @@
   };
 
   var FILENAME_BY_TYPE = {
-    'gondola': 'levantamientos-gondola-retailexperts.csv',
-    'carteleria': 'levantamientos-carteleria-retailexperts.csv',
-    'exhibicion': 'levantamientos-exhibiciones-retailexperts.csv',
-    'exhibicion-adicional': 'levantamientos-exhibiciones-adicionales-retailexperts.csv'
+    'gondola': 'levantamientos-gondola-retailexperts.xlsx',
+    'carteleria': 'levantamientos-carteleria-retailexperts.xlsx',
+    'exhibicion': 'levantamientos-exhibiciones-retailexperts.xlsx',
+    'exhibicion-adicional': 'levantamientos-exhibiciones-adicionales-retailexperts.xlsx'
   };
 
   var PARAM_BY_FILTER = {
@@ -41,6 +41,7 @@
     'Formato': 'formato',
     'Código Local': 'codigo_local',
     'Nombre Local': 'nombre_local',
+    'Cliente': 'cliente',
     'Categoría': 'categoria',
     'Nombre Ciclo': 'nombre_ciclo',
     'Mueble': 'mueble'
@@ -70,6 +71,7 @@
     if (name === 'Formato') return unique(options.formatos);
     if (name === 'Código Local') return unique(options.codigos_local);
     if (name === 'Nombre Local') return unique(options.nombres_local);
+    if (name === 'Cliente') return unique(options.clientes);
     if (name === 'Categoría') return unique(options.categorias);
     if (name === 'Nombre Ciclo') return unique(options.nombres_ciclo);
     if (name === 'Mueble') return unique(options.muebles);
@@ -169,6 +171,10 @@
     filtersEl.querySelectorAll('.filter-wrap').forEach(function (wrap) { wrap.remove(); });
     var names = (window.CATEGORY_FILTERS && window.CATEGORY_FILTERS[currentLabel()]) ||
       ['Fecha', 'Cadena', 'Formato', 'Código Local', 'Nombre Local', 'Categoría'];
+    var user = window.RetailAPI.getUser && window.RetailAPI.getUser();
+    if (user && (user.rol === 'admin' || user.rol === 'interno') && names.indexOf('Cliente') === -1) {
+      names = names.slice(0, 5).concat(['Cliente'], names.slice(5));
+    }
     names.forEach(buildFilter);
     updateSummary();
   }
@@ -284,17 +290,17 @@
       });
   }
 
-  function downloadCsv() {
+  function downloadExcel() {
     var original = downloadBtn.innerHTML;
     downloadBtn.disabled = true;
     downloadBtn.textContent = 'Preparando descarga...';
-    window.RetailAPI.request('/web/levantamientos/' + currentType() + '.csv' + window.RetailAPI.buildQuery(collectParams()))
+    window.RetailAPI.request('/web/levantamientos/' + currentType() + '.xlsx' + window.RetailAPI.buildQuery(collectParams()))
       .then(function (response) { return response.blob(); })
       .then(function (blob) {
         var a = document.createElement('a');
         var url = URL.createObjectURL(blob);
         a.href = url;
-        a.download = FILENAME_BY_TYPE[currentType()] || 'levantamientos-retailexperts.csv';
+        a.download = FILENAME_BY_TYPE[currentType()] || 'levantamientos-retailexperts.xlsx';
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -314,7 +320,7 @@
   });
   applyBtn.addEventListener('click', loadPreview);
   clearBtn.addEventListener('click', clearFilters);
-  downloadBtn.addEventListener('click', downloadCsv);
+  downloadBtn.addEventListener('click', downloadExcel);
 
   loadOptions();
 })();
