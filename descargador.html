@@ -79,10 +79,10 @@
   }
 
   .grid {
-    max-width: 1120px;
+    max-width: 1280px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: clamp(20px, 3vw, 32px);
   }
 
@@ -166,7 +166,34 @@
   .card.soon { cursor: default; }
   .card.soon .hint { color: var(--muted); }
 
-  @media (max-width: 760px) {
+  .worker {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 128px;
+    height: 128px;
+    margin-bottom: 30px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    border: 1.5px dashed rgba(139,47,201,0.45);
+  }
+  .worker-emoji {
+    font-size: 62px;
+    line-height: 1;
+    /* Armoniza el emoji con la paleta morada de la página */
+    filter: grayscale(1) sepia(1) saturate(4) hue-rotate(232deg) brightness(0.9);
+  }
+  .worker-tool {
+    position: absolute;
+    bottom: 14px;
+    right: 12px;
+    font-size: 29px;
+    line-height: 1;
+    filter: grayscale(1) sepia(1) saturate(4) hue-rotate(232deg) brightness(0.9);
+  }
+
+  @media (max-width: 980px) {
     .grid { grid-template-columns: 1fr; }
   }
 </style>
@@ -180,13 +207,6 @@
   </header>
 
   <main class="grid">
-    <div class="card soon" role="button" tabindex="0" aria-disabled="true">
-      <span class="tag">Portales B2B</span>
-      <h2>Datos desde portales B2B</h2>
-      <p>Descarga aquí los datos que extraemos de los portales B2B.</p>
-      <span class="hint">Próximamente</span>
-    </div>
-
     <a class="card" href="descargador-levantamientos.html">
       <span class="tag">Fuerza de Venta</span>
       <h2>Levantamientos en terreno</h2>
@@ -197,6 +217,26 @@
         </svg>
       </span>
     </a>
+
+    <div class="card soon" role="button" tabindex="0" aria-disabled="true">
+      <div class="worker" aria-hidden="true">
+        <span class="worker-emoji">👷</span>
+        <span class="worker-tool">🛠️</span>
+      </div>
+      <span class="tag">Asistencia</span>
+      <h2>PRÓXIMAMENTE</h2>
+      <p>Estamos preparando la descarga de datos de las asistencias.</p>
+    </div>
+
+    <div class="card soon" role="button" tabindex="0" aria-disabled="true">
+      <div class="worker" aria-hidden="true">
+        <span class="worker-emoji">👷</span>
+        <span class="worker-tool">🛠️</span>
+      </div>
+      <span class="tag">Portales B2B</span>
+      <h2>PRÓXIMAMENTE</h2>
+      <p>Estamos preparando la descarga de datos desde los portales B2B.</p>
+    </div>
   </main>
 </body>
 </html>

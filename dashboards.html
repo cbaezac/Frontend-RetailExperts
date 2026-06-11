@@ -175,6 +175,36 @@
     color: var(--muted);
     max-width: 460px;
   }
+  .placeholder h2 {
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    letter-spacing: 0.04em;
+  }
+  .worker {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 132px;
+    height: 132px;
+    margin-bottom: 26px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    border: 1.5px dashed rgba(224,86,28,0.45);
+  }
+  .worker-emoji {
+    font-size: 64px;
+    line-height: 1;
+    /* Armoniza el emoji con la paleta cálida (tonos naranja/café) */
+    filter: grayscale(1) sepia(1) saturate(3.2) hue-rotate(-12deg) brightness(0.92);
+  }
+  .worker-tool {
+    position: absolute;
+    bottom: 14px;
+    right: 12px;
+    font-size: 30px;
+    line-height: 1;
+    filter: grayscale(1) sepia(1) saturate(3.2) hue-rotate(-12deg) brightness(0.92);
+  }
   .placeholder code {
     font-family: ui-monospace, "SF Mono", Menlo, monospace;
     font-size: 0.92rem;
@@ -215,9 +245,13 @@
                 allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
       -->
       <div class="placeholder">
-        <div class="ph-badge">Marco listo para incrustar</div>
-        <h2>Conecta aquí tu reporte de Looker Studio</h2>
-        <p>Este espacio está preparado para recibir el panel de BI. Pega el <code>iframe</code> de Looker Studio y ocupará todo el marco automáticamente.</p>
+        <div class="worker" aria-hidden="true">
+          <span class="worker-emoji">👷</span>
+          <span class="worker-tool">🛠️</span>
+        </div>
+        <div class="ph-badge">En construcción</div>
+        <h2>PRÓXIMAMENTE</h2>
+        <p>Estamos preparando tus dashboards. Muy pronto verás aquí tus indicadores en tiempo real.</p>
       </div>
     </div>
   </main>
