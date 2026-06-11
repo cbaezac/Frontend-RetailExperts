@@ -3,30 +3,56 @@
 
   var filtersEl = document.getElementById('filters');
   var applyBtn = document.getElementById('applyBtn');
+  var clearBtn = document.getElementById('clearFiltersBtn');
+  var downloadBtn = document.getElementById('downloadBtn');
   var applySummary = document.getElementById('applySummary');
-  var previewPanel = document.getElementById('previewPanel');
   var previewTableWrap = document.getElementById('previewTableWrap');
   var previewMeta = document.getElementById('previewMeta');
   var previewNote = document.getElementById('previewNote');
   var previewSubtitle = document.getElementById('previewSubtitle');
   var options = null;
-  var previewTimer = null;
 
-  var applyClone = applyBtn.cloneNode(true);
-  applyBtn.parentNode.replaceChild(applyClone, applyBtn);
-  applyBtn = applyClone;
+  function stripOldListeners(button) {
+    var clone = button.cloneNode(true);
+    button.parentNode.replaceChild(clone, button);
+    return clone;
+  }
+
+  applyBtn = stripOldListeners(applyBtn);
+  clearBtn = stripOldListeners(clearBtn);
+  downloadBtn = stripOldListeners(downloadBtn);
+
+  var TYPE_BY_LABEL = {
+    'Góndola': 'gondola',
+    'Cartelería': 'carteleria',
+    'Exhibiciones': 'exhibicion',
+    'Exhibiciones Adicionales': 'exhibicion-adicional'
+  };
+
+  var FILENAME_BY_TYPE = {
+    'gondola': 'levantamientos-gondola-retailexperts.csv',
+    'carteleria': 'levantamientos-carteleria-retailexperts.csv',
+    'exhibicion': 'levantamientos-exhibiciones-retailexperts.csv',
+    'exhibicion-adicional': 'levantamientos-exhibiciones-adicionales-retailexperts.csv'
+  };
 
   var PARAM_BY_FILTER = {
     'Cadena': 'cadena',
     'Formato': 'formato',
     'Código Local': 'codigo_local',
     'Nombre Local': 'nombre_local',
-    'Categoría': 'categoria'
+    'Categoría': 'categoria',
+    'Nombre Ciclo': 'nombre_ciclo',
+    'Mueble': 'mueble'
   };
 
   function currentLabel() {
     var cat = document.querySelector('.cat[aria-pressed="true"]');
     return cat ? cat.textContent.trim() : 'Góndola';
+  }
+
+  function currentType() {
+    return TYPE_BY_LABEL[currentLabel()] || 'gondola';
   }
 
   function unique(values) {
@@ -45,6 +71,8 @@
     if (name === 'Código Local') return unique(options.codigos_local);
     if (name === 'Nombre Local') return unique(options.nombres_local);
     if (name === 'Categoría') return unique(options.categorias);
+    if (name === 'Nombre Ciclo') return unique(options.nombres_ciclo);
+    if (name === 'Mueble') return unique(options.muebles);
     return [];
   }
 
@@ -56,15 +84,11 @@
   }
 
   function updateSummary() {
-    var isGondola = currentLabel() === 'Góndola';
     var active = document.querySelectorAll('.filter.has-selection').length;
-    applySummary.textContent = currentLabel() + ' · ' + (
-      isGondola
-        ? (active === 0 ? 'sin filtros adicionales' : active + (active === 1 ? ' filtro aplicado' : ' filtros aplicados'))
-        : 'próximamente'
-    );
-    applyBtn.disabled = !isGondola;
-    if (previewPanel) previewPanel.style.display = isGondola ? '' : 'none';
+    applySummary.textContent = currentLabel() + ' · ' +
+      (active === 0 ? 'sin filtros adicionales' : active + (active === 1 ? ' filtro aplicado' : ' filtros aplicados'));
+    if (clearBtn) clearBtn.classList.toggle('is-active', active > 0);
+    if (clearBtn) clearBtn.disabled = active === 0;
   }
 
   function buildFilter(name) {
@@ -84,17 +108,22 @@
       dd.innerHTML = '<div class="dd-field"><label>Fecha de inicio</label><input type="date" class="dd-date" data-role="start" /></div><div class="dd-field"><label>Fecha de término</label><input type="date" class="dd-date" data-role="end" /></div><div class="dd-actions"><button type="button" class="dd-clear">Limpiar</button><button type="button" class="dd-apply">Aplicar</button></div>';
     } else {
       dd.innerHTML = '<input class="dd-search" type="text" placeholder="Buscar ' + name.toLowerCase() + '..." /><div class="dd-list"></div>';
+      var list = dd.querySelector('.dd-list');
       listFor(name).forEach(function (opt) {
         var item = document.createElement('label');
         item.className = 'dd-item';
-        item.innerHTML = '<input type="checkbox" value="' + opt.replace(/"/g, '&quot;') + '" /><span>' + opt + '</span>';
-        dd.querySelector('.dd-list').appendChild(item);
+        item.innerHTML = '<input type="checkbox" value="' + escapeAttribute(opt) + '" /><span>' + escapeHtml(opt) + '</span>';
+        list.appendChild(item);
       });
+      if (!list.children.length) {
+        list.innerHTML = '<div class="dd-empty">Sin opciones</div>';
+      }
     }
 
     wrap.appendChild(btn);
     wrap.appendChild(dd);
     filtersEl.appendChild(wrap);
+
     btn.addEventListener('click', function (event) {
       event.stopPropagation();
       var open = wrap.classList.contains('open');
@@ -109,8 +138,8 @@
       var has = dd.querySelectorAll('input[type="checkbox"]:checked').length > 0;
       btn.classList.toggle('has-selection', has);
       updateSummary();
-      schedulePreview();
     });
+
     var search = dd.querySelector('.dd-search');
     if (search) search.addEventListener('input', function () {
       var q = search.value.toLowerCase();
@@ -118,21 +147,21 @@
         item.style.display = item.textContent.toLowerCase().indexOf(q) === -1 ? 'none' : 'flex';
       });
     });
+
     var clear = dd.querySelector('.dd-clear');
     if (clear) clear.addEventListener('click', function () {
       dd.querySelectorAll('input').forEach(function (input) { input.value = ''; });
       btn.classList.remove('has-selection');
       closeDropdowns();
       updateSummary();
-      schedulePreview();
     });
+
     var dateApply = dd.querySelector('.dd-apply');
     if (dateApply) dateApply.addEventListener('click', function () {
       var has = !!dd.querySelector('[data-role="start"]').value || !!dd.querySelector('[data-role="end"]').value;
       btn.classList.toggle('has-selection', has);
       closeDropdowns();
       updateSummary();
-      schedulePreview();
     });
   }
 
@@ -161,6 +190,19 @@
     return params;
   }
 
+  function clearFilters() {
+    filtersEl.querySelectorAll('.filter-wrap').forEach(function (wrap) {
+      wrap.querySelectorAll('input').forEach(function (input) {
+        if (input.type === 'checkbox') input.checked = false;
+        else input.value = '';
+      });
+      wrap.querySelector('.filter').classList.remove('has-selection');
+    });
+    closeDropdowns();
+    updateSummary();
+    loadPreview();
+  }
+
   function escapeHtml(value) {
     return String(value == null ? '' : value)
       .replace(/&/g, '&amp;')
@@ -170,6 +212,10 @@
       .replace(/'/g, '&#39;');
   }
 
+  function escapeAttribute(value) {
+    return escapeHtml(value).replace(/`/g, '&#96;');
+  }
+
   function formatBoolean(value) {
     if (value === true || value === 'true') return 'Sí';
     if (value === false || value === 'false') return 'No';
@@ -177,103 +223,98 @@
   }
 
   function renderPreview(payload) {
-    if (!previewTableWrap) return;
     var rows = (payload && payload.rows) || [];
+    var columns = (payload && payload.columns) || [];
     var total = payload && Number(payload.total || 0);
     if (previewNote) {
       previewNote.classList.toggle('is-visible', !!(payload && payload.defaultDateApplied));
     }
     if (previewSubtitle) {
       previewSubtitle.textContent = payload && payload.defaultDateApplied
-        ? 'Últimos registros de Góndola de los últimos 30 días.'
-        : 'Últimos registros de Góndola según los filtros seleccionados.';
+        ? 'Últimos registros de ' + currentLabel() + ' de los últimos 30 días.'
+        : 'Últimos registros de ' + currentLabel() + ' según los filtros seleccionados.';
     }
     if (previewMeta) {
       previewMeta.textContent = rows.length
         ? 'Mostrando ' + rows.length + ' de ' + total + ' registros'
         : 'Sin registros';
     }
-    if (!rows.length) {
+    if (!rows.length || !columns.length) {
       previewTableWrap.innerHTML = '<div class="preview-empty">No hay levantamientos para estos filtros.</div>';
       return;
     }
-    var headers = [
-      ['fecha_ejecucion', 'Fecha ejecución'],
-      ['cadena', 'Cadena'],
-      ['formato', 'Formato'],
-      ['id_local', 'Código local'],
-      ['nombre_local', 'Nombre local'],
-      ['id_producto', 'ID producto'],
-      ['categoria_tareas', 'Categoría'],
-      ['disponible', 'Disponible'],
-      ['observacion', 'Observación']
-    ];
     var html = '<table class="preview-table"><thead><tr>' +
-      headers.map(function (h) { return '<th>' + h[1] + '</th>'; }).join('') +
+      columns.map(function (column) { return '<th>' + escapeHtml(column.label) + '</th>'; }).join('') +
       '</tr></thead><tbody>';
     html += rows.map(function (row) {
-      return '<tr>' + headers.map(function (h) {
-        var value = h[0] === 'disponible' ? formatBoolean(row[h[0]]) : row[h[0]];
-        return '<td title="' + escapeHtml(value) + '">' + escapeHtml(value) + '</td>';
+      return '<tr>' + columns.map(function (column) {
+        var value = column.key === 'disponible' || column.key === 'implementado' ? formatBoolean(row[column.key]) : row[column.key];
+        return '<td title="' + escapeAttribute(value) + '">' + escapeHtml(value) + '</td>';
       }).join('') + '</tr>';
     }).join('');
     html += '</tbody></table>';
     previewTableWrap.innerHTML = html;
   }
 
+  function loadOptions() {
+    options = null;
+    renderFilters();
+    previewMeta.textContent = 'Cargando...';
+    previewTableWrap.innerHTML = '<div class="preview-empty">Cargando filtros...</div>';
+    return window.RetailAPI.requestJson('/web/levantamientos/' + currentType() + '/filtros')
+      .then(function (payload) {
+        options = payload || {};
+        renderFilters();
+        return loadPreview();
+      })
+      .catch(function () {
+        previewMeta.textContent = 'Error';
+        previewTableWrap.innerHTML = '<div class="preview-empty">No se pudieron cargar los filtros.</div>';
+      });
+  }
+
   function loadPreview() {
-    if (currentLabel() !== 'Góndola' || !previewTableWrap) return;
     previewMeta.textContent = 'Cargando...';
     previewTableWrap.innerHTML = '<div class="preview-empty">Cargando levantamientos...</div>';
-    window.RetailAPI.requestJson('/web/levantamientos/gondola/preview' + window.RetailAPI.buildQuery(collectParams()))
+    return window.RetailAPI.requestJson('/web/levantamientos/' + currentType() + '/preview' + window.RetailAPI.buildQuery(collectParams()))
       .then(renderPreview)
       .catch(function () {
-        if (previewMeta) previewMeta.textContent = 'Error';
+        previewMeta.textContent = 'Error';
         previewTableWrap.innerHTML = '<div class="preview-empty">No se pudo cargar la vista previa.</div>';
       });
   }
 
-  function schedulePreview() {
-    if (previewTimer) window.clearTimeout(previewTimer);
-    previewTimer = window.setTimeout(loadPreview, 250);
-  }
-
-  document.addEventListener('click', closeDropdowns);
-  document.querySelectorAll('.cat').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      window.setTimeout(function () {
-        renderFilters();
-        schedulePreview();
-      }, 0);
-    });
-  });
-  applyBtn.addEventListener('click', function () {
-    if (currentLabel() !== 'Góndola') return;
-    var original = applyBtn.innerHTML;
-    applyBtn.disabled = true;
-    applyBtn.textContent = 'Preparando descarga...';
-    window.RetailAPI.request('/web/levantamientos/gondola.csv' + window.RetailAPI.buildQuery(collectParams()))
+  function downloadCsv() {
+    var original = downloadBtn.innerHTML;
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = 'Preparando descarga...';
+    window.RetailAPI.request('/web/levantamientos/' + currentType() + '.csv' + window.RetailAPI.buildQuery(collectParams()))
       .then(function (response) { return response.blob(); })
       .then(function (blob) {
         var a = document.createElement('a');
         var url = URL.createObjectURL(blob);
         a.href = url;
-        a.download = 'levantamientos-gondola-retailexperts.csv';
+        a.download = FILENAME_BY_TYPE[currentType()] || 'levantamientos-retailexperts.csv';
         document.body.appendChild(a);
         a.click();
         a.remove();
         URL.revokeObjectURL(url);
       })
       .finally(function () {
-        applyBtn.disabled = false;
-        applyBtn.innerHTML = original;
+        downloadBtn.disabled = false;
+        downloadBtn.innerHTML = original;
       });
-  });
+  }
 
-  window.RetailAPI.requestJson('/web/levantamientos/gondola/filtros')
-    .then(function (payload) {
-      options = payload || {};
-      renderFilters();
-      loadPreview();
+  document.addEventListener('click', closeDropdowns);
+  document.querySelectorAll('.cat').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      window.setTimeout(loadOptions, 0);
     });
+  });
+  applyBtn.addEventListener('click', loadPreview);
+  clearBtn.addEventListener('click', clearFilters);
+  downloadBtn.addEventListener('click', downloadCsv);
+
+  loadOptions();
 })();
