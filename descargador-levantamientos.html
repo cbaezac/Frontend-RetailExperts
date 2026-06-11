@@ -280,6 +280,97 @@
   .btn-apply:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
   .btn-apply:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 
+  .preview-panel {
+    margin-top: clamp(34px, 5vh, 52px);
+    background: rgba(255,255,255,0.78);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 18px 48px rgba(44,18,64,0.08);
+    overflow: hidden;
+  }
+  .preview-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: flex-start;
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid rgba(44,18,64,0.10);
+    background: rgba(255,255,255,0.62);
+  }
+  .preview-title {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--ink);
+  }
+  .preview-subtitle {
+    margin-top: 4px;
+    font-size: 0.88rem;
+    color: var(--muted);
+  }
+  .preview-meta {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--muted);
+    white-space: nowrap;
+    padding-top: 4px;
+  }
+  .preview-note {
+    display: none;
+    margin: 14px 20px 0;
+    border: 1px solid rgba(139,47,201,0.18);
+    border-radius: 12px;
+    background: rgba(139,47,201,0.08);
+    color: var(--muted);
+    padding: 11px 13px;
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+  .preview-note.is-visible { display: block; }
+  .preview-table-wrap {
+    overflow: auto;
+    max-height: 430px;
+    padding: 14px 20px 20px;
+  }
+  .preview-table {
+    width: 100%;
+    min-width: 920px;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+    color: #30273a;
+    background: #fff;
+    border: 1px solid rgba(44,18,64,0.10);
+  }
+  .preview-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    text-align: left;
+    vertical-align: bottom;
+    background: #fbf8fd;
+    color: #5d4c69;
+    border-bottom: 1px solid rgba(44,18,64,0.16);
+    border-right: 1px solid rgba(44,18,64,0.10);
+    padding: 10px 9px;
+    font-weight: 800;
+  }
+  .preview-table td {
+    border-right: 1px solid rgba(44,18,64,0.08);
+    padding: 8px 9px;
+    white-space: nowrap;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .preview-table tbody tr:nth-child(even) { background: rgba(44,18,64,0.045); }
+  .preview-table tbody tr:hover { background: rgba(139,47,201,0.08); }
+  .preview-empty {
+    padding: 28px 20px;
+    color: var(--muted);
+    text-align: center;
+    font-weight: 700;
+  }
+
   @media (max-width: 860px) { .cats { grid-template-columns: repeat(2, 1fr); } }
 </style>
 </head>
@@ -316,6 +407,20 @@
         Aplicar y descargar
       </button>
     </div>
+
+    <section class="preview-panel" id="previewPanel" aria-live="polite">
+      <div class="preview-head">
+        <div>
+          <h2 class="preview-title">Vista previa de levantamientos</h2>
+          <p class="preview-subtitle" id="previewSubtitle">Últimos registros de Góndola según los filtros seleccionados.</p>
+        </div>
+        <span class="preview-meta" id="previewMeta">Cargando...</span>
+      </div>
+      <p class="preview-note" id="previewNote">Sin filtro de fecha: se mostrarán y descargarán los últimos 30 días.</p>
+      <div class="preview-table-wrap" id="previewTableWrap">
+        <div class="preview-empty">Cargando levantamientos...</div>
+      </div>
+    </section>
   </div>
 
   <script>
@@ -527,6 +632,6 @@
     renderFilters(initialCat ? initialCat.textContent.trim() : 'Góndola');
   </script>
   <script src="assets/js/api.js"></script>
-  <script src="assets/js/descargador-api.js?v=202606111020"></script>
+  <script src="assets/js/descargador-api.js?v=202606111035"></script>
 </body>
 </html>

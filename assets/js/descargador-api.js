@@ -4,7 +4,13 @@
   var filtersEl = document.getElementById('filters');
   var applyBtn = document.getElementById('applyBtn');
   var applySummary = document.getElementById('applySummary');
+  var previewPanel = document.getElementById('previewPanel');
+  var previewTableWrap = document.getElementById('previewTableWrap');
+  var previewMeta = document.getElementById('previewMeta');
+  var previewNote = document.getElementById('previewNote');
+  var previewSubtitle = document.getElementById('previewSubtitle');
   var options = null;
+  var previewTimer = null;
 
   var applyClone = applyBtn.cloneNode(true);
   applyBtn.parentNode.replaceChild(applyClone, applyBtn);
@@ -58,6 +64,7 @@
         : 'próximamente'
     );
     applyBtn.disabled = !isGondola;
+    if (previewPanel) previewPanel.style.display = isGondola ? '' : 'none';
   }
 
   function buildFilter(name) {
@@ -102,6 +109,7 @@
       var has = dd.querySelectorAll('input[type="checkbox"]:checked').length > 0;
       btn.classList.toggle('has-selection', has);
       updateSummary();
+      schedulePreview();
     });
     var search = dd.querySelector('.dd-search');
     if (search) search.addEventListener('input', function () {
@@ -116,6 +124,7 @@
       btn.classList.remove('has-selection');
       closeDropdowns();
       updateSummary();
+      schedulePreview();
     });
     var dateApply = dd.querySelector('.dd-apply');
     if (dateApply) dateApply.addEventListener('click', function () {
@@ -123,6 +132,7 @@
       btn.classList.toggle('has-selection', has);
       closeDropdowns();
       updateSummary();
+      schedulePreview();
     });
   }
 
@@ -151,10 +161,90 @@
     return params;
   }
 
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function formatBoolean(value) {
+    if (value === true || value === 'true') return 'Sí';
+    if (value === false || value === 'false') return 'No';
+    return value == null ? '' : String(value);
+  }
+
+  function renderPreview(payload) {
+    if (!previewTableWrap) return;
+    var rows = (payload && payload.rows) || [];
+    var total = payload && Number(payload.total || 0);
+    if (previewNote) {
+      previewNote.classList.toggle('is-visible', !!(payload && payload.defaultDateApplied));
+    }
+    if (previewSubtitle) {
+      previewSubtitle.textContent = payload && payload.defaultDateApplied
+        ? 'Últimos registros de Góndola de los últimos 30 días.'
+        : 'Últimos registros de Góndola según los filtros seleccionados.';
+    }
+    if (previewMeta) {
+      previewMeta.textContent = rows.length
+        ? 'Mostrando ' + rows.length + ' de ' + total + ' registros'
+        : 'Sin registros';
+    }
+    if (!rows.length) {
+      previewTableWrap.innerHTML = '<div class="preview-empty">No hay levantamientos para estos filtros.</div>';
+      return;
+    }
+    var headers = [
+      ['fecha_ejecucion', 'Fecha ejecución'],
+      ['cadena', 'Cadena'],
+      ['formato', 'Formato'],
+      ['id_local', 'Código local'],
+      ['nombre_local', 'Nombre local'],
+      ['id_producto', 'ID producto'],
+      ['categoria_tareas', 'Categoría'],
+      ['disponible', 'Disponible'],
+      ['observacion', 'Observación']
+    ];
+    var html = '<table class="preview-table"><thead><tr>' +
+      headers.map(function (h) { return '<th>' + h[1] + '</th>'; }).join('') +
+      '</tr></thead><tbody>';
+    html += rows.map(function (row) {
+      return '<tr>' + headers.map(function (h) {
+        var value = h[0] === 'disponible' ? formatBoolean(row[h[0]]) : row[h[0]];
+        return '<td title="' + escapeHtml(value) + '">' + escapeHtml(value) + '</td>';
+      }).join('') + '</tr>';
+    }).join('');
+    html += '</tbody></table>';
+    previewTableWrap.innerHTML = html;
+  }
+
+  function loadPreview() {
+    if (currentLabel() !== 'Góndola' || !previewTableWrap) return;
+    previewMeta.textContent = 'Cargando...';
+    previewTableWrap.innerHTML = '<div class="preview-empty">Cargando levantamientos...</div>';
+    window.RetailAPI.requestJson('/web/levantamientos/gondola/preview' + window.RetailAPI.buildQuery(collectParams()))
+      .then(renderPreview)
+      .catch(function () {
+        if (previewMeta) previewMeta.textContent = 'Error';
+        previewTableWrap.innerHTML = '<div class="preview-empty">No se pudo cargar la vista previa.</div>';
+      });
+  }
+
+  function schedulePreview() {
+    if (previewTimer) window.clearTimeout(previewTimer);
+    previewTimer = window.setTimeout(loadPreview, 250);
+  }
+
   document.addEventListener('click', closeDropdowns);
   document.querySelectorAll('.cat').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      window.setTimeout(renderFilters, 0);
+      window.setTimeout(function () {
+        renderFilters();
+        schedulePreview();
+      }, 0);
     });
   });
   applyBtn.addEventListener('click', function () {
@@ -184,5 +274,6 @@
     .then(function (payload) {
       options = payload || {};
       renderFilters();
+      loadPreview();
     });
 })();
