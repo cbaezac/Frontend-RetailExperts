@@ -15,7 +15,7 @@
     'Formato': 'formato',
     'Código Local': 'codigo_local',
     'Nombre Local': 'nombre_local',
-    'Categoría': 'producto'
+    'Categoría': 'categoria'
   };
 
   function currentLabel() {
@@ -50,9 +50,14 @@
   }
 
   function updateSummary() {
+    var isGondola = currentLabel() === 'Góndola';
     var active = document.querySelectorAll('.filter.has-selection').length;
-    applySummary.textContent = currentLabel() + ' · ' +
-      (active === 0 ? 'sin filtros adicionales' : active + (active === 1 ? ' filtro aplicado' : ' filtros aplicados'));
+    applySummary.textContent = currentLabel() + ' · ' + (
+      isGondola
+        ? (active === 0 ? 'sin filtros adicionales' : active + (active === 1 ? ' filtro aplicado' : ' filtros aplicados'))
+        : 'próximamente'
+    );
+    applyBtn.disabled = !isGondola;
   }
 
   function buildFilter(name) {
@@ -153,16 +158,17 @@
     });
   });
   applyBtn.addEventListener('click', function () {
+    if (currentLabel() !== 'Góndola') return;
     var original = applyBtn.innerHTML;
     applyBtn.disabled = true;
     applyBtn.textContent = 'Preparando descarga...';
-    window.RetailAPI.request('/web/base-datos/productos.csv' + window.RetailAPI.buildQuery(collectParams()))
+    window.RetailAPI.request('/web/levantamientos/gondola.csv' + window.RetailAPI.buildQuery(collectParams()))
       .then(function (response) { return response.blob(); })
       .then(function (blob) {
         var a = document.createElement('a');
         var url = URL.createObjectURL(blob);
         a.href = url;
-        a.download = 'productos-retailexperts.csv';
+        a.download = 'levantamientos-gondola-retailexperts.csv';
         document.body.appendChild(a);
         a.click();
         a.remove();
@@ -174,7 +180,7 @@
       });
   });
 
-  window.RetailAPI.requestJson('/web/galeria/filtros')
+  window.RetailAPI.requestJson('/web/levantamientos/gondola/filtros')
     .then(function (payload) {
       options = payload || {};
       renderFilters();
