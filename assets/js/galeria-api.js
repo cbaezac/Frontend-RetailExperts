@@ -498,6 +498,16 @@
     });
   }
 
+  function zipFileName() {
+    var sectionNames = {
+      gondola: 'Gondola',
+      carteleria: 'Carteleria',
+      exhibicion: 'Exhibiciones',
+      exhibicion_adicional: 'ExhibicionesAdicionales'
+    };
+    return 'Fotografias-RetailExperts(' + (sectionNames[currentType()] || 'Galeria') + ').zip';
+  }
+
   function downloadZip(photoList) {
     return Promise.all(photoList.map(function (photo, index) {
       return fetchPhotoBlob(photo).then(function (blob) {
@@ -506,7 +516,7 @@
         });
       });
     })).then(function (files) {
-      downloadBlob(createZip(files), 'fotografias-retail-experts.zip');
+      downloadBlob(createZip(files), zipFileName());
     });
   }
 
