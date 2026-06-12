@@ -1705,5 +1705,41 @@ function enviarFormulario(e) {
 }
 </script>
 
+<!-- CLIENTES: enlaces a sitios web -->
+<script>
+(function () {
+  var clientes = [
+    { nombre: 'Adclean',     url: 'https://tienda.adclean.cl/' },
+    { nombre: 'B-Japi',      url: 'https://b-japi.com/' },
+    { nombre: 'Café Haití',  url: 'https://cafehaiti.cl/' },
+    { nombre: 'Kuna Foods',  url: 'https://kunafoods.cl/' },
+    { nombre: 'Manare',      url: 'https://manare.cl/' },
+    { nombre: 'Olisur',      url: 'https://www.olisur.com/' },
+    { nombre: 'Panesco',     url: 'https://panescofood.cl/' },
+    { nombre: 'Prater',      url: 'https://labprater.cl/' },
+    { nombre: 'Procarne',    url: 'https://www.procarne.cl/' },
+    { nombre: 'Puri',        url: 'https://puricompany.com/' }
+  ];
+
+  var logos = document.querySelectorAll('#clientes .clients-grid .client-logo');
+  logos.forEach(function (logo, i) {
+    var c = clientes[i];
+    if (!c) return;
+    logo.style.cursor = 'pointer';
+    logo.setAttribute('role', 'link');
+    logo.setAttribute('tabindex', '0');
+    logo.setAttribute('title', 'Visitar el sitio de ' + c.nombre);
+    logo.setAttribute('aria-label', 'Visitar el sitio de ' + c.nombre);
+
+    function ir() { window.open(c.url, '_blank', 'noopener,noreferrer'); }
+
+    logo.addEventListener('click', ir);
+    logo.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ir(); }
+    });
+  });
+})();
+</script>
+
 </body>
 </html>
