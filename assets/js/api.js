@@ -1,5 +1,13 @@
 (function () {
-  var API_BASE_URL = 'https://api.retailexperts.cl';
+  // En local (abriendo el HTML en localhost o como archivo) apunta al backend
+  // local; en cualquier otro host (Netlify/prod) usa la API productiva.
+  var API_BASE_URL = (function () {
+    var h = window.location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '') {
+      return 'http://localhost:3000';
+    }
+    return 'https://api.retailexperts.cl';
+  })();
   var TOKEN_KEY = 'retailexperts_web_token';
   var USER_KEY = 'retailexperts_web_user';
 

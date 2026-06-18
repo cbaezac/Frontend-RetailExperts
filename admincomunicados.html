@@ -104,6 +104,53 @@
   .toast{ position:fixed; left:50%; bottom:30px; transform:translateX(-50%) translateY(20px); background:#15130E; color:#FFF8E7; font-family:var(--font-display); font-weight:600; font-size:.92rem; padding:13px 24px; border-radius:999px; box-shadow:0 16px 40px rgba(0,0,0,.3); z-index:200; opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease; display:inline-flex; align-items:center; gap:9px; }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
   .toast svg{ width:16px; height:16px; }
+  .var-chips{ display:flex; flex-wrap:wrap; align-items:center; gap:7px; margin:2px 0 12px; }
+  .var-hint{ font-size:.78rem; color:#8a7f70; font-weight:600; }
+  .chip{ font-family:var(--font-body); font-size:.78rem; font-weight:600; color:var(--purple); background:rgba(90,13,116,.07); border:1px solid rgba(90,13,116,.18); border-radius:999px; padding:5px 11px; cursor:pointer; transition:background .18s, color .18s, border-color .18s; }
+  .chip:hover{ background:var(--purple); color:#fff; border-color:var(--purple); }
+  .chip code{ font-family:inherit; }
+  .tabs{ display:flex; gap:4px; margin-bottom:26px; border-bottom:2px solid #ece4d4; }
+  .tab{ font-family:var(--font-display); font-weight:700; font-size:.95rem; color:#9a8fa0; background:none; border:none; padding:11px 20px; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; transition:color .2s, border-color .2s; }
+  .tab.is-active{ color:var(--purple); border-bottom-color:var(--purple); }
+  .tab-panel{ display:none; }
+  .tab-panel.is-active{ display:block; }
+  .rules-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+  .rules-head h2{ font-family:var(--font-display); font-size:1.25rem; color:#1a1320; }
+  .btn-new{ background:var(--purple); color:#fff; border:none; border-radius:999px; padding:10px 18px; font-family:var(--font-display); font-weight:700; font-size:.9rem; cursor:pointer; }
+  .btn-new:hover{ background:var(--purple-deep); }
+  .rule-card{ background:#fff; border:1px solid #ece4d4; border-radius:14px; padding:16px 18px; margin-bottom:12px; display:flex; align-items:flex-start; gap:14px; }
+  .rule-main{ flex:1; min-width:0; }
+  .rule-name{ font-family:var(--font-display); font-weight:700; font-size:1rem; color:#1a1320; margin-bottom:5px; }
+  .rule-meta{ font-size:.8rem; color:#8a7f70; margin-bottom:7px; }
+  .rule-badge{ display:inline-block; font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:3px 9px; border-radius:999px; margin-right:7px; }
+  .badge-prog{ background:rgba(90,13,116,.1); color:var(--purple); }
+  .badge-evt{ background:rgba(216,72,26,.12); color:#D8481A; }
+  .rule-body{ font-size:.86rem; color:#3a3340; line-height:1.4; }
+  .rule-actions{ display:flex; flex-direction:column; gap:8px; align-items:flex-end; flex:0 0 auto; }
+  .switch{ position:relative; display:inline-block; width:42px; height:24px; }
+  .switch input{ opacity:0; width:0; height:0; }
+  .slider{ position:absolute; cursor:pointer; inset:0; background:#ccc; border-radius:999px; transition:.2s; }
+  .slider::before{ content:''; position:absolute; height:18px; width:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.2s; }
+  .switch input:checked + .slider{ background:#3BA55D; }
+  .switch input:checked + .slider::before{ transform:translateX(18px); }
+  .rule-link{ background:none; border:none; color:#8a7f70; font-size:.78rem; cursor:pointer; padding:2px 4px; font-weight:600; }
+  .rule-link:hover{ color:var(--purple); }
+  .rule-link.danger:hover{ color:#c0392b; }
+  .rule-form{ background:#fff; border:1px solid #ece4d4; border-radius:14px; padding:22px; margin-bottom:20px; display:none; }
+  .rule-form.is-open{ display:block; }
+  .rule-form .field{ margin-bottom:14px; }
+  .rule-form label{ display:block; font-size:.82rem; font-weight:600; color:#3a3340; margin-bottom:6px; }
+  .rule-form input[type=text], .rule-form input[type=time], .rule-form textarea, .rule-form select{ width:100%; padding:10px 12px; border:1.5px solid #e2d9c0; border-radius:9px; font-family:var(--font-body); font-size:.92rem; background:#fff; color:#1a1a1a; }
+  .rule-form textarea{ min-height:70px; resize:vertical; }
+  .seg-row{ display:flex; gap:18px; flex-wrap:wrap; align-items:center; }
+  .seg-row label{ display:flex; align-items:center; gap:6px; margin:0; font-weight:600; }
+  .days{ display:flex; gap:6px; flex-wrap:wrap; }
+  .day-chip{ border:1.5px solid #e2d9c0; border-radius:8px; padding:6px 11px; font-size:.8rem; cursor:pointer; user-select:none; }
+  .day-chip.on{ background:var(--purple); color:#fff; border-color:var(--purple); }
+  .form-actions{ display:flex; gap:10px; margin-top:6px; }
+  .btn-save{ background:var(--orange); color:#fff; border:none; border-radius:999px; padding:11px 24px; font-family:var(--font-display); font-weight:700; cursor:pointer; }
+  .btn-cancel{ background:none; border:1.5px solid #ddd; border-radius:999px; padding:11px 22px; font-weight:600; cursor:pointer; }
+  .muted-empty{ text-align:center; color:#9a8fa0; padding:34px; font-size:.9rem; }
   @media (max-width:980px){ .layout{ grid-template-columns:1fr; } .preview-col{ position:static; } .phone{ margin-top:8px; } }
 </style>
 </head>
@@ -124,6 +171,12 @@
     <h1 class="page-title">Comunicados</h1>
     <p class="page-sub">Segmenta a los reponedores, escribe tu mensaje y míralo tal como aparecerá en su celular antes de enviarlo.</p>
 
+    <div class="tabs" id="tabs">
+      <button class="tab is-active" data-tab="manual" type="button">Manual</button>
+      <button class="tab" data-tab="auto" type="button">Automáticas</button>
+    </div>
+
+    <section id="tab-manual" class="tab-panel is-active">
     <div class="layout">
       <div class="form-col">
         <section class="panel">
@@ -155,6 +208,14 @@
           <div class="field" style="margin-bottom:10px;">
             <label for="mensaje">Mensaje</label>
             <textarea id="mensaje" maxlength="180" placeholder="Escribe el comunicado que recibirán los reponedores…"></textarea>
+            <div class="var-chips" id="varChips">
+              <span class="var-hint">Insertar variable:</span>
+              <button type="button" class="chip" data-var="cliente">cliente</button>
+              <button type="button" class="chip" data-var="formato">formato</button>
+              <button type="button" class="chip" data-var="ruta">ruta</button>
+              <button type="button" class="chip" data-var="local">local</button>
+              <button type="button" class="chip" data-var="nombre">nombre</button>
+            </div>
             <div class="char-row"><span class="char-count" id="charCount">0 / 180</span></div>
           </div>
           <div class="send-row">
@@ -198,6 +259,83 @@
         </div>
       </div>
     </div>
+    </section>
+
+    <section id="tab-auto" class="tab-panel">
+      <div class="rules-head">
+        <h2>Reglas automáticas</h2>
+        <button class="btn-new" id="btnNewRule" type="button">+ Nueva regla</button>
+      </div>
+
+      <form class="rule-form" id="ruleForm">
+        <input type="hidden" id="ruleId" />
+        <div class="field">
+          <label>Nombre de la regla</label>
+          <input type="text" id="ruleNombre" placeholder="Ej. Recordatorio responde locales" />
+        </div>
+        <div class="field">
+          <label>¿Cuándo se dispara?</label>
+          <div class="seg-row">
+            <label><input type="radio" name="disp" value="programada" checked /> Programada (por horario)</label>
+            <label><input type="radio" name="disp" value="evento" /> Por evento del sistema</label>
+          </div>
+        </div>
+
+        <div id="dispProgramada">
+          <div class="field">
+            <label>Hora</label>
+            <input type="time" id="ruleHora" value="09:00" />
+          </div>
+          <div class="field">
+            <label>Días (sin seleccionar = todos los días)</label>
+            <div class="days" id="ruleDays">
+              <span class="day-chip" data-d="1">Lun</span>
+              <span class="day-chip" data-d="2">Mar</span>
+              <span class="day-chip" data-d="3">Mié</span>
+              <span class="day-chip" data-d="4">Jue</span>
+              <span class="day-chip" data-d="5">Vie</span>
+              <span class="day-chip" data-d="6">Sáb</span>
+              <span class="day-chip" data-d="0">Dom</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="dispEvento" style="display:none;">
+          <div class="field">
+            <label>Evento que la dispara</label>
+            <select id="ruleEvento">
+              <option value="stock_actualizado">Cuando se actualiza el stock</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Título</label>
+          <input type="text" id="ruleTitulo" maxlength="50" placeholder="Ej. Stock actualizado" />
+        </div>
+        <div class="field" style="margin-bottom:8px;">
+          <label>Mensaje</label>
+          <textarea id="ruleCuerpo" maxlength="180" placeholder="Escribe el mensaje…"></textarea>
+          <div class="var-chips" id="ruleChips">
+            <span class="var-hint">Insertar variable:</span>
+            <button type="button" class="chip" data-var="nombre">nombre</button>
+          </div>
+        </div>
+        <div class="field">
+          <label style="display:flex; align-items:center; gap:8px; font-weight:600;">
+            <input type="checkbox" id="ruleActiva" checked /> Activa (corriendo)
+          </label>
+        </div>
+        <p class="rule-meta" style="margin-bottom:14px;">Por ahora las reglas se envían a <b>todos</b> los reponedores con la app. La segmentación por ruta se puede agregar después.</p>
+
+        <div class="form-actions">
+          <button type="button" class="btn-save" id="ruleSave">Guardar regla</button>
+          <button type="button" class="btn-cancel" id="ruleCancel">Cancelar</button>
+        </div>
+      </form>
+
+      <div id="rulesList"><div class="muted-empty">Cargando reglas…</div></div>
+    </section>
   </main>
 
   <div class="toast" id="toast"></div>
@@ -273,17 +411,54 @@
       clearBtn.style.display = anyFilter ? 'inline-block' : 'none';
       window.__recipients=nR;
       updateSendState();
+      updatePreview();
     }
 
     var titulo=document.getElementById('titulo'), mensaje=document.getElementById('mensaje');
     var nTitle=document.getElementById('notifTitle'), nBody=document.getElementById('notifBody'), notif=document.getElementById('notif');
     var charCount=document.getElementById('charCount'), sendBtn=document.getElementById('sendBtn'), sendHint=document.getElementById('sendHint');
+
+    // Resuelve las variables de segmentación a partir de lo seleccionado arriba.
+    // Si hay varios seleccionados, se unen con " y ". {nombre} lo rellena el backend.
+    function resolveVars(){
+      function joinSel(arr, fmt){ return (arr && arr.length) ? arr.map(fmt).join(' y ') : null; }
+      return {
+        cliente: joinSel(selections.cliente, function(i){ return CLIENT_LABELS[i]; }),
+        formato: joinSel(selections.formato, function(v){ return v; }),
+        ruta:    joinSel(selections.ruta, fmtRuta),
+        local:   joinSel(selections.nombre, titleCase)
+      };
+    }
+    // Sustituye {var} en un texto. En preview muestra [var] si falta valor.
+    function applyVars(text, forPreview){
+      var v = resolveVars();
+      return String(text).replace(/\{(\w+)\}/g, function(m, key){
+        if(key === 'nombre') return forPreview ? '[nombre]' : m;
+        var val = v[key];
+        if(val) return val;
+        return forPreview ? '['+key+']' : m;
+      });
+    }
+
+    // Botones para insertar variables en el cursor del mensaje.
+    document.getElementById('varChips').addEventListener('click', function(e){
+      var btn = e.target.closest('.chip'); if(!btn) return;
+      var token = '{'+btn.getAttribute('data-var')+'}';
+      var start = mensaje.selectionStart != null ? mensaje.selectionStart : mensaje.value.length;
+      var end   = mensaje.selectionEnd   != null ? mensaje.selectionEnd   : mensaje.value.length;
+      mensaje.value = mensaje.value.slice(0,start) + token + mensaje.value.slice(end);
+      mensaje.focus();
+      var pos = start + token.length;
+      mensaje.setSelectionRange(pos, pos);
+      updatePreview();
+    });
+
     function updatePreview(){
       var t=titulo.value.trim(), msg=mensaje.value;
       var empty = !t && !msg.trim();
       notif.classList.toggle('placeholder', empty);
-      nTitle.textContent = t || (empty?'Título del comunicado':'Retail Experts');
-      nBody.textContent = msg.trim() ? msg : (empty?'Aquí aparecerá el mensaje que escribas para los reponedores.':'');
+      nTitle.textContent = t ? applyVars(t,true) : (empty?'Título del comunicado':'Retail Experts');
+      nBody.textContent = msg.trim() ? applyVars(msg,true) : (empty?'Aquí aparecerá el mensaje que escribas para los reponedores.':'');
       charCount.textContent=msg.length+' / 180';
       charCount.classList.toggle('warn', msg.length>160);
       updateSendState();
@@ -315,10 +490,38 @@
     }
     sendBtn.addEventListener('click', function(){
       if(sendBtn.disabled) return;
-      var nR=window.__recipients||0;
-      // Placeholder: aquí se conectará el envío real de la notificación push al backend.
-      toast('Comunicado enviado a '+nR+(nR===1?' reponedor':' reponedores'));
-      notif.style.animation='none'; void notif.offsetWidth; notif.style.animation='';
+
+      // Resuelve la segmentación: rutas de las salas que pasan los filtros.
+      // Sin filtros => null => broadcast a todos en el backend.
+      var anyFilter = FILTERS.some(function(f){ return selections[f.id].length; });
+      var rutasSet = {};
+      SALAS.filter(matchSala).forEach(function(s){ if(s[2]) rutasSet[s[2]]=true; });
+      var rutas = anyFilter ? Object.keys(rutasSet) : null;
+
+      var payload = {
+        titulo: (titulo.value.trim() || 'Retail Experts'),
+        mensaje: mensaje.value.trim(),
+        rutas: rutas,
+        variables: resolveVars()
+      };
+
+      var prevHtml = sendBtn.innerHTML;
+      sendBtn.disabled = true;
+      sendBtn.textContent = 'Enviando…';
+
+      window.RetailAPI.requestJson('/web/notificaciones/comunicado', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      }).then(function(res){
+        var n = (res && res.destinatarios) || 0;
+        toast('Comunicado enviado a '+n+(n===1?' reponedor':' reponedores'));
+        notif.style.animation='none'; void notif.offsetWidth; notif.style.animation='';
+      }).catch(function(err){
+        toast('Error al enviar: '+((err && err.message) || 'intenta de nuevo'));
+      }).finally(function(){
+        sendBtn.innerHTML = prevHtml;
+        updateSendState();
+      });
     });
 
     updateAudience();
@@ -326,5 +529,189 @@
   </script>
   <script src="assets/js/api.js"></script>
   <script src="assets/js/admin-guard.js"></script>
+  <script>
+  (function(){
+    var API = window.RetailAPI;
+
+    // --- Pestañas Manual / Automáticas ---
+    var rulesLoaded = false;
+    document.getElementById('tabs').addEventListener('click', function(e){
+      var btn = e.target.closest('.tab'); if(!btn) return;
+      var tab = btn.getAttribute('data-tab');
+      document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('is-active', t===btn); });
+      document.getElementById('tab-manual').classList.toggle('is-active', tab==='manual');
+      document.getElementById('tab-auto').classList.toggle('is-active', tab==='auto');
+      if(tab==='auto' && !rulesLoaded){ rulesLoaded = true; cargarReglas(); }
+    });
+
+    // --- Form: mostrar/ocultar campos según disparador ---
+    var form = document.getElementById('ruleForm');
+    var diasSel = {};
+    function disparadorActual(){ return (form.querySelector('input[name="disp"]:checked')||{}).value || 'programada'; }
+    function syncDisparadorUI(){
+      var d = disparadorActual();
+      document.getElementById('dispProgramada').style.display = d==='programada' ? 'block' : 'none';
+      document.getElementById('dispEvento').style.display     = d==='evento'     ? 'block' : 'none';
+    }
+    form.querySelectorAll('input[name="disp"]').forEach(function(r){ r.addEventListener('change', syncDisparadorUI); });
+
+    // Días de la semana (toggle)
+    document.getElementById('ruleDays').addEventListener('click', function(e){
+      var chip = e.target.closest('.day-chip'); if(!chip) return;
+      var d = chip.getAttribute('data-d');
+      if(diasSel[d]){ delete diasSel[d]; chip.classList.remove('on'); }
+      else { diasSel[d] = true; chip.classList.add('on'); }
+    });
+
+    // Insertar {nombre} en el mensaje de la regla
+    var ruleCuerpo = document.getElementById('ruleCuerpo');
+    document.getElementById('ruleChips').addEventListener('click', function(e){
+      var btn = e.target.closest('.chip'); if(!btn) return;
+      var token = '{'+btn.getAttribute('data-var')+'}';
+      var s = ruleCuerpo.selectionStart != null ? ruleCuerpo.selectionStart : ruleCuerpo.value.length;
+      var en = ruleCuerpo.selectionEnd != null ? ruleCuerpo.selectionEnd : ruleCuerpo.value.length;
+      ruleCuerpo.value = ruleCuerpo.value.slice(0,s)+token+ruleCuerpo.value.slice(en);
+      ruleCuerpo.focus(); ruleCuerpo.setSelectionRange(s+token.length, s+token.length);
+    });
+
+    // --- Abrir/cerrar form ---
+    function abrirForm(){ form.classList.add('is-open'); }
+    function cerrarForm(){ form.classList.remove('is-open'); }
+    function resetForm(){
+      document.getElementById('ruleId').value = '';
+      document.getElementById('ruleNombre').value = '';
+      form.querySelector('input[name="disp"][value="programada"]').checked = true;
+      document.getElementById('ruleHora').value = '09:00';
+      diasSel = {}; document.querySelectorAll('.day-chip').forEach(function(c){ c.classList.remove('on'); });
+      document.getElementById('ruleEvento').value = 'stock_actualizado';
+      document.getElementById('ruleTitulo').value = '';
+      ruleCuerpo.value = '';
+      document.getElementById('ruleActiva').checked = true;
+      syncDisparadorUI();
+    }
+    document.getElementById('btnNewRule').addEventListener('click', function(){ resetForm(); abrirForm(); });
+    document.getElementById('ruleCancel').addEventListener('click', cerrarForm);
+
+    // --- Guardar (crear o editar) ---
+    document.getElementById('ruleSave').addEventListener('click', function(){
+      var id = document.getElementById('ruleId').value;
+      var disp = disparadorActual();
+      var payload = {
+        nombre: document.getElementById('ruleNombre').value.trim(),
+        disparador: disp,
+        hora: disp==='programada' ? document.getElementById('ruleHora').value : null,
+        dias_semana: disp==='programada' ? Object.keys(diasSel).map(Number) : null,
+        evento: disp==='evento' ? document.getElementById('ruleEvento').value : null,
+        titulo: document.getElementById('ruleTitulo').value.trim(),
+        cuerpo: ruleCuerpo.value.trim(),
+        variables: {},
+        rutas: null,
+        activa: document.getElementById('ruleActiva').checked
+      };
+      if(!payload.nombre || !payload.titulo || !payload.cuerpo){
+        toast('Completa nombre, título y mensaje'); return;
+      }
+      var path = id ? '/web/notificaciones/reglas/'+id : '/web/notificaciones/reglas';
+      var method = id ? 'PUT' : 'POST';
+      API.requestJson(path, { method: method, body: JSON.stringify(payload) })
+        .then(function(){ toast('Regla guardada'); cerrarForm(); cargarReglas(); })
+        .catch(function(err){ toast('Error: '+((err&&err.message)||'no se pudo guardar')); });
+    });
+
+    // --- Cargar y pintar la lista ---
+    function fmtDias(arr){
+      if(!arr || !arr.length) return 'todos los días';
+      var n = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+      return arr.slice().sort().map(function(d){ return n[d]; }).join(', ');
+    }
+    function cargarReglas(){
+      var cont = document.getElementById('rulesList');
+      cont.innerHTML = '<div class="muted-empty">Cargando reglas…</div>';
+      API.requestJson('/web/notificaciones/reglas').then(function(reglas){
+        if(!reglas.length){ cont.innerHTML = '<div class="muted-empty">Aún no hay reglas. Crea una con "+ Nueva regla".</div>'; return; }
+        cont.innerHTML = '';
+        reglas.forEach(function(r){ cont.appendChild(renderRule(r)); });
+      }).catch(function(err){
+        cont.innerHTML = '<div class="muted-empty">Error cargando reglas: '+((err&&err.message)||'')+'</div>';
+      });
+    }
+
+    function renderRule(r){
+      var card = document.createElement('div'); card.className='rule-card';
+      var esProg = r.disparador==='programada';
+      var cuando = esProg
+        ? ('🕐 '+String(r.hora||'').slice(0,5)+' · '+fmtDias(r.dias_semana))
+        : ('⚡ evento: '+(r.evento||''));
+      var badge = esProg ? '<span class="rule-badge badge-prog">Programada</span>'
+                         : '<span class="rule-badge badge-evt">Evento</span>';
+      var main = document.createElement('div'); main.className='rule-main';
+      main.innerHTML =
+        '<div class="rule-name">'+badge+escapeHtml(r.nombre)+'</div>'+
+        '<div class="rule-meta">'+cuando+'</div>'+
+        '<div class="rule-body"><b>'+escapeHtml(r.titulo)+'</b> — '+escapeHtml(r.cuerpo)+'</div>';
+
+      var actions = document.createElement('div'); actions.className='rule-actions';
+      // toggle activa
+      var sw = document.createElement('label'); sw.className='switch';
+      var chk = document.createElement('input'); chk.type='checkbox'; chk.checked=!!r.activa;
+      var sl = document.createElement('span'); sl.className='slider';
+      sw.appendChild(chk); sw.appendChild(sl);
+      chk.addEventListener('change', function(){
+        API.requestJson('/web/notificaciones/reglas/'+r.id+'/activa', { method:'PATCH', body: JSON.stringify({ activa: chk.checked }) })
+          .then(function(){ toast(chk.checked?'Regla activada':'Regla pausada'); })
+          .catch(function(){ chk.checked=!chk.checked; toast('No se pudo cambiar'); });
+      });
+      // probar
+      var test = document.createElement('button'); test.className='rule-link'; test.textContent='Probar ahora';
+      test.addEventListener('click', function(){
+        API.requestJson('/web/notificaciones/reglas/'+r.id+'/ejecutar', { method:'POST' })
+          .then(function(res){ toast('Enviada a '+(res.destinatarios||0)+' reponedor(es)'); })
+          .catch(function(err){ toast('Error: '+((err&&err.message)||'')); });
+      });
+      // editar
+      var edit = document.createElement('button'); edit.className='rule-link'; edit.textContent='Editar';
+      edit.addEventListener('click', function(){ cargarEnForm(r); });
+      // eliminar
+      var del = document.createElement('button'); del.className='rule-link danger'; del.textContent='Eliminar';
+      del.addEventListener('click', function(){
+        if(!confirm('¿Eliminar la regla "'+r.nombre+'"?')) return;
+        API.requestJson('/web/notificaciones/reglas/'+r.id, { method:'DELETE' })
+          .then(function(){ toast('Regla eliminada'); cargarReglas(); })
+          .catch(function(){ toast('No se pudo eliminar'); });
+      });
+
+      actions.appendChild(sw); actions.appendChild(test); actions.appendChild(edit); actions.appendChild(del);
+      card.appendChild(main); card.appendChild(actions);
+      return card;
+    }
+
+    function cargarEnForm(r){
+      document.getElementById('ruleId').value = r.id;
+      document.getElementById('ruleNombre').value = r.nombre || '';
+      form.querySelector('input[name="disp"][value="'+r.disparador+'"]').checked = true;
+      document.getElementById('ruleHora').value = (r.hora||'09:00').slice(0,5);
+      diasSel = {}; document.querySelectorAll('.day-chip').forEach(function(c){ c.classList.remove('on'); });
+      (r.dias_semana||[]).forEach(function(d){ diasSel[d]=true; var c=document.querySelector('.day-chip[data-d="'+d+'"]'); if(c)c.classList.add('on'); });
+      document.getElementById('ruleEvento').value = r.evento || 'stock_actualizado';
+      document.getElementById('ruleTitulo').value = r.titulo || '';
+      ruleCuerpo.value = r.cuerpo || '';
+      document.getElementById('ruleActiva').checked = !!r.activa;
+      syncDisparadorUI();
+      abrirForm();
+      document.getElementById('tab-auto').scrollIntoView({ behavior:'smooth' });
+    }
+
+    function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c]; }); }
+
+    // toast(): reutiliza el del script anterior si existe; si no, define uno simple.
+    function toast(msg){
+      var el=document.getElementById('toast'); if(!el) return alert(msg);
+      el.innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>'+escapeHtml(msg)+'</span>';
+      el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(function(){ el.classList.remove('show'); }, 3000);
+    }
+
+    syncDisparadorUI();
+  })();
+  </script>
 </body>
 </html>
