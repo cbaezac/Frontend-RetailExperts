@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exhibiciones · Tareas · Retail Experts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root{
+    --purple:#5A0D74; --purple-deep:#3D0850; --purple-light:#7B1E99;
+    --orange:#FF5A1F; --orange-dark:#C8480F; --cream:#FFF8E7; --cream-dark:#F5EDD4;
+    --ink:#1A0820; --white:#FFF; --line:rgba(28,26,20,0.14); --line-soft:rgba(28,26,20,0.08);
+    --muted:#6B6557; --card:#FFFDF6; --frame:#15130E; --accent:#7B1E99; --accent-dark:#5A0D74;
+    --font-display:'Bricolage Grotesque',sans-serif; --font-body:'Manrope',sans-serif;
+  }
+  html,body{ min-height:100%; }
+  body{ font-family:var(--font-body); color:var(--ink); background:radial-gradient(120% 80% at 50% -10%, rgba(90,13,116,0.08) 0%, rgba(0,0,0,0) 55%), var(--cream); min-height:100vh; display:flex; flex-direction:column; }
+  .admin-header{ flex:0 0 auto; display:flex; align-items:center; gap:20px; padding:14px clamp(20px,4vw,40px); background:var(--cream); border-bottom:1px solid var(--cream-dark); }
+  .admin-header .logo-img{ height:40px; width:auto; display:block; }
+  .header-divider{ width:1px; height:26px; background:rgba(90,13,116,.18); }
+  .header-title{ font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--purple); letter-spacing:-0.01em; }
+  .header-spacer{ margin-left:auto; }
+  .back-btn{ display:inline-flex; align-items:center; gap:7px; padding:9px 16px; background:transparent; color:var(--purple); border:1.5px solid rgba(90,13,116,.25); border-radius:999px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; transition:background .2s,color .2s,border-color .2s; }
+  .back-btn:hover{ background:var(--purple); color:var(--white); border-color:var(--purple); }
+  .back-btn svg{ width:15px; height:15px; }
+
+  .wrap{ width:100%; max-width:840px; margin:0 auto; padding:clamp(32px,6vh,64px) clamp(20px,4vw,48px) 70px; }
+  .crumb{ display:inline-flex; align-items:center; gap:8px; font-size:.86rem; color:var(--muted); margin-bottom:18px; }
+  .crumb a{ color:var(--muted); text-decoration:none; font-weight:600; }
+  .crumb a:hover{ color:var(--accent); }
+  .head-row{ display:flex; align-items:center; gap:18px; margin-bottom:10px; }
+  .head-ico{ width:60px; height:60px; flex:0 0 auto; display:grid; place-items:center; border-radius:17px; color:#fff; background:linear-gradient(150deg,#5A0D74,#7B1E99); box-shadow:0 14px 30px rgba(90,13,116,0.3); }
+  .head-ico svg{ width:30px; height:30px; }
+  .eyebrow{ font-family:var(--font-display); font-weight:600; text-transform:uppercase; letter-spacing:.2em; font-size:.74rem; color:var(--accent); margin-bottom:6px; }
+  .page-title{ font-family:var(--font-display); font-weight:800; font-size:clamp(2rem,4.5vw,2.9rem); line-height:1; letter-spacing:-.02em; color:var(--purple); }
+  .page-sub{ font-size:1rem; color:var(--muted); line-height:1.6; margin:14px 0 clamp(26px,4vh,38px); max-width:60ch; }
+
+  .panel{ background:var(--card); border:1px solid var(--line); border-radius:20px; padding:clamp(22px,3vw,34px); box-shadow:0 14px 40px rgba(28,26,20,0.08); }
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .field{ display:flex; flex-direction:column; }
+  .field.full{ grid-column:1 / -1; }
+  .field label{ font-family:var(--font-display); font-weight:600; font-size:.82rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:9px; }
+  .field label .req{ color:var(--accent); }
+  .field input[type=text], .field input[type=date], .field select{ width:100%; font-family:var(--font-body); font-size:1rem; color:var(--ink); background:#fff; border:1.5px solid var(--line); border-radius:11px; padding:13px 15px; outline:none; transition:border-color .15s ease; }
+  .field input:focus, .field select:focus{ border-color:var(--accent); }
+  .field select{ appearance:none; -webkit-appearance:none; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5' stroke='%236B6557' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; padding-right:38px; }
+
+  /* multiselect */
+  .ms{ position:relative; }
+  .ms-btn{ width:100%; display:flex; align-items:center; justify-content:space-between; gap:8px; font-family:var(--font-body); font-size:1rem; color:var(--ink); background:#fff; border:1.5px solid var(--line); border-radius:11px; padding:13px 15px; cursor:pointer; text-align:left; transition:border-color .15s ease; }
+  .ms-btn.open, .ms-btn:hover{ border-color:var(--accent); }
+  .ms-btn .ms-ph{ color:var(--muted); }
+  .ms-btn .chev{ display:flex; flex:0 0 auto; transition:transform .2s ease; }
+  .ms-btn.open .chev{ transform:rotate(180deg); }
+  .ms-pop{ position:absolute; top:calc(100% + 8px); left:0; right:0; background:#FFFDF6; border:1px solid var(--line); border-radius:13px; box-shadow:0 24px 60px rgba(28,26,20,.22); padding:11px; z-index:30; display:none; }
+  .ms-pop.open{ display:block; }
+  .ms-search{ width:100%; font-size:.92rem; border:1px solid var(--line); border-radius:9px; padding:9px 11px; margin-bottom:9px; outline:none; }
+  .ms-search:focus{ border-color:var(--accent); }
+  .ms-list{ max-height:210px; overflow-y:auto; display:flex; flex-direction:column; gap:2px; }
+  .ms-item{ display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:8px; cursor:pointer; font-size:.93rem; }
+  .ms-item:hover{ background:rgba(28,26,20,.06); }
+  .ms-item input{ accent-color:var(--accent); width:16px; height:16px; flex:0 0 auto; cursor:pointer; }
+  .ms-empty{ padding:9px; font-size:.88rem; color:var(--muted); }
+  .ms-chips{ display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
+  .chip{ display:inline-flex; align-items:center; gap:6px; font-size:.85rem; font-weight:600; color:var(--accent); background:rgba(90,13,116,0.09); border:1px solid rgba(90,13,116,0.22); border-radius:999px; padding:5px 8px 5px 12px; }
+  .chip button{ display:grid; place-items:center; width:17px; height:17px; border-radius:50%; border:0; background:rgba(0,0,0,.08); color:inherit; cursor:pointer; font-size:.7rem; line-height:1; }
+  .chip button:hover{ background:rgba(0,0,0,.18); }
+
+  .form-foot{ display:flex; align-items:center; gap:16px; margin-top:28px; padding-top:24px; border-top:1px solid var(--line-soft); }
+  .btn-primary{ display:inline-flex; align-items:center; gap:10px; font-family:var(--font-display); font-weight:700; font-size:1.02rem; cursor:pointer; color:#fff; background:var(--accent); border:1.5px solid var(--accent); border-radius:999px; padding:14px 30px; box-shadow:0 14px 32px rgba(90,13,116,0.3); transition:transform .18s ease, background .18s ease; }
+  .btn-primary:hover:not(:disabled){ transform:translateY(-2px); background:var(--accent-dark); }
+  .btn-primary:disabled{ opacity:.45; cursor:not-allowed; box-shadow:none; }
+  .btn-primary svg{ width:17px; height:17px; }
+  .btn-ghost{ font-family:var(--font-display); font-weight:600; font-size:.95rem; color:var(--muted); background:transparent; border:0; cursor:pointer; padding:10px; }
+  .btn-ghost:hover{ color:var(--ink); }
+  .foot-hint{ margin-left:auto; font-size:.85rem; color:var(--muted); }
+
+  .toast{ position:fixed; left:50%; bottom:30px; transform:translateX(-50%) translateY(20px); background:#15130E; color:#FFF8E7; font-family:var(--font-display); font-weight:600; font-size:.92rem; padding:13px 24px; border-radius:999px; box-shadow:0 16px 40px rgba(0,0,0,.3); z-index:200; opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease; display:inline-flex; align-items:center; gap:9px; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast svg{ width:16px; height:16px; }
+
+  @media (max-width:640px){ .grid{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+  <header class="admin-header">
+    <a class="back-btn" href="admintareas.html">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Volver a Tareas
+    </a>
+    <div class="header-divider"></div>
+    <a href="index.html"><img class="logo-img" src="logo-retail-experts.png" alt="Retail Experts"></a>
+    <span class="header-title">Tareas</span>
+    <div class="header-spacer"></div>
+  </header>
+
+  <main class="wrap">
+    <div class="crumb"><a href="adminweb.html">Panel</a> › <a href="admintareas.html">Tareas</a> › <span>Exhibiciones</span></div>
+    <div class="head-row">
+      <div class="head-ico"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M5 7l1 12a2 2 0 0 0 2 1.8h8a2 2 0 0 0 2-1.8L19 7" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8.5 7V5.5A2.5 2.5 0 0 1 11 3h2a2.5 2.5 0 0 1 2.5 2.5V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M9.5 11v5M14.5 11v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+      <div>
+        <p class="eyebrow">Nueva tarea</p>
+        <h1 class="page-title">Exhibiciones</h1>
+      </div>
+    </div>
+    <p class="page-sub">Define una exhibición por tipo de mueble y los locales donde se debe armar. Los reponedores la verán en su lista de tareas.</p>
+
+    <section class="panel">
+      <div class="grid" id="formGrid"></div>
+      <div class="form-foot">
+        <button class="btn-primary" id="submitBtn" type="button" disabled>
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          Crear tarea
+        </button>
+        <button class="btn-ghost" id="resetBtn" type="button">Limpiar</button>
+        <span class="foot-hint" id="footHint">Completa los campos requeridos</span>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    var FD = {"clientLabels":["Adclean","Bekys","Bjapi","Café Haití","Kuna Foods","Manare","Olisur","Panesco","Prater","Procarne","Puri"],"formatos":["Central Mayorista","Darkstore","Hiper Líder","Jumbo","Líder Express","Santa Isabel","Tottus","Unimarc"],"muebles":["Isla","Cabecera","Punta de Góndola","Exhibidor","Chimenea","Cenefa","Tótem"],"codigosLlave":["j403","j408","j410","j411","j414","j501","j502","j503","j504","j506","j507","j508","j510","j511","j512","j513","j514","j519","j520","j521","j532","j534","j591","j592","j613","j614","j619","j624","j633","j646","j649","j656","j659","j660","j671","j676","j695","j739","j748","j754","j760","j762","j770","j775","j780","j781","j796","j809","j810","j817","j825","j843","j844","j851","j872","j875","j919","j955","j957","j958","j970","j988","j989","j992","n551","n561","n587","n612","n635","n648","n651","n654","n658","n674","n692","n733","n734","n737","n742","n744","n758","n761","n771","n783","n797","n801","n818","n836","n845","n859","n901","n904","n906","n908","n918","n985","n987","t103","t104","t112","t116","t120","t121","t123","t124","t125","t126","t131","t132","t133","t134","t152","t153","t203","t204","t206","t207","t213","t215","t219","t220","t222","t301","t302","t304","t305","t307","t309","t311","t313","t501","t505","t509","t510","t512","t513","u469","u585","u759","u761","u763","u764","u915","u916","w1","w2","w3","w15","w16","w18","w32","w33","w35","w36","w37","w38","w39","w41","w42","w43","w44","w45","w46","w48","w49","w51","w52","w53","w54","w55","w56","w57","w58","w61","w62","w65","w66","w71","w72","w73","w74","w75","w76","w77","w78","w79","w80","w81","w82","w83","w84","w85","w86","w87","w88","w89","w91","w92","w93","w94","w95","w96","w97","w98","w99","w120","w121","w122","w125","w126","w127","w129","w137","w139","w143","w146","w149","w159","w177","w180","w182","w183","w195","w244","w248","w252","w253","w276","w279","w425","w426","w456","w457","w459","w514","w518","w523","w525","w602","w605","w606","w607","w608","w610","w611","w612","w613","w616","w618","w619","w620","w621","w625","w626","w627","w628","w631","w632","w635","w640","w643","w645","w647","w650","w653","w654","w655","w656","w658","w670","w671","w674","w677","w679","w680","w681","w682","w684","w686","w687","w689","w693","w695","w696","w697","w736","w739","w747","w748","w798","w910","w929","w937","w940","w945","w952","w963","w978","w983","w985","w988","w991","w993"],"productos":["P-1001 · Aceite 1L","P-1002 · Detergente 500ml","P-1003 · Shampoo 250g","P-1004 · Café 900g","P-1005 · Galletas 1.5L","P-1006 · Cereal 340g","P-1007 · Jugo 1L","P-1008 · Salsa 500ml","P-1009 · Arroz 250g","P-1010 · Fideos 900g","P-1011 · Atún 1.5L","P-1012 · Leche 340g","P-1013 · Aceite 1L","P-1014 · Detergente 500ml","P-1015 · Shampoo 250g","P-1016 · Café 900g","P-1017 · Galletas 1.5L","P-1018 · Cereal 340g","P-1019 · Jugo 1L","P-1020 · Salsa 500ml","P-1021 · Arroz 250g","P-1022 · Fideos 900g","P-1023 · Atún 1.5L","P-1024 · Leche 340g"]};
+    var FIELDS = [{"id":"mueble","type":"select","label":"Mueble","ph":"Selecciona el mueble","options":["Isla","Cabecera","Punta de Góndola","Exhibidor","Chimenea","Cenefa","Tótem"]},{"id":"cliente","type":"select","label":"Cliente","ph":"Selecciona un cliente","options":["Adclean","Bekys","Bjapi","Café Haití","Kuna Foods","Manare","Olisur","Panesco","Prater","Procarne","Puri"]},{"id":"inicio","type":"date","label":"Fecha de inicio"},{"id":"termino","type":"date","label":"Fecha de término"},{"id":"productos","type":"multi","label":"Código de producto","ph":"Selecciona productos","options":["P-1001 · Aceite 1L","P-1002 · Detergente 500ml","P-1003 · Shampoo 250g","P-1004 · Café 900g","P-1005 · Galletas 1.5L","P-1006 · Cereal 340g","P-1007 · Jugo 1L","P-1008 · Salsa 500ml","P-1009 · Arroz 250g","P-1010 · Fideos 900g","P-1011 · Atún 1.5L","P-1012 · Leche 340g","P-1013 · Aceite 1L","P-1014 · Detergente 500ml","P-1015 · Shampoo 250g","P-1016 · Café 900g","P-1017 · Galletas 1.5L","P-1018 · Cereal 340g","P-1019 · Jugo 1L","P-1020 · Salsa 500ml","P-1021 · Arroz 250g","P-1022 · Fideos 900g","P-1023 · Atún 1.5L","P-1024 · Leche 340g"]},{"id":"llaves","type":"multi","label":"Código Local Llave","ph":"Selecciona locales","options":["j403","j408","j410","j411","j414","j501","j502","j503","j504","j506","j507","j508","j510","j511","j512","j513","j514","j519","j520","j521","j532","j534","j591","j592","j613","j614","j619","j624","j633","j646","j649","j656","j659","j660","j671","j676","j695","j739","j748","j754","j760","j762","j770","j775","j780","j781","j796","j809","j810","j817","j825","j843","j844","j851","j872","j875","j919","j955","j957","j958","j970","j988","j989","j992","n551","n561","n587","n612","n635","n648","n651","n654","n658","n674","n692","n733","n734","n737","n742","n744","n758","n761","n771","n783","n797","n801","n818","n836","n845","n859","n901","n904","n906","n908","n918","n985","n987","t103","t104","t112","t116","t120","t121","t123","t124","t125","t126","t131","t132","t133","t134","t152","t153","t203","t204","t206","t207","t213","t215","t219","t220","t222","t301","t302","t304","t305","t307","t309","t311","t313","t501","t505","t509","t510","t512","t513","u469","u585","u759","u761","u763","u764","u915","u916","w1","w2","w3","w15","w16","w18","w32","w33","w35","w36","w37","w38","w39","w41","w42","w43","w44","w45","w46","w48","w49","w51","w52","w53","w54","w55","w56","w57","w58","w61","w62","w65","w66","w71","w72","w73","w74","w75","w76","w77","w78","w79","w80","w81","w82","w83","w84","w85","w86","w87","w88","w89","w91","w92","w93","w94","w95","w96","w97","w98","w99","w120","w121","w122","w125","w126","w127","w129","w137","w139","w143","w146","w149","w159","w177","w180","w182","w183","w195","w244","w248","w252","w253","w276","w279","w425","w426","w456","w457","w459","w514","w518","w523","w525","w602","w605","w606","w607","w608","w610","w611","w612","w613","w616","w618","w619","w620","w621","w625","w626","w627","w628","w631","w632","w635","w640","w643","w645","w647","w650","w653","w654","w655","w656","w658","w670","w671","w674","w677","w679","w680","w681","w682","w684","w686","w687","w689","w693","w695","w696","w697","w736","w739","w747","w748","w798","w910","w929","w937","w940","w945","w952","w963","w978","w983","w985","w988","w991","w993"]}];
+    var state = {};
+
+    var grid=document.getElementById('formGrid');
+    function opt(v){ return '<option value="'+String(v).replace(/"/g,'&quot;')+'">'+v+'</option>'; }
+
+    FIELDS.forEach(function(f){
+      state[f.id] = f.type==='multi' ? [] : '';
+      var wrap=document.createElement('div'); wrap.className='field'+((f.full||f.type==='multi')?' full':'');
+      var lab='<label for="'+f.id+'">'+f.label+' <span class="req">*</span></label>';
+      if(f.type==='text'){ wrap.innerHTML=lab+'<input type="text" id="'+f.id+'" placeholder="'+(f.ph||'')+'" />'; }
+      else if(f.type==='date'){ wrap.innerHTML=lab+'<input type="date" id="'+f.id+'" />'; }
+      else if(f.type==='select'){ wrap.innerHTML=lab+'<select id="'+f.id+'"><option value="" disabled selected>'+(f.ph||'Selecciona…')+'</option>'+f.options.map(opt).join('')+'</select>'; }
+      else if(f.type==='multi'){ wrap.innerHTML=lab+'<div class="ms" id="ms-'+f.id+'"><button type="button" class="ms-btn"><span class="ms-ph">'+(f.ph||'Selecciona…')+'</span><span class="chev"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button><div class="ms-pop"><input class="ms-search" type="text" placeholder="Buscar…" /><div class="ms-list"></div></div><div class="ms-chips"></div></div>'; }
+      grid.appendChild(wrap);
+    });
+
+    // wire simple inputs
+    FIELDS.forEach(function(f){
+      if(f.type==='text'||f.type==='date'){ var el=document.getElementById(f.id); el.addEventListener('input',function(){ state[f.id]=el.value.trim(); validate(); }); }
+      else if(f.type==='select'){ var s=document.getElementById(f.id); s.addEventListener('change',function(){ state[f.id]=s.value; validate(); }); }
+      else if(f.type==='multi'){ wireMulti(f); }
+    });
+
+    function wireMulti(f){
+      var root=document.getElementById('ms-'+f.id);
+      var btn=root.querySelector('.ms-btn'), pop=root.querySelector('.ms-pop'), list=root.querySelector('.ms-list'), search=root.querySelector('.ms-search'), chips=root.querySelector('.ms-chips'), ph=btn.querySelector('.ms-ph');
+      f.options.forEach(function(o){ var it=document.createElement('label'); it.className='ms-item'; it.innerHTML='<input type="checkbox" value="'+String(o).replace(/"/g,'&quot;')+'" /><span>'+o+'</span>'; list.appendChild(it); });
+      btn.addEventListener('click',function(e){ e.stopPropagation(); var open=pop.classList.contains('open'); closeAllMs(); if(!open){ pop.classList.add('open'); btn.classList.add('open'); search.focus(); } });
+      pop.addEventListener('click',function(e){e.stopPropagation();});
+      search.addEventListener('input',function(){ var q=search.value.toLowerCase().trim(); var any=false; list.querySelectorAll('.ms-item').forEach(function(it){ var m=it.textContent.toLowerCase().indexOf(q)!==-1; it.style.display=m?'flex':'none'; if(m)any=true; }); var e=pop.querySelector('.ms-empty'); if(!any&&!e){ e=document.createElement('div'); e.className='ms-empty'; e.textContent='Sin resultados'; list.appendChild(e);} else if(any&&e){e.remove();} });
+      list.addEventListener('change',function(){ state[f.id]=[].slice.call(list.querySelectorAll('input:checked')).map(function(c){return c.value;}); renderChips(); validate(); });
+      function renderChips(){
+        var sel=state[f.id];
+        ph.textContent = sel.length ? sel.length+' seleccionado'+(sel.length>1?'s':'') : (f.ph||'Selecciona…');
+        ph.style.color = sel.length ? 'var(--ink)' : '';
+        chips.innerHTML='';
+        sel.forEach(function(v){ var c=document.createElement('span'); c.className='chip'; c.innerHTML='<span>'+v+'</span><button type="button" aria-label="Quitar">✕</button>'; c.querySelector('button').addEventListener('click',function(){ var box=list.querySelector('input[value="'+v.replace(/"/g,'&quot;')+'"]'); if(box)box.checked=false; state[f.id]=state[f.id].filter(function(x){return x!==v;}); renderChips(); validate(); }); chips.appendChild(c); });
+      }
+      root._render=renderChips;
+    }
+    function closeAllMs(){ document.querySelectorAll('.ms-pop.open').forEach(function(p){ p.classList.remove('open'); }); document.querySelectorAll('.ms-btn.open').forEach(function(b){ b.classList.remove('open'); }); }
+    document.addEventListener('click', closeAllMs);
+
+    var submitBtn=document.getElementById('submitBtn'), footHint=document.getElementById('footHint');
+    function isFilled(f){ var v=state[f.id]; return f.type==='multi' ? v.length>0 : !!v; }
+    function validate(){
+      var missing=FIELDS.filter(function(f){ return !isFilled(f); });
+      submitBtn.disabled = missing.length>0;
+      // date sanity
+      footHint.textContent = missing.length ? 'Faltan '+missing.length+' campo'+(missing.length>1?'s':'') : 'Listo para crear';
+    }
+
+    function toast(msg){ var el=document.getElementById('toast'); el.innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>'+msg+'</span>'; el.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(function(){ el.classList.remove('show'); },3200); }
+
+    submitBtn.addEventListener('click', function(){
+      if(submitBtn.disabled) return;
+      // Placeholder: aquí se conectará la creación real de la tarea en el backend.
+      toast('Tarea de Exhibiciones creada correctamente');
+    });
+    document.getElementById('resetBtn').addEventListener('click', function(){
+      FIELDS.forEach(function(f){ state[f.id]= f.type==='multi'?[]:''; });
+      document.querySelectorAll('input[type=text],input[type=date]').forEach(function(i){i.value='';});
+      document.querySelectorAll('select').forEach(function(s){s.selectedIndex=0;});
+      document.querySelectorAll('.ms-item input:checked').forEach(function(c){c.checked=false;});
+      document.querySelectorAll('.ms').forEach(function(r){ if(r._render)r._render(); });
+      validate();
+    });
+
+    validate();
+  </script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-guard.js"></script>
+</body>
+</html>

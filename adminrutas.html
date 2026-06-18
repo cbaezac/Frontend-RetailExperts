@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rutas · Panel de administración · Retail Experts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #F6ECD0;
+    --ink: #1C1A14;
+    --muted: #6B6557;
+    --frame: #15130E;
+    --accent: #E0561C;
+    --accent-soft: rgba(224,86,28,0.12);
+    --purple: #5A0D74;
+    --line: rgba(28,26,20,0.18);
+    --line-soft: rgba(28,26,20,0.10);
+    --card: #FFFDF6;
+    --visit: #1F8A4C;
+  }
+  html { height: 100%; }
+  body {
+    font-family: 'Manrope', system-ui, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(120% 70% at 50% -10%, rgba(90,13,116,0.07) 0%, rgba(0,0,0,0) 55%),
+      var(--bg);
+    min-height: 100vh;
+    padding: clamp(76px, 9vh, 104px) clamp(16px, 3vw, 44px) 64px;
+  }
+
+  .back {
+    position: fixed;
+    top: clamp(20px, 3vw, 30px);
+    left: clamp(16px, 3vw, 40px);
+    display: inline-flex; align-items: center; gap: 9px;
+    font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 0.95rem;
+    color: var(--ink); text-decoration: none;
+    padding: 11px 20px 11px 16px;
+    border: 1.5px solid var(--line); border-radius: 999px;
+    background: rgba(255,255,255,0.55); backdrop-filter: blur(4px);
+    z-index: 60; transition: gap .25s ease;
+  }
+  .back .arrow { transition: transform .25s ease; }
+  .back:hover { background: var(--frame); color: #fff; gap: 12px; }
+  .back:hover .arrow { transform: translateX(-3px); }
+
+  .admin-flag {
+    position: fixed; top: clamp(20px, 3vw, 30px); right: clamp(16px, 3vw, 40px);
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 0.74rem;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: #FFF8E7; background: var(--purple); border-radius: 999px; padding: 9px 16px;
+    z-index: 60; box-shadow: 0 10px 24px rgba(90,13,116,0.3);
+  }
+  .admin-flag svg { width: 14px; height: 14px; }
+
+  .wrap { max-width: 1500px; margin: 0 auto; }
+
+  .head { margin-bottom: clamp(22px, 3vh, 32px); }
+  .eyebrow {
+    font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.22em; font-size: 0.78rem;
+    color: var(--accent); margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800;
+    font-size: clamp(2.2rem, 5vw, 3.6rem); line-height: 0.98; letter-spacing: -0.02em;
+  }
+  .sub { margin-top: 10px; color: var(--muted); font-size: 1rem; max-width: 60ch; }
+
+  /* ---- Filters ---- */
+  .filters {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    margin-bottom: 16px;
+  }
+  .flabel {
+    font-size: 0.82rem; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--muted); margin-right: 2px; font-weight: 600;
+  }
+  .filter-wrap { position: relative; }
+  .filter {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 0.9rem;
+    color: var(--ink); cursor: pointer; background: var(--card);
+    border: 1px solid var(--line); border-radius: 999px; padding: 9px 15px;
+    transition: box-shadow .2s ease;
+  }
+  .filter:hover { background: #fff; border-color: var(--ink); }
+  .filter .chev { transition: transform .2s ease; display: flex; }
+  .filter[aria-expanded="true"] .chev { transform: rotate(180deg); }
+  .filter.has-selection { background: var(--frame); color: #FFF8E7; border-color: var(--frame); }
+  .filter .count {
+    font-size: 0.74rem; background: rgba(255,255,255,0.22); color: inherit;
+    border-radius: 999px; padding: 1px 7px; font-weight: 700;
+  }
+  .filter:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .dropdown {
+    position: absolute; top: calc(100% + 10px); left: 0;
+    width: 260px; background: #FFFDF6; border: 1px solid var(--line);
+    border-radius: 14px; box-shadow: 0 24px 60px rgba(28,26,20,0.22);
+    padding: 12px; z-index: 50;
+    opacity: 0; visibility: hidden; pointer-events: none; transform: translateY(-6px);
+    transition: opacity .18s ease, transform .18s ease, visibility .18s;
+  }
+  .filter-wrap.open .dropdown { opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0); }
+  .dd-search {
+    width: 100%; font-family: 'Manrope', sans-serif; font-size: 0.9rem; color: var(--ink);
+    background: #fff; border: 1px solid var(--line); border-radius: 9px;
+    padding: 9px 12px; margin-bottom: 10px; outline: none;
+  }
+  .dd-search:focus { border-color: var(--accent); }
+  .dd-list { max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+  .dd-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 9px;
+    border-radius: 8px; cursor: pointer; font-size: 0.92rem; color: var(--ink);
+    transition: background .15s ease;
+  }
+  .dd-item:hover { background: rgba(28,26,20,0.06); }
+  .dd-item input { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; flex: 0 0 auto; }
+  .dd-empty { padding: 10px 9px; font-size: 0.88rem; color: var(--muted); }
+
+  .toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 14px; flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .result-count {
+    font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 0.98rem; color: var(--ink);
+  }
+  .result-count b { color: var(--accent); }
+  .toolbar-actions { display: flex; gap: 10px; align-items: center; }
+  .btn {
+    font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 0.9rem;
+    cursor: pointer; border-radius: 999px; padding: 10px 18px;
+    transition: transform .15s ease, box-shadow .2s ease, background .2s ease;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn svg { display: block; }
+  .btn-ghost { color: var(--ink); background: var(--card); border: 1.5px solid var(--line); }
+  .btn-ghost:hover { background: #fff; border-color: var(--ink); }
+  .btn-ghost.disabled { opacity: .45; pointer-events: none; }
+
+  /* ---- Table ---- */
+  .table-card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 16px; overflow: hidden; box-shadow: 0 16px 40px rgba(28,26,20,0.10);
+  }
+  .table-scroll { overflow-x: auto; overflow-y: auto; max-height: 70vh; }
+  table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 0.86rem; white-space: nowrap; }
+
+  thead th {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--frame); color: #FFF8E7;
+    font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600;
+    text-align: left; padding: 13px 14px; letter-spacing: 0.01em;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+  }
+  thead th.client-col {
+    text-align: center; padding: 14px 16px; min-width: 96px;
+    font-size: 0.78rem; vertical-align: middle;
+  }
+  thead th.group-sep { }
+  tbody td.group-sep { }
+
+  tbody td {
+    padding: 11px 14px; border-bottom: 1px solid var(--line-soft); color: var(--ink);
+    vertical-align: middle;
+  }
+  tbody tr:hover td { background: rgba(224,86,28,0.05); }
+  tbody td.client-col { text-align: center; padding: 11px 16px; min-width: 96px; }
+
+  /* sticky first columns */
+  th.sticky-col, td.sticky-col { position: sticky; z-index: 10; background: var(--card); }
+  thead th.sticky-col { z-index: 30; background: var(--frame); }
+  .c0 { left: 0; }
+  .c1 { left: var(--w0); }
+  .c2 { left: calc(var(--w0) + var(--w1)); box-shadow: 6px 0 12px -8px rgba(28,26,20,0.35); }
+  tbody tr:hover td.sticky-col { background: #FBF4E2; }
+
+  .cadena-badge {
+    display: inline-block; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600;
+    font-size: 0.78rem; padding: 3px 10px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .codigo { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; letter-spacing: 0.02em; }
+  .nombre { font-weight: 600; }
+  .dias { letter-spacing: 0.06em; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 0.82rem; }
+  .ruta-badge {
+    display: inline-block; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600;
+    font-size: 0.78rem; padding: 3px 10px; border-radius: 8px;
+    background: rgba(28,26,20,0.06); color: var(--ink);
+  }
+  .freq { display: inline-flex; align-items: center; justify-content: center; min-width: 26px;
+    font-weight: 700; font-family: 'Bricolage Grotesque', sans-serif; color: var(--muted); }
+
+  .visit-yes {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--visit); color: #fff;
+  }
+  .visit-yes svg { width: 14px; height: 14px; }
+  .visit-no { color: rgba(28,26,20,0.18); font-weight: 700; }
+
+  .empty-row td { text-align: center; padding: 48px 20px; color: var(--muted);
+    font-family: 'Bricolage Grotesque', sans-serif; font-size: 1.05rem; }
+
+  /* ---- Editable cells ---- */
+  td.editable { cursor: pointer; }
+  td.codigo.editable:hover { color: var(--accent); }
+  td.nombre.editable:hover .edit-name { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+  .edit-pencil { display: inline-flex; vertical-align: middle; margin-left: 8px; color: var(--accent); opacity: 0; transition: opacity .15s ease; }
+  tbody tr:hover .edit-pencil { opacity: 1; }
+  .hist-count { background: var(--accent); color: #fff; border-radius: 999px; font-size: 0.72rem; padding: 1px 7px; font-weight: 700; }
+
+  /* ---- Modal ---- */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(21,19,14,0.55); backdrop-filter: blur(3px);
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility .2s;
+  }
+  .modal-overlay.open { opacity: 1; visibility: visible; }
+  .modal {
+    width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto;
+    background: var(--card); border-radius: 20px; border: 1px solid var(--line);
+    box-shadow: 0 40px 100px rgba(0,0,0,0.4);
+    transform: translateY(12px) scale(.98); transition: transform .2s ease;
+  }
+  .modal-wide { max-width: 680px; }
+  .modal-overlay.open .modal { transform: none; }
+  .modal-head { position: relative; padding: 26px 28px 20px; border-bottom: 1px solid var(--line-soft); }
+  .modal-close {
+    position: absolute; top: 18px; right: 18px; width: 36px; height: 36px;
+    border-radius: 50%; border: 1px solid var(--line); background: #fff; color: var(--ink);
+    font-size: 0.9rem; cursor: pointer; display: grid; place-items: center; line-height: 1;
+    transition: background .15s ease, color .15s ease;
+  }
+  .modal-close:hover { background: var(--frame); color: #fff; }
+  .modal-head h2 {
+    font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800;
+    font-size: 1.55rem; letter-spacing: -0.02em; margin: 11px 0 4px; line-height: 1.05;
+  }
+  .modal-sub { color: var(--muted); font-size: 0.9rem; }
+  .modal-sub b { color: var(--ink); font-family: 'Bricolage Grotesque', sans-serif; }
+  .modal-body { padding: 22px 28px 8px; display: flex; flex-direction: column; gap: 22px; }
+  .edit-block .block-label {
+    font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: 0.8rem;
+    text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+    margin-bottom: 11px; display: block;
+  }
+  .days { display: flex; gap: 8px; flex-wrap: wrap; }
+  .day-toggle {
+    width: 46px; height: 46px; border-radius: 12px; border: 1.5px solid var(--line);
+    background: #fff; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700;
+    font-size: 1rem; color: var(--muted); cursor: pointer; transition: all .15s ease;
+  }
+  .day-toggle:hover { border-color: var(--ink); }
+  .day-toggle.on { background: var(--visit); border-color: var(--visit); color: #fff; box-shadow: 0 6px 14px rgba(31,138,76,0.3); }
+  .freq-note { margin-top: 13px; font-size: 0.92rem; color: var(--ink); }
+  .freq-note b { font-family: 'Bricolage Grotesque', sans-serif; font-size: 1.1rem; color: var(--accent); }
+  .freq-hint { color: var(--muted); font-size: 0.82rem; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .edit-input {
+    width: 100%; font-family: 'Manrope', sans-serif; font-size: 0.98rem; color: var(--ink);
+    background: #fff; border: 1.5px solid var(--line); border-radius: 10px;
+    padding: 11px 13px; outline: none; transition: border-color .15s ease;
+  }
+  .edit-input:focus { border-color: var(--accent); }
+  .clients-grid { display: flex; flex-wrap: wrap; gap: 9px; }
+  .client-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 0.9rem; color: var(--muted);
+    background: #fff; border: 1.5px solid var(--line); border-radius: 999px;
+    padding: 8px 14px 8px 11px; cursor: pointer; transition: all .15s ease;
+  }
+  .client-chip:hover { border-color: var(--ink); color: var(--ink); }
+  .client-chip .chip-ico {
+    display: inline-flex; width: 18px; height: 18px; border-radius: 50%;
+    align-items: center; justify-content: center; background: rgba(28,26,20,0.08);
+    color: var(--muted); transition: all .15s ease;
+  }
+  .client-chip .chip-ico svg { width: 12px; height: 12px; }
+  .client-chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .client-chip.on .chip-ico { background: var(--accent); color: #fff; }
+  .cli-count { font-weight: 700; color: var(--accent); }
+  .modal-foot {
+    position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: 10px;
+    padding: 18px 28px 24px; background: linear-gradient(to top, var(--card) 72%, rgba(255,253,246,0));
+    border-top: 1px solid var(--line-soft);
+  }
+  .btn-save { color: #FFF8E7; background: var(--accent); border: 1.5px solid var(--accent); }
+  .btn-save:hover { background: #c8480f; transform: translateY(-1px); }
+  /* route select + locked rut */
+  .edit-select {
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5' stroke='%236B6557' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 13px center; padding-right: 36px; cursor: pointer;
+  }
+  .rut-locked {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    width: 100%; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 0.98rem;
+    color: var(--ink); background: rgba(28,26,20,0.05); border: 1.5px solid var(--line);
+    border-radius: 10px; padding: 11px 13px; letter-spacing: 0.01em;
+  }
+  .rut-locked .lock-ico { color: var(--muted); flex: 0 0 auto; }
+  .rut-locked .lock-ico svg { width: 15px; height: 15px; display: block; }
+  .rut-hint { margin-top: 7px; font-size: 0.78rem; color: var(--muted); }
+
+  /* ---- History ---- */
+  .log-empty { text-align: center; padding: 40px 20px; color: var(--muted); font-family: 'Bricolage Grotesque', sans-serif; }
+  .log-list { display: flex; flex-direction: column; gap: 14px; }
+  .log-entry { border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; background: #fff; }
+  .log-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .log-top .l-name { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 1.02rem; }
+  .log-top .l-code { font-family: 'Bricolage Grotesque', sans-serif; font-size: 0.76rem; background: var(--accent-soft); color: var(--accent); padding: 2px 9px; border-radius: 999px; }
+  .log-top .l-time { margin-left: auto; color: var(--muted); font-size: 0.82rem; }
+  .diff-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 7px 0; font-size: 0.9rem; border-top: 1px dashed var(--line-soft); }
+  .diff-row:first-child { border-top: none; }
+  .diff-field { min-width: 118px; color: var(--muted); font-weight: 600; }
+  .diff-before { color: #b5362a; background: rgba(194,58,43,0.08); padding: 2px 9px; border-radius: 6px; text-decoration: line-through; text-decoration-color: rgba(194,58,43,0.5); }
+  .diff-after { color: var(--visit); background: rgba(31,138,76,0.10); padding: 2px 9px; border-radius: 6px; font-weight: 600; }
+  .diff-arrow { color: var(--muted); }
+  .diff-clients { padding: 8px 0 2px; border-top: 1px dashed var(--line-soft); }
+  .mini-chip { display: inline-block; font-size: 0.8rem; padding: 2px 9px; border-radius: 999px; margin: 2px 4px 0 0; }
+  .mini-chip.add { background: rgba(31,138,76,0.12); color: var(--visit); }
+  .mini-chip.rem { background: rgba(194,58,43,0.10); color: #b5362a; text-decoration: line-through; }
+
+  /* ---- Toast ---- */
+  .toast {
+    position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%) translateY(20px);
+    background: var(--frame); color: #FFF8E7; font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 600; font-size: 0.92rem; padding: 13px 24px; border-radius: 999px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.3); z-index: 200; opacity: 0; pointer-events: none;
+    transition: opacity .25s ease, transform .25s ease; display: inline-flex; align-items: center; gap: 9px;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast svg { width: 16px; height: 16px; }
+
+  @media (max-width: 720px) {
+    .sub { font-size: 0.92rem; }
+    .grid2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <a class="back" href="adminweb.html"><span class="arrow">←</span> Volver al panel</a>
+  <span class="admin-flag">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+      <path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Administrador
+  </span>
+
+  <div class="wrap">
+    <header class="head">
+      <p class="eyebrow">Base de rutas</p>
+      <h1>Rutas</h1>
+      <p class="sub">Listado de salas por ruta y los clientes que las visitan. Filtra para acotar la base y haz clic en el <b>código</b> o <b>nombre</b> de una sala para editar sus datos.</p>
+    </header>
+
+    <div class="filters" id="filters" role="group" aria-label="Filtros">
+      <span class="flabel">Filtrar por</span>
+    </div>
+
+    <div class="toolbar">
+      <span class="result-count" id="resultCount">Mostrando <b>0</b> de 0 salas</span>
+      <div class="toolbar-actions">
+        <button class="btn btn-ghost" id="historyBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg> Historial <span class="hist-count" id="histCount" style="display:none">0</span></button>
+        <button class="btn btn-ghost disabled" id="clearBtn" type="button">Limpiar filtros</button>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-scroll">
+        <table id="table">
+          <thead><tr id="theadRow"></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: editar sala ===== -->
+  <div class="modal-overlay" id="editOverlay">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="m-nombre">
+      <div class="modal-head">
+        <button class="modal-close" id="m-close" type="button" aria-label="Cerrar">✕</button>
+        <span class="cadena-badge" id="m-cadena"></span>
+        <h2 id="m-nombre"></h2>
+        <p class="modal-sub">Código local <b id="m-codigo"></b></p>
+      </div>
+      <div class="modal-body">
+        <section class="edit-block">
+          <span class="block-label">Días de visita</span>
+          <div class="days" id="m-days"></div>
+          <p class="freq-note">Frecuencia semanal: <b id="m-freq">0</b> <span class="freq-hint">— se calcula automáticamente según los días marcados</span></p>
+        </section>
+        <section class="edit-block grid2">
+          <div>
+            <label class="block-label" for="m-ruta">Ruta asociada</label>
+            <select class="edit-input edit-select" id="m-ruta"></select>
+          </div>
+          <div>
+            <label class="block-label" for="m-rut">RUT del reponedor</label>
+            <div class="rut-locked"><span id="m-rut">—</span><span class="lock-ico"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span></div>
+            <p class="rut-hint">No editable · asignado según la ruta</p>
+          </div>
+        </section>
+        <section class="edit-block">
+          <span class="block-label">Clientes asociados · <span class="cli-count" id="m-cli-count">0</span></span>
+          <div class="clients-grid" id="m-clients"></div>
+        </section>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="m-cancel" type="button">Cancelar</button>
+        <button class="btn btn-save" id="m-save" type="button">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: historial de cambios ===== -->
+  <div class="modal-overlay" id="histOverlay">
+    <div class="modal modal-wide" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <button class="modal-close" id="h-close" type="button" aria-label="Cerrar">✕</button>
+        <span class="cadena-badge" style="background:rgba(90,13,116,0.1);color:var(--purple)">Trazabilidad</span>
+        <h2>Historial de cambios</h2>
+        <p class="modal-sub">Registro de modificaciones realizadas sobre la base de rutas.</p>
+      </div>
+      <div class="modal-body" id="h-body"></div>
+      <div class="modal-foot">
+        <span style="margin-right:auto; display:inline-flex; align-items:center; gap:7px; font-size:0.82rem; color:var(--muted)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Registro permanente · no puede borrarse</span>
+        <button class="btn btn-save" id="h-export" type="button" style="background:var(--visit);border-color:var(--visit)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 19h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Descargar Excel</button>
+        <button class="btn btn-ghost" id="h-done" type="button">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    var RAW = [["cencosud","j403","darkstore maipu","l-m-x-j-v-s","6","rm9","","si","","","si","si","si","si","","","",""],["cencosud","j408","darkstore viña del mar","l-m-x-j-v-s","6","v costa","","si","","","","si","si","si","","","",""],["cencosud","j410","darkstore la florida","l-m-x-j-v-s","6","rm8","","si","","","si","si","si","si","","si","",""],["cencosud","j411","darkstore costanera cent","l-m-x-j-v-s","6","rm3","","si","si","si","","si","si","si","","","",""],["cencosud","j414","darkstore la dehesa","l-m-x-j-v-s","6","rm2","","si","","","","si","si","si","","","",""],["cencosud","j501","jumbo bilbao","l-m-x-j-v-s","6","rm4","","si","si","si","","si","si","si","","","si",""],["cencosud","j502","jumbo kennedy","l-m-x-j-v-s","6","rm1","","","si","si","","si","si","si","si","","si",""],["cencosud","j503","jumbo maipu","l-m-x-j-v-s","6","rm9","","si","","si","si","si","si","si","","","",""],["cencosud","j504","jumbo rancagua","l-m-x-j-v-s","6","rancagua","","si","si","si","","si","si","si","","","",""],["cencosud","j506","jumbo temuco av.alemania","m-v","2","pituto","","","si","si","","si","si","si","","","",""],["cencosud","j507","jumbo puerto montt","l-m-j-v","4","puertos","","","si","si","si","si","si","si","","","",""],["cencosud","j508","jumbo viña del mar","l-m-x-j-v-s","6","v costa","","si","si","si","","si","si","si","","","",""],["cencosud","j510","jumbo la florida","l-m-x-j-v-s","6","rm8","","si","","si","si","si","si","si","si","si","si",""],["cencosud","j511","jumbo costanera","l-m-x-j-v-s","6","pituto","","si","si","si","","si","si","si","si","","si",""],["cencosud","j512","jumbo la reina","l-m-x-j-v-s","6","rm4","","si","si","si","","si","si","si","","","si",""],["cencosud","j513","jumbo el llano subercasea","l-m-x-j-v-s","6","rm5","","si","","si","","si","si","si","","","si",""],["cencosud","j514","jumbo la dehesa","l-m-x-j-v-s","6","rm2","","si","si","si","","si","si","si","si","","si",""],["cencosud","j519","jumbo peñalolen","l-m-x-j-v-s","6","rm8","","si","si","si","si","si","si","si","si","","si",""],["cencosud","j520","jumbo valparaiso","x-s","2","v costa","","si","","","","si","si","si","","","",""],["cencosud","j521","jumbo la serena","l-m-x-j-v-s","6","la serena","","si","si","si","si","si","si","si","","si","",""],["cencosud","j532","jumbo chillan","m-v","2","pituto","","si","","si","","si","si","si","","","",""],["cencosud","j534","jumbo antofagasta angamos","l-x-v","3","pituto","","si","si","si","","si","si","si","","si","",""],["cencosud","j591","jumbo talca el arenal","l-x-v","3","talca","","si","","si","","si","si","si","","si","",""],["cencosud","j592","jumbo curico","m-v","2","pituto","","si","","","","si","si","","","","",""],["cencosud","j613","jumbo puente alto","m-j-s","3","rm10","","","","","","si","si","","","","si",""],["cencosud","j614","jumbo calama","m-v","2","pituto","","si","","","","si","si","si","","si","",""],["cencosud","j619","jumbo arica","m-v","2","pituto","","","","","","si","si","si","","","",""],["cencosud","j624","jumbo el alba","l-m-x-j-v-s","6","rm1","","","si","si","si","si","si","si","","","si",""],["cencosud","j633","jumbo alessandri hualpen","l-m-x-j-v-s","6","concepcion b","","si","","si","","si","si","si","","","",""],["cencosud","j646","jumbo quillota","m-v","2","pituto","","","si","","","si","si","","","","",""],["cencosud","j649","jumbo vicente mende","m-v","2","pituto","","","si","","","si","si","","","","",""],["cencosud","j656","jumbo la serena ulr","l-x-v","3","la serena","","si","si","","si","si","si","si","","","",""],["cencosud","j659","jumbo concha y toro","l-x-v","3","rm10","","si","","","si","si","si","si","","","si",""],["cencosud","j660","jumbo iquique","m-v","2","pituto","","si","","si","","si","si","si","","","",""],["cencosud","j671","jumbo plaza el trebol","l-m-x-j-v-s","6","concepcion b","","","si","","","si","si","si","","","",""],["cencosud","j676","jumbo pedro de vald","l-m-x-j-v-s","6","concepcion a","","","si","","","si","si","si","","","",""],["cencosud","j695","jumbo los angeles","l-m-x-j-v-s","6","los angeles","","si","","si","si","si","si","si","","","",""],["cencosud","j739","jumbo bosquemar","l-j","2","v costa","","si","si","si","","si","si","si","","","",""],["cencosud","j748","jumbo osorno","m-v","2","pituto","","si","","si","","si","si","si","","","",""],["cencosud","j754","jumbo san felipe","m-v","2","pituto","","","si","","","si","si","","","","",""],["cencosud","j760","jumbo copiapo","m-v","2","pituto","","","","","","si","si","","","","",""],["cencosud","j762","jumbo los trapenses","l-m-x-j-v-s","6","rm2","","","si","","si","si","si","si","","","si",""],["cencosud","j770","jumbo pajaritos","l-x-v","3","rm9","","","","si","si","si","si","si","","","si",""],["cencosud","j775","jumbo ñuñoa","l-m-x-j-v-s","6","rm5","","si","si","si","si","si","si","si","","","si",""],["cencosud","j780","jumbo los andes","m-v","2","pituto","","","","","","si","si","","","","",""],["cencosud","j781","jumbo el belloto","m-v","2","pituto","","","","si","","si","si","","","","",""],["cencosud","j796","jumbo antofagasta pedro a","m-j-s","3","pituto","","si","","","","si","si","si","","","",""],["cencosud","j809","jumbo mall center concepc","l-m-x-j-v-s","6","concepcion a","","si","","si","","si","si","si","","","",""],["cencosud","j810","jumbo lo castillo","l-x-v","3","rm3","","","si","si","","si","si","si","","","",""],["cencosud","j817","jumbo antofagasta s","l-x-v","3","pituto","","si","si","","","si","si","si","","si","",""],["cencosud","j825","jumbo membrillar","l-x-v","3","rancagua","","","si","","","si","si","","","","",""],["cencosud","j843","jumbo san bernardo las li","m-v","2","pituto","","si","si","si","","si","si","si","","","",""],["cencosud","j844","jumbo copiapo los c","m-v","2","pituto","","","si","","","","si","","","","","si"],["cencosud","j851","jumbo santa cruz","m-v","2","pituto","","","si","","","si","si","","","","",""],["cencosud","j872","jumbo maitencillo","m-v","2","pituto","","","si","","","si","si","si","","","",""],["cencosud","j875","jumbo 14 norte","m-v","2","v costa","","","si","si","","si","si","si","","","",""],["cencosud","j919","jumbo doña ema","x-s","2","puertos","","","si","","si","si","si","","","","",""],["cencosud","j955","jumbo valdivia","m-v","2","pituto","","","si","","","si","si","si","","","",""],["cencosud","j957","jumbo mall talca","m-j-s","3","talca","","","si","","","si","si","si","","","",""],["cencosud","j958","jumbo pie andino","m-j-s","3","rm2","","si","si","","","si","si","si","","","si",""],["cencosud","j970","jumbo los pablos","m-v","2","pituto","","","si","","","si","si","","","","",""],["cencosud","j988","jumbo puertas de ch","m-j-s","3","pituto","","si","si","","","si","si","si","","","",""],["cencosud","j989","jumbo independencia","m-j-s","3","rm3","","si","","","","si","si","si","","si","si",""],["cencosud","j992","jumbo colina chamis","m-j-s","3","pituto","","","si","","","si","si","si","","","si",""],["cencosud","n551","santa isabel coquimbo anibal pinto","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n561","santa isabel valparaiso curauma","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n587","santa isabel puerto montt valle vol","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n612","santa isabel santiago grajales","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n635","santa isabel las condes plaza artesa","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n648","santa isabel la serena san joaquin","m-v","2","la serena","","","","","si","si","","","","","",""],["cencosud","n651","santa isabel lampa valle grande","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n654","santa isabel maipu ciudad satelite","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n658","santa isabel coquimbo sindempart","m-v","2","pituto","","","","","","si","","","","si","",""],["cencosud","n674","santa isabel viña del mar quillota","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n692","santa isabel huechuraba pedro fontov","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n733","santa isabel puerto varas del salvad","x-s","2","puertos","","","","","si","si","","","","","",""],["cencosud","n734","santa isabel puerto montt diego port","j","1","puertos","","","","","si","si","","","","","",""],["cencosud","n737","santa isabel concepcion freire","l-x-v","3","concepcion a","","","","","","","","","","si","",""],["cencosud","n742","santa isabel los angeles villagran","m-j","2","los angeles","","","","","si","","","","","","",""],["cencosud","n744","santa isabel la union augusto grob","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n758","santa isabel maipu 3 poniente","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n761","santa isabel los angeles ex plaza","l-v","2","los angeles","","","","","si","si","","","","","",""],["cencosud","n771","santa isabel santiago huerfanos","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n783","santa isabel concepcion lomas de sa","m-j-s","3","concepcion b","","","","","","si","","","","","",""],["cencosud","n797","santa isabel antofagasta 14 de febre","m-j","2","pituto","","","","","","si","","","","si","",""],["cencosud","n801","santa isabel concepcion collao","m-j-s","3","concepcion a","","","","","","si","","","","","",""],["cencosud","n818","santa isabel curacavi playa tres","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n836","santa isabel la serena ruta 41","l-j","2","la serena","","","","","si","si","","","","","",""],["cencosud","n845","santa isabel coquimbo la cantera","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n859","santa isabel santa maria oriente","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n901","santa isabel vallenar prat","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n904","santa isabel puerto montt sargento","m-v","2","puertos","","","","","si","si","","","","","",""],["cencosud","n906","santa isabel puerto varas colon","x-s","2","puertos","","","","","si","si","","","","","",""],["cencosud","n908","santa isabel ovalle vicuña mackenna","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n918","santa isabel puente alto el peñon","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n985","santa isabel victoria","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n987","santa isabel maipu el bosque","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t103","tottus puente alto","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t104","tottus nataniel","m-v","2","pituto","","","","","si","si","si","","","si","",""],["tottus","t112","tottus el bosque","m-v","2","pituto","","","","","","si","si","","","","",""],["tottus","t116","tottus huechuraba","m-v","2","pituto","","","","","","","si","","","","",""],["tottus","t120","tottus vitacura","l-x-v","3","rm3","","","","","si","si","si","","","","",""],["tottus","t121","tottus plaza egaña","m-v","2","pituto","","","","","","si","si","","","si","",""],["tottus","t123","tottus mp los dominicos","m-j-s","3","rm1","","","","","si","si","si","","","","",""],["tottus","t124","tottus walker martinez","m-v","2","pituto","","","","","","","","","","si","",""],["tottus","t125","tottus chamisero","m-j-s","3","pituto","","","","","","","si","","","","",""],["tottus","t126","tottus vivaceta","m-v","2","pituto","","","","","","","si","","","si","",""],["tottus","t131","tottus piedra roja","m-j-s","3","pituto","","","","","","si","si","","","","",""],["tottus","t132","tottus la cisternas","m-v","2","pituto","","","","","","si","","","","si","",""],["tottus","t133","tottus factoria","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t134","tottus quilin","l-v","2","rm8","","","","","si","si","si","","","si","",""],["tottus","t152","tottus plaza oeste ii","m-j-s","3","rm9","","","","","","si","","","","","",""],["tottus","t153","tottus kennedy ii","l-x-v","3","pituto","","","","","si","si","si","","","","",""],["tottus","t203","tottus peñaflor","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t204","tottus melipilla","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t206","tottus talagante cordillera","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t207","tottus la calera","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t213","tottus viña del mar santa julia","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t215","tottus quilpue","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t219","tottus reñaca","m-v","2","pituto","","","","","","si","si","","","","",""],["tottus","t220","tottus maitencillo","m-v","2","pituto","","","","","","","si","","","si","",""],["tottus","t222","tottus curauma","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t301","tottus buin","m-v","2","pituto","","","","","","si","si","","","","",""],["tottus","t302","tottus rengo","m-v","2","pituto","","","","","","si","","","","si","",""],["tottus","t304","tottus talca","m-j-s","3","talca","","","","","","si","","","","","",""],["tottus","t305","tottus machali","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t307","tottus el trebol talcahuano","m-j-s","3","concepcion b","","","","","","si","","","","si","",""],["tottus","t309","tottus bio bio","m-j-s","3","concepcion a","","","","","","si","","","","","",""],["tottus","t311","tottus talca colin","l-x-v","3","talca","","","","","","si","","","","","",""],["tottus","t313","tottus curico norte","m-v","2","pituto","","","","","","","si","","","","",""],["tottus","t501","tottus antofagasta mall","l-x-v","2","pituto","","","","","","si","","","","si","",""],["tottus","t505","tottus ovalle","m-v","2","pituto","","","","","","si","si","","","","",""],["tottus","t509","tottus coquimbo tierras blancas","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t510","tottus balmaceda la serena","x-s","2","la serena","","","","","","si","","","","","",""],["tottus","t512","tottus mp la serena","x-s","2","la serena","","","","","","si","","","","si","",""],["tottus","t513","tottus antofagasta norte","m-j-s","2","pituto","","","","","","si","","","","si","",""],["smu","u469","unimarc los militares las condes","m-v","2","pituto","","","","","","si","","","","","",""],["smu","u585","unimarc los volcanes puerto montt","m-v","2","puertos","","","","","si","","","","","","",""],["smu","u759","unimarc portal los angeles","m-j","2","los angeles","","","","","si","","","","","","",""],["smu","u761","unimarc marconi los angeles","l-v","2","los angeles","","","","","si","","","","","","",""],["smu","u763","unimarc juan soler puerto montt","j","1","puertos","","","","","si","","","","","","",""],["smu","u764","unimarc urmeneta puerto montt","j","1","puertos","","","","","si","","","","","","",""],["smu","u915","unimarc rotonda puerto montt","l","1","puertos","","","","","si","","","","","","",""],["smu","u916","unimarc paloma puerto montt","m-v","2","puertos","","","","","si","","","","","","",""],["walmart","w1","lider express plaza lyon","m-v","2","pituto","","","","","","","","","","","si",""],["walmart","w120","hiper lider temuco (barrio ingles)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w121","hiper lider punta arenas","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w122","hiper lider quillota","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w125","hiper lider ovalle","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w126","hiper lider copiapo","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w127","hiper lider linares","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w129","lider express puerto varas","x-s","2","puertos","","","","","si","si","","","","","",""],["walmart","w137","hiper lider san pablo","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w139","lider express colina (piedra roja)","m-j-s","3","pituto","","","","","","si","","","","","",""],["walmart","w143","hiper lider talca la florida","l-x-v","3","talca","","","","","","si","","","","si","",""],["walmart","w146","lider express san javier","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w149","lider express colina","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w15","lider express estoril","l-x-v","3","rm1","","","","","","si","","","","","",""],["walmart","w159","central mayorista","x-v","2","rm8","","","","","","","","","","si","",""],["walmart","w16","lider express la dehesa","m-j-s","3","rm2","","","","","","si","","","","","",""],["walmart","w177","lider express antofagasta (perez zujovi","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w18","lider express manuel montt","m-v","2","pituto","","","","","","","","","","","si",""],["walmart","w180","lider express nunoa (irarrazaval)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w182","hiper lider buin (bernardo o higgins)","m-v","2","pituto","","","","","","si","","","","","si",""],["walmart","w183","lider express temuco (los pablos)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w195","lider express puerto montt (balmaceda)","l","1","puertos","","","","","si","si","","","","","",""],["walmart","w2","lider express pedro de valdivia","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w244","hiper lider outlet park","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w248","lider express mall arauco quilicura","l-x-v","3","pituto","","","","","","si","","","","","",""],["walmart","w252","lider express calera de tango","m-v","2","pituto","","","","","","","","","","","si",""],["walmart","w253","lider express colina el algarrobal chic","m-v","2","pituto","","","","","","si","","","","","si",""],["walmart","w276","lider express lampa valle grande ii","m-v","2","pituto","","","","","","si","","","","","si",""],["walmart","w279","hiper lider curico camilo henriquez","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w3","hiper lider irarrazaval","l-x-v","3","rm5","","","","","","si","","","si","","",""],["walmart","w32","hiper lider gran avenida","m-j-s","3","rm5","","","","","si","si","","","si","","",""],["walmart","w33","hiper lider calama","m-v","2","pituto","","","","","","si","","","","","","si"],["walmart","w35","hiper lider rancagua","l-x-v","3","rancagua","","","","","","si","","","","","",""],["walmart","w36","hiper lider los angeles","m-j-s","3","los angeles","","","","","si","si","","","","","",""],["walmart","w37","hiper lider matucana","m-j-s","3","rm3","","","","","si","si","","","","","",""],["walmart","w38","hiper lider einstein","l-x-v","3","rancagua","","","","","","si","","","","","",""],["walmart","w39","hiper lider recreo","m-j-s","3","rancagua","","","","","","si","","","","si","",""],["walmart","w41","hiper lider huechuraba (mall plaza no","l-x-v","3","pituto","","","","","","si","","","","","si",""],["walmart","w42","hiper lider curico","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w425","hiper lider copiapo","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w426","hiper lider los angeles (sor vicenta)","l-x-v","3","los angeles","","","","","si","si","","","","","",""],["walmart","w43","lider express plaza maule","m-j-s","3","talca","","","","","","si","","","","","",""],["walmart","w44","hiper lider quilin","m-j-s","3","rm8","","","","","si","si","","","","","si","si"],["walmart","w45","hiper lider maipu (el descanso)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w456","hiper lider temuco barros arana","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w457","hiper lider villa alemana (camino tro","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w459","hiper lider calama huaytiquina","m-v","2","pituto","","","","","","si","","","","si","",""],["walmart","w46","hiper lider maipu (av central)","l-x-v","3","rm9","","","","","","si","","","","","",""],["walmart","w48","hiper lider puente alto (mall plaza t","l-x-v","2","rm10","","","","","si","si","","","","","","si"],["walmart","w49","hiper lider quilicura","l-x-v","3","pituto","","","","","","si","","","","","",""],["walmart","w51","lider express tobalaba","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w514","lider express machali","l-x","2","rancagua","","","","","","si","","","","","",""],["walmart","w518","hiper lider valparaiso (av. argentina","x-s","2","v costa","","","","","","si","","","","","",""],["walmart","w52","lider express grecia","m-v","2","pituto","","","","","","","","","","","si",""],["walmart","w523","lider express los angeles (vicuna macke","x-s","2","los angeles","","","","","si","","","","","","",""],["walmart","w525","lider express padre hurtado (laguna del","m-v","2","pituto","","","","","","si","","","","","si",""],["walmart","w53","hiper lider coquimbo","m-v","2","pituto","","","","","si","si","","","","si","",""],["walmart","w54","hiper lider vicuna mackenna","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w55","hiper lider macul","m-v","2","pituto","","","","","","si","","","","","si",""],["walmart","w56","lider express gran avenida","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w57","hiper lider vitacura","l-x-v","3","rm3","","","","","","si","","","si","","",""],["walmart","w58","hiper lider vina del mar","m-v","2","v costa","","","","","","si","","","","","",""],["walmart","w602","hiper lider los andes vecino","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w605","lider express la serena","x-s","2","la serena","","","","","si","si","","","","si","",""],["walmart","w606","hiper lider coronel","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w607","hiper lider melipilla","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w608","hiper lider chillan","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w61","lider express plaza de maipu","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w610","lider express nonato coo","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w611","lider express rojas magallanes","m-s","2","rm10","","","","","si","si","","","","","si",""],["walmart","w612","lider express chillan","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w613","lider express ciudad del este","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w616","hiper lider maipu 3 poniente","l-x-v","3","rm9","","","","","","si","","","","si","",""],["walmart","w618","hiper lider casona osorno","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w619","lider express puerto montt 4 terraza","m-v","2","puertos","","","","","si","si","","","","","",""],["walmart","w62","hiper lider la florida (pza.vespucio)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w620","hiper lider san bernardo (mall plaza","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w621","lider express merced","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w625","lider express con con","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w626","hiper lider principe de gales","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w627","lider express san vicente","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w628","hiper lider santa cruz","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w631","hiper lider collao","m-j-s","3","concepcion a","","","","","","si","","","","si","",""],["walmart","w632","hiper lider vina centro terminal","m-v","2","v costa","","","","","","si","","","","","",""],["walmart","w635","hiper lider arica (pedro montt)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w640","lider express 10 de julio","m-v","2","pituto","","","","","","","","","","si","",""],["walmart","w643","lider express mexico","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w645","lider express rancagua","m-j","2","rancagua","","","","","","si","","","","","",""],["walmart","w647","lider express maitencillo","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w65","lider express seminario","m-v","2","pituto","","","","","","","","","","","si",""],["walmart","w650","lider express algarrobo","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w653","lider express curico alessandri","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w654","hiper lider san antonio","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w655","hiper lider antofagasta","m-j-s","2","pituto","","","","","","si","","","","","",""],["walmart","w656","lider express buin (san martin)","m-v","2","pituto","","","","","","","","","si","","si",""],["walmart","w658","lider express puerto varas (mall)","x-s","2","puertos","","","","","si","si","","","","","",""],["walmart","w66","hiper lider talagante","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w670","hiper lider puerto montt (cardonal)","l-j","2","puertos","","","","","si","si","","","","","",""],["walmart","w671","hiper lider quilicura (lo marcoleta)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w674","lider express pedro fontova","l-x-v","3","pituto","","","","","","si","","","","si","si",""],["walmart","w677","lider express providencia (santa isabel","m-v","2","pituto","","","","","","","","","","","si",""],["walmart","w679","hiper lider iquique (bilbao)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w680","lider express villarrica","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w681","lider express pucon","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w682","hiper lider san joaquin","m-j-s","3","rm5","","","","","si","si","","","","","",""],["walmart","w684","hiper lider 4 esquinas","m-v","2","la serena","","","","","si","si","","","","","","si"],["walmart","w686","hiper lider reg. arica","m-v","2","la serena","","","","","si","si","","","","","",""],["walmart","w687","lider express temuco caupolican","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w689","lider express santiago (san martin)","m-v","2","pituto","","","","","","","","","","si","",""],["walmart","w693","hiper lider la pintana","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w695","lider express rancagua diagonal donihue","m-j","2","rancagua","","","","","","si","","","","","",""],["walmart","w696","lider express valparaiso (curauma)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w697","hiper lider san fernando","m-v","2","pituto","","","","","","si","","","","","","si"],["walmart","w71","hiper lider ñuñoa vespucio sur","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w72","hiper lider alameda","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w73","hiper lider puente alto (espacio urba","m-j-s","3","rm10","","","","","si","si","","","","","",""],["walmart","w736","hiper lider penaflor (balmaceda)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w739","hiper lider maipu (camino a melipilla","l-x-v","3","rm9","","","","","","si","","","","si","",""],["walmart","w74","lider express tomas moro","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w747","hiper lider concon (magallanes)","l-j","2","v costa","","","","","","si","","","","","",""],["walmart","w748","hiper lider renca (miraflores)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w75","hiper lider maipu (pajaritos)","m-j-s","3","rm9","","","","","","si","","","","","",""],["walmart","w76","hiper lider departamental","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w77","hiper lider independencia","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w78","hiper lider iquique","m-v","2","pituto","","","","","","si","","","","","","si"],["walmart","w79","hiper lider talca","m-j-s","3","talca","","","","","","si","","","","","",""],["walmart","w798","hiper lider santiago (san bernardo","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w80","hiper lider los morros","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w81","hiper lider arica","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w82","hiper lider san bernardo","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w83","hiper lider la florida (santa amalia)","l-m-x-j-v-s","6","rm10","","","","","si","si","","","","si","",""],["walmart","w84","hiper lider el belloto","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w85","hiper lider cerrillos (oeste)","m-j-s","3","rm9","","","","","si","si","","","","","",""],["walmart","w86","hiper lider recoleta","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w87","hiper lider santa rosa (san ramon)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w88","hiper lider los dominicos","l-m-x-j-v-s","6","rm1","","","","","","si","","","","","",""],["walmart","w89","hiper lider bio bio","l-m-x-j-v-s","6","concepcion b","","","","","","si","","","","","",""],["walmart","w91","hiper lider antofagasta","l-x-v","2","pituto","","","","","","si","","","","","",""],["walmart","w910","hiper lider camino la farfana (","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w92","hiper lider la serena (puertas del ma","x-s","2","la serena","","","","","si","si","","","","","",""],["walmart","w929","hiper lider puerto montt (la paloma)","m-v","2","puertos","","","","","si","si","","","","","",""],["walmart","w93","hiper lider osorno","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w937","lider express coquimbo (el amanecer)","m-v","2","pituto","","","","","si","si","","","","","",""],["walmart","w94","hiper lider valdivia","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w940","lider express santiago (lo campino)","m-v","2","pituto","","","","","","","","","","","si",""],["walmart","w945","hiper lider chiguayante (manuel rodri","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w95","hiper lider la reina","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w952","hiper lider talcahuano (perez gacitua","l-x-v","3","concepcion b","","","","","","si","","","","","",""],["walmart","w96","hiper lider temuco (prieto)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w963","lider express pudahuel (ciudad de los v","m-v","2","pituto","","","","","","si","","","","","si",""],["walmart","w97","hiper lider puente nuevo","l-x-v","3","rm2","","","","","","si","","","si","","",""],["walmart","w978","hiper lider limache (arturo prat)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w98","hiper lider concepcion (pratt)","l-x-v","3","concepcion a","","","","","","si","","","","","",""],["walmart","w983","hiper lider la calera","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w985","hiper lider san felipe","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w988","hiper lider calama (av grecia)","m-v","2","pituto","","","","","","si","","","","si","",""],["walmart","w99","hiper lider puerto montt","l-j","2","puertos","","","","","si","si","","","","","",""],["walmart","w991","lider express la serena (las parcelas)","l-j","2","la serena","","","","","si","si","","","","","",""],["walmart","w993","hiper lider san pedro de la paz","l-x-v","3","concepcion a","","","","","","si","","","","","",""]];
+
+    // Column meta (file order)
+    var COLS = [
+      { key:'cadena', label:'Cadena', type:'cadena' },
+      { key:'codigo', label:'Código Local', type:'codigo' },
+      { key:'nombre', label:'Nombre Local', type:'nombre' },
+      { key:'dias',   label:'Días', type:'dias' },
+      { key:'freq',   label:'Frec.', type:'freq' },
+      { key:'ruta',   label:'Ruta', type:'ruta' },
+      { key:'rut',    label:'RUT', type:'rut' }
+    ];
+    var CLIENTS = ['adclean','bekys','bjapi','cafe_haiti','kuna foods','manare','olisur','panesco','prater','procarne','puri'];
+    var CLIENT_LABELS = {
+      'adclean':'Adclean','bekys':'Bekys','bjapi':'Bjapi','cafe_haiti':'Café Haití','kuna foods':'Kuna Foods','manare':'Manare','olisur':'Olisur','panesco':'Panesco','prater':'Prater','procarne':'Procarne','puri':'Puri'
+    };
+
+    // ---- formatting ----
+    function titleCase(s){ return s.replace(/\w\S*/g, function(t){ return t.charAt(0).toUpperCase()+t.substr(1); }); }
+    function fmtCadena(v){ if(v==='smu') return 'SMU'; return titleCase(v); }
+    function fmtCodigo(v){ return v.toUpperCase(); }
+    function fmtNombre(v){ return titleCase(v); }
+    function fmtDias(v){ return v.toUpperCase(); }
+    function fmtRuta(v){ if(/^rm\s*\d+$/i.test(v.replace(/\s/g,''))) return v.toUpperCase().replace(/\s/g,''); return titleCase(v); }
+    // RUT del reponedor asociado a cada ruta. En la demo se genera de forma determinista;
+    // al conectar el backend, reemplazar routeRut() por la consulta real ruta -> RUT.
+    function computeDV(num){ var s=String(num), sum=0, mul=2; for(var i=s.length-1;i>=0;i--){ sum+=parseInt(s[i],10)*mul; mul=mul===7?2:mul+1; } var r=11-(sum%11); return r===11?'0':r===10?'K':String(r); }
+    function routeRut(route){ var s=String(route||''), h=0; for(var i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))>>>0; } var body=10000000+(h%15000000); var dv=computeDV(body); var f=String(body).replace(/\B(?=(\d{3})+(?!\d))/g,'.'); return f+'-'+dv; }
+    function isVisit(v){ return String(v).trim().toLowerCase()==='si'; }
+
+    // Build row objects
+    var ROWS = RAW.map(function(r, idx){
+      return {
+        id: idx,
+        cadena:r[0]||'', codigo:r[1]||'', nombre:r[2]||'', dias:r[3]||'',
+        freq:r[4]||'', ruta:r[5]||'', rut:r[6]||'',
+        clients: CLIENTS.map(function(_,i){ return r[7+i]||''; })
+      };
+    });
+
+    // Cargar cambios guardados (persistencia local; luego se conecta al backend)
+    var overrides = {};
+    try { overrides = JSON.parse(localStorage.getItem('re_admin_asist_rows_v1') || '{}'); } catch(e){ overrides = {}; }
+    ROWS.forEach(function(r){
+      var o = overrides[r.id];
+      if(o){ r.dias=o.dias; r.freq=o.freq; r.ruta=o.ruta; r.rut=o.rut; if(o.clients) r.clients=o.clients; }
+    });
+    var changeLog = [];
+    try { changeLog = JSON.parse(localStorage.getItem('re_admin_asist_log_v1') || '[]'); } catch(e){ changeLog = []; }
+
+    // ---- Filters config ----
+    function distinctSorted(getter){
+      var s={};
+      ROWS.forEach(function(r){ var v=getter(r); if(v) s[v]=true; });
+      return Object.keys(s).sort(function(a,b){ return a.localeCompare(b,'es',{numeric:true}); });
+    }
+    var FILTERS = [
+      { id:'cadena', label:'Cadena', options:distinctSorted(function(r){return r.cadena;}), fmt:fmtCadena, match:function(r,sel){ return sel.indexOf(r.cadena)!==-1; } },
+      { id:'codigo', label:'Código Local Llave', options:distinctSorted(function(r){return r.codigo;}), fmt:fmtCodigo, match:function(r,sel){ return sel.indexOf(r.codigo)!==-1; } },
+      { id:'nombre', label:'Nombre Local', options:distinctSorted(function(r){return r.nombre;}), fmt:fmtNombre, match:function(r,sel){ return sel.indexOf(r.nombre)!==-1; } },
+      { id:'ruta', label:'Ruta', options:distinctSorted(function(r){return r.ruta;}), fmt:fmtRuta, match:function(r,sel){ return sel.indexOf(r.ruta)!==-1; } },
+      { id:'cliente', label:'Cliente', options:CLIENTS.slice(), fmt:function(v){return CLIENT_LABELS[v];},
+        match:function(r,sel){ return sel.some(function(c){ var idx=CLIENTS.indexOf(c); return idx!==-1 && isVisit(r.clients[idx]); }); } }
+    ];
+    var selections = {}; FILTERS.forEach(function(f){ selections[f.id]=[]; });
+
+    // ---- Build filter UI ----
+    var filtersEl = document.getElementById('filters');
+    function buildFilter(f){
+      var wrap=document.createElement('div'); wrap.className='filter-wrap';
+      var btn=document.createElement('button'); btn.className='filter'; btn.type='button'; btn.setAttribute('aria-expanded','false');
+      btn.innerHTML='<span>'+f.label+'</span><span class="chev" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+      var dd=document.createElement('div'); dd.className='dropdown';
+      dd.innerHTML='<input class="dd-search" type="text" placeholder="Buscar '+f.label.toLowerCase()+'…" /><div class="dd-list"></div>';
+      var list=dd.querySelector('.dd-list');
+      f.options.forEach(function(opt){
+        var item=document.createElement('label'); item.className='dd-item';
+        item.innerHTML='<input type="checkbox" value="'+opt+'" /><span>'+f.fmt(opt)+'</span>';
+        list.appendChild(item);
+      });
+      wrap.appendChild(btn); wrap.appendChild(dd); filtersEl.appendChild(wrap);
+
+      btn.addEventListener('click', function(e){ e.stopPropagation();
+        var open=wrap.classList.contains('open'); closeAll(); if(!open){ wrap.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.querySelector('.dd-search').focus(); }
+      });
+      var search=dd.querySelector('.dd-search');
+      search.addEventListener('click',function(e){e.stopPropagation();});
+      search.addEventListener('input',function(){
+        var q=search.value.toLowerCase().trim(); var any=false;
+        list.querySelectorAll('.dd-item').forEach(function(it){ var match=it.textContent.toLowerCase().indexOf(q)!==-1; it.style.display=match?'flex':'none'; if(match)any=true; });
+        var empty=dd.querySelector('.dd-empty');
+        if(!any&&!empty){ empty=document.createElement('div'); empty.className='dd-empty'; empty.textContent='Sin resultados'; list.appendChild(empty); }
+        else if(any&&empty){ empty.remove(); }
+      });
+      dd.addEventListener('click',function(e){e.stopPropagation();});
+      dd.addEventListener('change',function(){
+        var checked=[].slice.call(dd.querySelectorAll('input[type="checkbox"]:checked')).map(function(c){return c.value;});
+        selections[f.id]=checked;
+        var n=checked.length;
+        if(n>0){ btn.classList.add('has-selection'); var c=btn.querySelector('.count'); if(!c){c=document.createElement('span');c.className='count';btn.appendChild(c);} c.textContent=n; }
+        else { btn.classList.remove('has-selection'); var c2=btn.querySelector('.count'); if(c2)c2.remove(); }
+        render();
+      });
+    }
+    FILTERS.forEach(buildFilter);
+
+    function closeAll(){ document.querySelectorAll('.filter-wrap.open').forEach(function(w){ w.classList.remove('open'); w.querySelector('.filter').setAttribute('aria-expanded','false'); }); }
+    document.addEventListener('click', closeAll);
+
+    // ---- Build table head ----
+    var theadRow=document.getElementById('theadRow');
+    var headHtml='';
+    COLS.forEach(function(c,i){
+      var sticky = i<3 ? ' sticky-col c'+i : '';
+      headHtml+='<th class="'+ (i<3?'sticky-col c'+i:'') +'">'+c.label+'</th>';
+    });
+    CLIENTS.forEach(function(c,i){
+      headHtml+='<th class="client-col">'+CLIENT_LABELS[c]+'</th>';
+    });
+    theadRow.innerHTML=headHtml;
+
+    // measure sticky widths after first render
+    var tbody=document.getElementById('tbody');
+    var resultCount=document.getElementById('resultCount');
+    var checkSvg='<span class="visit-yes"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+    var PENCIL_SVG='<svg viewBox="0 0 24 24" width="14" height="14" fill="none"><path d="M4 20h4L18.5 9.5a2 2 0 0 0 0-3l-1-1a2 2 0 0 0-3 0L4 16v4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m13.5 7.5 3 3" stroke="currentColor" stroke-width="1.8"/></svg>';
+
+    function rowMatches(r){
+      return FILTERS.every(function(f){ var sel=selections[f.id]; if(!sel.length) return true; return f.match(r,sel); });
+    }
+
+    function render(){
+      var filtered=ROWS.filter(rowMatches);
+      var html='';
+      if(filtered.length===0){
+        html='<tr class="empty-row"><td colspan="'+(COLS.length+CLIENTS.length)+'">No hay salas que coincidan con los filtros.</td></tr>';
+      } else {
+        filtered.forEach(function(r){
+          html+='<tr>';
+          html+='<td class="sticky-col c0"><span class="cadena-badge">'+fmtCadena(r.cadena)+'</span></td>';
+          html+='<td class="sticky-col c1 codigo editable" data-edit="'+r.id+'" title="Editar sala">'+fmtCodigo(r.codigo)+'</td>';
+          html+='<td class="sticky-col c2 nombre editable" data-edit="'+r.id+'" title="Editar sala"><span class="edit-name">'+fmtNombre(r.nombre)+'</span><span class="edit-pencil">'+PENCIL_SVG+'</span></td>';
+          html+='<td class="dias">'+fmtDias(r.dias)+'</td>';
+          html+='<td><span class="freq">'+r.freq+'</span></td>';
+          html+='<td><span class="ruta-badge">'+fmtRuta(r.ruta)+'</span></td>';
+          html+='<td style="color:var(--muted)">'+routeRut(r.ruta)+'</td>';
+          r.clients.forEach(function(cv,i){
+            html+='<td class="client-col">'+(isVisit(cv)?checkSvg:'<span class="visit-no">–</span>')+'</td>';
+          });
+          html+='</tr>';
+        });
+      }
+      tbody.innerHTML=html;
+      resultCount.innerHTML='Mostrando <b>'+filtered.length+'</b> de '+ROWS.length+' salas';
+      // toggle clear button
+      var anySel=FILTERS.some(function(f){return selections[f.id].length;});
+      clearBtn.classList.toggle('disabled', !anySel);
+      updateStickyWidths();
+    }
+
+    function updateStickyWidths(){
+      var firstRow=tbody.querySelector('tr:not(.empty-row)');
+      var ref = firstRow || theadRow;
+      var cells = ref.children;
+      if(cells.length>=3){
+        var w0=cells[0].getBoundingClientRect().width;
+        var w1=cells[1].getBoundingClientRect().width;
+        document.documentElement.style.setProperty('--w0', w0+'px');
+        document.documentElement.style.setProperty('--w1', w1+'px');
+      }
+    }
+
+    var clearBtn=document.getElementById('clearBtn');
+    clearBtn.addEventListener('click', function(){
+      if(clearBtn.classList.contains('disabled')) return;
+      FILTERS.forEach(function(f){ selections[f.id]=[]; });
+      document.querySelectorAll('.filter').forEach(function(b){ b.classList.remove('has-selection'); var c=b.querySelector('.count'); if(c)c.remove(); });
+      document.querySelectorAll('.dd-item input:checked').forEach(function(c){ c.checked=false; });
+      render();
+    });
+
+    /* ===== Editar sala (modal) + trazabilidad ===== */
+    var DAY_DEFS = [['l','L','Lunes'],['m','M','Martes'],['x','X','Miércoles'],['j','J','Jueves'],['v','V','Viernes'],['s','S','Sábado'],['d','D','Domingo']];
+    var ICO_CHECK='<svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var ICO_PLUS='<svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
+
+    var editOverlay=document.getElementById('editOverlay');
+    var histOverlay=document.getElementById('histOverlay');
+    var mDays=document.getElementById('m-days'), mFreq=document.getElementById('m-freq');
+    var mRuta=document.getElementById('m-ruta'), mRut=document.getElementById('m-rut');
+    var mClients=document.getElementById('m-clients'), mCliCount=document.getElementById('m-cli-count');
+    var toastEl=document.getElementById('toast');
+    var current=null, dayState={}, clientState=[];
+
+    function toast(msg){
+      toastEl.innerHTML=ICO_CHECK+'<span>'+msg+'</span>';
+      toastEl.classList.add('show');
+      clearTimeout(toast._t); toast._t=setTimeout(function(){ toastEl.classList.remove('show'); }, 2600);
+    }
+    function persistRows(){ try{ localStorage.setItem('re_admin_asist_rows_v1', JSON.stringify(overrides)); }catch(e){} }
+    function persistLog(){ try{ localStorage.setItem('re_admin_asist_log_v1', JSON.stringify(changeLog)); }catch(e){} }
+
+    // Poblar el select de rutas con la lista predeterminada (rutas existentes en la base)
+    var ROUTE_OPTS = distinctSorted(function(r){ return r.ruta; });
+    (function(){
+      var html=''; ROUTE_OPTS.forEach(function(rt){ html+='<option value="'+String(rt).replace(/"/g,'&quot;')+'">'+fmtRuta(rt)+'</option>'; });
+      mRuta.innerHTML=html;
+    })();
+    function updateRutDisplay(){ mRut.textContent = mRuta.value ? routeRut(mRuta.value) : '—'; }
+    mRuta.addEventListener('change', updateRutDisplay);
+
+    function openEdit(id){
+      var r=null; for(var i=0;i<ROWS.length;i++){ if(ROWS[i].id===id){ r=ROWS[i]; break; } }
+      if(!r) return;
+      current=r;
+      document.getElementById('m-cadena').textContent=fmtCadena(r.cadena);
+      document.getElementById('m-nombre').textContent=fmtNombre(r.nombre);
+      document.getElementById('m-codigo').textContent=fmtCodigo(r.codigo);
+      dayState={};
+      String(r.dias||'').split('-').forEach(function(d){ d=d.trim().toLowerCase(); if(d) dayState[d]=true; });
+      renderDays();
+      mRuta.value=r.ruta||'';
+      updateRutDisplay();
+      clientState=CLIENTS.map(function(_,i){ return isVisit(r.clients[i]); });
+      renderClients();
+      editOverlay.classList.add('open');
+    }
+    function closeEdit(){ editOverlay.classList.remove('open'); current=null; }
+
+    function renderDays(){
+      mDays.innerHTML='';
+      DAY_DEFS.forEach(function(d){
+        var b=document.createElement('button'); b.type='button'; b.title=d[2];
+        b.className='day-toggle'+(dayState[d[0]]?' on':''); b.textContent=d[1];
+        b.addEventListener('click', function(){ dayState[d[0]]=!dayState[d[0]]; renderDays(); });
+        mDays.appendChild(b);
+      });
+      updateFreq();
+    }
+    function freqCount(){ var n=0; DAY_DEFS.forEach(function(d){ if(dayState[d[0]]) n++; }); return n; }
+    function updateFreq(){ mFreq.textContent=freqCount(); }
+
+    function renderClients(){
+      mClients.innerHTML='';
+      CLIENTS.forEach(function(c,i){
+        var on=clientState[i];
+        var chip=document.createElement('button'); chip.type='button';
+        chip.className='client-chip'+(on?' on':'');
+        chip.innerHTML='<span class="chip-ico">'+(on?ICO_CHECK:ICO_PLUS)+'</span>'+CLIENT_LABELS[c];
+        chip.addEventListener('click', function(){ clientState[i]=!clientState[i]; renderClients(); });
+        mClients.appendChild(chip);
+      });
+      mCliCount.textContent=clientState.filter(Boolean).length;
+    }
+
+    function saveEdit(){
+      if(!current) return;
+      var selDays=DAY_DEFS.filter(function(d){ return dayState[d[0]]; });
+      var newDias=selDays.map(function(d){ return d[0]; }).join('-');
+      var newFreq=String(selDays.length);
+      var newRuta=(mRuta.value||'').trim().toLowerCase();
+      var newRut=newRuta?routeRut(newRuta):'';
+      var newClients=current.clients.slice();
+      var added=[], removed=[];
+      CLIENTS.forEach(function(c,i){
+        var origOn=isVisit(current.clients[i]); var now=clientState[i];
+        if(now!==origOn){
+          if(now){ newClients[i]='si'; added.push(CLIENT_LABELS[c]); }
+          else { newClients[i]=''; removed.push(CLIENT_LABELS[c]); }
+        }
+      });
+      var changes=[];
+      var oldDias=fmtDias(current.dias)||'—', nDias=(newDias?newDias.toUpperCase():'—');
+      if(oldDias!==nDias) changes.push({f:'Días de visita',b:oldDias,a:nDias});
+      if(String(current.freq)!==newFreq) changes.push({f:'Frecuencia',b:(current.freq||'0')+'×/sem',a:newFreq+'×/sem'});
+      if((current.ruta||'')!==newRuta) changes.push({f:'Ruta',b:current.ruta?fmtRuta(current.ruta):'—',a:newRuta?fmtRuta(newRuta):'—'});
+      var oldRut=current.ruta?routeRut(current.ruta):'—';
+      if(oldRut!==(newRut||'—')) changes.push({f:'RUT reponedor',b:oldRut,a:newRut||'—'});
+      if(!changes.length && !added.length && !removed.length){ toast('No hubo cambios que guardar'); closeEdit(); return; }
+      current.dias=newDias; current.freq=newFreq; current.ruta=newRuta; current.rut=newRut; current.clients=newClients;
+      overrides[current.id]={dias:current.dias,freq:current.freq,ruta:current.ruta,rut:current.rut,clients:current.clients};
+      persistRows();
+      changeLog.unshift({ ts:Date.now(), codigo:fmtCodigo(current.codigo), nombre:fmtNombre(current.nombre), cadena:fmtCadena(current.cadena), changes:changes, added:added, removed:removed });
+      persistLog();
+      render(); updateHistBtn(); closeEdit(); toast('Cambios guardados correctamente');
+    }
+
+    /* ---- Historial ---- */
+    var histBtn=document.getElementById('historyBtn'), histCount=document.getElementById('histCount'), hBody=document.getElementById('h-body');
+    function updateHistBtn(){
+      if(changeLog.length){ histCount.style.display='inline-block'; histCount.textContent=changeLog.length; }
+      else histCount.style.display='none';
+    }
+    function fmtTime(ts){
+      try { return new Date(ts).toLocaleString('es-CL',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+      catch(e){ return new Date(ts).toLocaleString(); }
+    }
+    function renderHistory(){
+      if(!changeLog.length){ hBody.innerHTML='<p class="log-empty">Aún no se han registrado cambios.</p>'; return; }
+      var html='<div class="log-list">';
+      changeLog.forEach(function(e){
+        html+='<div class="log-entry"><div class="log-top"><span class="l-name">'+e.nombre+'</span><span class="l-code">'+e.codigo+'</span><span class="l-time">'+fmtTime(e.ts)+'</span></div>';
+        e.changes.forEach(function(c){
+          html+='<div class="diff-row"><span class="diff-field">'+c.f+'</span><span class="diff-before">'+c.b+'</span><span class="diff-arrow">→</span><span class="diff-after">'+c.a+'</span></div>';
+        });
+        if(e.added.length||e.removed.length){
+          html+='<div class="diff-clients"><span class="diff-field" style="display:block;margin-bottom:5px">Clientes</span>';
+          e.added.forEach(function(x){ html+='<span class="mini-chip add">+ '+x+'</span>'; });
+          e.removed.forEach(function(x){ html+='<span class="mini-chip rem">'+x+'</span>'; });
+          html+='</div>';
+        }
+        html+='</div>';
+      });
+      html+='</div>';
+      hBody.innerHTML=html;
+    }
+    function openHist(){ renderHistory(); histOverlay.classList.add('open'); }
+    function closeHist(){ histOverlay.classList.remove('open'); }
+
+    /* ---- Exportar historial a Excel (.xls / SpreadsheetML) ---- */
+    function xmlEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function exportExcel(){
+      if(!changeLog.length){ toast('No hay cambios para exportar'); return; }
+      var headers=['Fecha y hora','Cadena','Código local','Nombre local','Campo modificado','Antes','Después','Usuario'];
+      var rows=[];
+      changeLog.forEach(function(e){
+        var t=fmtTime(e.ts);
+        e.changes.forEach(function(c){ rows.push([t,e.cadena,e.codigo,e.nombre,c.f,c.b,c.a,'Administrador']); });
+        e.added.forEach(function(x){ rows.push([t,e.cadena,e.codigo,e.nombre,'Cliente agregado','—',x,'Administrador']); });
+        e.removed.forEach(function(x){ rows.push([t,e.cadena,e.codigo,e.nombre,'Cliente quitado',x,'—','Administrador']); });
+      });
+      var widths=[150,90,90,180,150,150,150,100];
+      var xml='<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n';
+      xml+='<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
+      xml+='<Styles><Style ss:ID="hdr"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#15130E" ss:Pattern="Solid"/><Alignment ss:Vertical="Center"/></Style>';
+      xml+='<Style ss:ID="cell"><Alignment ss:Vertical="Center"/></Style></Styles>';
+      xml+='<Worksheet ss:Name="Historial"><Table>';
+      widths.forEach(function(w){ xml+='<Column ss:Width="'+w+'"/>'; });
+      xml+='<Row ss:Height="22">';
+      headers.forEach(function(h){ xml+='<Cell ss:StyleID="hdr"><Data ss:Type="String">'+xmlEsc(h)+'</Data></Cell>'; });
+      xml+='</Row>';
+      rows.forEach(function(r){ xml+='<Row>'; r.forEach(function(v){ xml+='<Cell ss:StyleID="cell"><Data ss:Type="String">'+xmlEsc(v)+'</Data></Cell>'; }); xml+='</Row>'; });
+      xml+='</Table></Worksheet></Workbook>';
+      var blob=new Blob([xml], {type:'application/vnd.ms-excel'});
+      var url=URL.createObjectURL(blob);
+      var d=new Date(); var stamp=d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2);
+      var a=document.createElement('a'); a.href=url; a.download='historial-cambios-rutas-'+stamp+'.xls';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      toast('Historial exportado a Excel');
+    }
+
+    document.getElementById('m-close').addEventListener('click', closeEdit);
+    document.getElementById('m-cancel').addEventListener('click', closeEdit);
+    document.getElementById('m-save').addEventListener('click', saveEdit);
+    editOverlay.addEventListener('click', function(e){ if(e.target===editOverlay) closeEdit(); });
+    histBtn.addEventListener('click', openHist);
+    document.getElementById('h-export').addEventListener('click', exportExcel);
+    document.getElementById('h-close').addEventListener('click', closeHist);
+    document.getElementById('h-done').addEventListener('click', closeHist);
+    histOverlay.addEventListener('click', function(e){ if(e.target===histOverlay) closeHist(); });
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeEdit(); closeHist(); } });
+
+    tbody.addEventListener('click', function(e){
+      var cell=e.target.closest('[data-edit]');
+      if(cell){ openEdit(parseInt(cell.getAttribute('data-edit'),10)); }
+    });
+    updateHistBtn();
+
+    render();
+    window.addEventListener('resize', updateStickyWidths);
+  </script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-guard.js"></script>
+</body>
+</html>

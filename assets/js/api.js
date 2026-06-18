@@ -30,9 +30,30 @@
     return 'login.html';
   }
 
+  var ADMIN_ALLOWED_EMAILS = {
+    'cbaeza@retailexperts.cl': true,
+    'jcardemil@retailexperts.cl': true,
+    'jroca@retailexperts.cl': true,
+    'avergara@retailexperts.cl': true
+  };
+
   function requireAuth() {
     if (!getToken()) {
       window.location.href = loginUrl();
+      return false;
+    }
+    return true;
+  }
+
+  function isAdminUser(user) {
+    return !!(user && (user.rol === 'admin' || user.rol === 'interno') && ADMIN_ALLOWED_EMAILS[String(user.email || '').toLowerCase()]);
+  }
+
+  function requireAdminAuth() {
+    var user = getUser();
+    if (!getToken() || !isAdminUser(user)) {
+      clearSession();
+      window.location.href = 'adminlogin.html';
       return false;
     }
     return true;
@@ -84,11 +105,29 @@
     return request(path, options).then(function (response) { return response.json(); });
   }
 
+  function cleanPassword(password) {
+    return String(password || '').trim();
+  }
+
   function login(username, password) {
     return fetch(API_BASE_URL + '/web/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ usuario: username, password: password })
+      body: JSON.stringify({ usuario: username, password: cleanPassword(password) })
+    }).then(function (response) {
+      if (!response.ok) throw new Error('Usuario o contrasena incorrectos');
+      return response.json();
+    }).then(function (payload) {
+      setSession(payload);
+      return payload;
+    });
+  }
+
+  function adminLogin(username, password) {
+    return fetch(API_BASE_URL + '/web/auth/admin-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario: username, password: cleanPassword(password) })
     }).then(function (response) {
       if (!response.ok) throw new Error('Usuario o contrasena incorrectos');
       return response.json();
@@ -105,9 +144,12 @@
     setSession: setSession,
     clearSession: clearSession,
     requireAuth: requireAuth,
+    requireAdminAuth: requireAdminAuth,
+    isAdminUser: isAdminUser,
     buildQuery: buildQuery,
     request: request,
     requestJson: requestJson,
-    login: login
+    login: login,
+    adminLogin: adminLogin
   };
 })();

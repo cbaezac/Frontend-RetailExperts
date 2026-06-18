@@ -1552,11 +1552,19 @@ section { position: relative; }
       </div>
     </div>
     <div class="footer-bottom">
-      <span>© 2025 Retail Experts. Todos los derechos reservados.</span>
+      <span><span class="re-key">&copy;</span> 2025 Retail Experts. Todos los derechos reservados.</span>
       <span class="tag">El aliado que impulsa tu negocio.</span>
     </div>
   </div>
 </footer>
+
+<script>
+// Acceso administrativo oculto: doble clic sobre el símbolo © del footer.
+(function () {
+  var key = document.querySelector('.re-key');
+  if (key) key.addEventListener('dblclick', function () { window.location.href = 'adminlogin.html'; });
+})();
+</script>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // Scroll reveal animations

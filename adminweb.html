@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de administración · Retail Experts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --purple: #5A0D74;
+  --purple-deep: #3D0850;
+  --purple-light: #7B1E99;
+  --orange: #FF5A1F;
+  --orange-light: #FF7A45;
+  --cream: #FFF8E7;
+  --cream-dark: #F5EDD4;
+  --ink: #1A0820;
+  --white: #FFFFFF;
+  --font-display: 'Bricolage Grotesque', sans-serif;
+  --font-body: 'Manrope', sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-body);
+  background: var(--ink);
+  color: var(--white);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* === HEADER === */
+.admin-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px clamp(20px, 4vw, 40px);
+  background: var(--cream);
+  border-bottom: 1px solid var(--cream-dark);
+}
+.admin-header .logo-img { height: 40px; width: auto; display: block; }
+.header-divider { width: 1px; height: 26px; background: rgba(90,13,116,.18); }
+.header-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--purple);
+  letter-spacing: -0.01em;
+}
+.header-spacer { margin-left: auto; }
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #6a6a6a;
+  font-weight: 500;
+}
+.user-avatar {
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: var(--purple);
+  color: var(--white);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+}
+.logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: 14px;
+  padding: 9px 16px;
+  background: transparent;
+  color: var(--purple);
+  border: 1.5px solid rgba(90,13,116,.25);
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .2s, color .2s, border-color .2s;
+}
+.logout-btn:hover { background: var(--purple); color: var(--white); border-color: var(--purple); }
+.logout-btn svg { width: 15px; height: 15px; }
+
+/* === MODULES GRID === */
+.modules {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: 1fr 1fr;
+  gap: 3px;
+  background: var(--ink);
+  min-height: 0;
+}
+.module {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(24px, 4vw, 48px);
+  text-decoration: none;
+  color: var(--white);
+  overflow: hidden;
+  isolation: isolate;
+  transition: filter .3s ease;
+}
+.module::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 120% at 100% 0%, rgba(255,255,255,.14), transparent 55%);
+  opacity: 0;
+  transition: opacity .35s ease;
+  z-index: -1;
+}
+.module:hover::after { opacity: 1; }
+.module.is-active:hover { filter: brightness(1.06); }
+
+.mod-mantenedores { background: linear-gradient(150deg, #2E0A52 0%, #46126F 100%); }
+.mod-rutas { background: linear-gradient(150deg, #43127A 0%, #621C92 100%); }
+.mod-asistencia { background: linear-gradient(150deg, #7A1F92 0%, #9E2A7E 100%); }
+.mod-galeria    { background: linear-gradient(150deg, #561888 0%, #7A2496 100%); }
+.mod-tareas     { background: linear-gradient(150deg, #9A2A6E 0%, #C0395A 100%); }
+.mod-comunicados  { background: linear-gradient(150deg, #D8481A 0%, #FF7C42 100%); }
+.mod-proximo    { background: linear-gradient(150deg, #241030, #14081c); cursor: not-allowed; }
+
+.module .mod-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.mod-icon {
+  width: clamp(54px, 5vw, 70px);
+  height: clamp(54px, 5vw, 70px);
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: rgba(255,255,255,.16);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,.22);
+}
+.mod-icon svg { width: 54%; height: 54%; color: var(--white); }
+
+.mod-arrow {
+  width: 46px; height: 46px;
+  display: grid; place-items: center;
+  border-radius: 50%;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.22);
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: opacity .3s ease, transform .3s ease, background .2s;
+}
+.mod-icon svg, .mod-arrow svg { stroke: currentColor; }
+.mod-arrow svg { width: 22px; height: 22px; color: var(--white); }
+.module.is-active:hover .mod-arrow { opacity: 1; transform: translateX(0); }
+.module.is-active:hover .mod-icon { background: rgba(255,255,255,.24); }
+
+.mod-body { margin-top: auto; }
+.mod-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.7);
+  margin-bottom: 10px;
+}
+.mod-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(26px, 3.4vw, 40px);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  margin-bottom: 10px;
+}
+.mod-desc {
+  font-size: clamp(13px, 1.1vw, 15px);
+  line-height: 1.5;
+  color: rgba(255,255,255,.82);
+  max-width: 34ch;
+}
+
+.soon-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.18);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.7);
+}
+.mod-proximo .mod-icon,
+.mod-proximo .mod-title,
+.mod-proximo .mod-desc { opacity: .55; }
+
+@media (max-width: 1080px) {
+  body { overflow: auto; }
+  .modules {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: none;
+  }
+  .module { min-height: 260px; }
+}
+@media (max-width: 720px) {
+  body { overflow: auto; }
+  .modules {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+  }
+  .module { min-height: 220px; }
+  .header-user { display: none; }
+}
+</style>
+</head>
+<body>
+  <header class="admin-header">
+    <a href="index.html"><img class="logo-img" src="logo-retail-experts.png" alt="Retail Experts"></a>
+    <div class="header-divider"></div>
+    <span class="header-title">Panel de administración</span>
+    <div class="header-spacer"></div>
+    <div class="header-user">
+      <span class="user-avatar">A</span>
+      <span>Administrador</span>
+    </div>
+    <a class="logout-btn" href="adminlogin.html">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M15 12H4m0 0 4-4m-4 4 4 4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M9 4h7a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Cerrar sesión
+    </a>
+  </header>
+
+  <main class="modules">
+    <!-- MANTENEDORES -->
+    <a class="module mod-mantenedores is-active" href="adminmantenedores.html">
+      <div class="mod-top">
+        <div class="mod-icon">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M11 3.5a1 1 0 0 1 2 0l.3 1.6a7 7 0 0 1 1.7 1l1.5-.7a1 1 0 0 1 1.3.4l1 1.7a1 1 0 0 1-.3 1.3l-1.2 1a7 7 0 0 1 0 2l1.2 1a1 1 0 0 1 .3 1.3l-1 1.7a1 1 0 0 1-1.3.4l-1.5-.7a7 7 0 0 1-1.7 1L13 20.5a1 1 0 0 1-2 0l-.3-1.6a7 7 0 0 1-1.7-1l-1.5.7a1 1 0 0 1-1.3-.4l-1-1.7a1 1 0 0 1 .3-1.3l1.2-1a7 7 0 0 1 0-2l-1.2-1a1 1 0 0 1-.3-1.3l1-1.7a1 1 0 0 1 1.3-.4l1.5.7a7 7 0 0 1 1.7-1L11 3.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+            <circle cx="12" cy="12" r="2.6" stroke="currentColor" stroke-width="1.6"/>
+          </svg>
+        </div>
+        <span class="mod-arrow">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m0 0-6-6m6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </div>
+      <div class="mod-body">
+        <h2 class="mod-title">Mantenedores</h2>
+        <p class="mod-desc">Administra las bases de: Locales, Productos y Local-Producto.</p>
+      </div>
+    </a>
+
+    <!-- RUTAS -->
+    <a class="module mod-rutas is-active" href="adminrutas.html">
+      <div class="mod-top">
+        <div class="mod-icon">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="6" cy="5" r="2.4" stroke="currentColor" stroke-width="1.8"/>
+            <circle cx="18" cy="19" r="2.4" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M6 7.4v3.1A3.5 3.5 0 0 0 9.5 14h5a3.5 3.5 0 0 1 3.5 3.5v-.9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0.1 3.2"/>
+          </svg>
+        </div>
+        <span class="mod-arrow">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m0 0-6-6m6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </div>
+      <div class="mod-body">
+        <h2 class="mod-title">Rutas</h2>
+        <p class="mod-desc">Modifica las rutas de cada sala. Frecuencia, responsable y clientes asociados.</p>
+      </div>
+    </a>
+
+    <!-- ASISTENCIA -->
+    <a class="module mod-asistencia is-active" href="adminasistencia.html">
+      <div class="mod-top">
+        <div class="mod-icon">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M3 9h18M8 2.5v4M16 2.5v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="m9 14.5 2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="mod-arrow">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m0 0-6-6m6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </div>
+      <div class="mod-body">
+        <h2 class="mod-title">Asistencia</h2>
+        <p class="mod-desc">Modifica el plan de visitas de cada reponedor en cada sala.</p>
+      </div>
+    </a>
+
+    <!-- GALERÍA -->
+    <a class="module mod-galeria is-active" href="admingaleria.html">
+      <div class="mod-top">
+        <div class="mod-icon">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.8"/>
+            <circle cx="8.5" cy="9.5" r="1.8" stroke="currentColor" stroke-width="1.8"/>
+            <path d="m4 18 5-5 4 4 3-3 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="mod-arrow">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m0 0-6-6m6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </div>
+      <div class="mod-body">
+        <h2 class="mod-title">Galería</h2>
+        <p class="mod-desc">Revisa las distintas fotografías, y elimina cualquier inconsistencia.</p>
+      </div>
+    </a>
+
+    <!-- TAREAS -->
+    <a class="module mod-tareas is-active" href="admintareas.html">
+      <div class="mod-top">
+        <div class="mod-icon">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M9 5h9M9 12h9M9 19h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="m3.5 4.8 1.2 1.2 2-2.4M3.5 11.8l1.2 1.2 2-2.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="5" cy="19" r="1.6" stroke="currentColor" stroke-width="1.8"/>
+          </svg>
+        </div>
+        <span class="mod-arrow">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m0 0-6-6m6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </div>
+      <div class="mod-body">
+        <h2 class="mod-title">Tareas</h2>
+        <p class="mod-desc">Crea o elimina tareas de los distintos acuerdos comerciales.</p>
+      </div>
+    </a>
+
+    <!-- COMUNICADOS -->
+    <a class="module mod-comunicados is-active" href="admincomunicados.html">
+      <div class="mod-top">
+        <div class="mod-icon">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 9a2 2 0 0 1 2-2h2l8-3v16l-8-3v3a1.5 1.5 0 0 1-3 0v-3H6a2 2 0 0 1-2-2V9Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+            <path d="M19 9a3 3 0 0 1 0 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="mod-arrow">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m0 0-6-6m6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </div>
+      <div class="mod-body">
+        <h2 class="mod-title">Comunicados</h2>
+        <p class="mod-desc">Genera comunicados masivos para un refuerzo en el aplicativo móvil.</p>
+      </div>
+    </a>
+  </main>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-guard.js"></script>
+</body>
+</html>

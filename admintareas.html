@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tareas · Panel de administración · Retail Experts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --purple: #5A0D74; --purple-deep: #3D0850; --purple-light: #7B1E99;
+  --orange: #FF5A1F; --orange-dark: #C8480F; --orange-light: #FF7A45;
+  --cream: #FFF8E7; --cream-dark: #F5EDD4; --ink: #1A0820; --white: #FFFFFF;
+  --line: rgba(28,26,20,0.14); --muted: #6B6557;
+  --font-display: 'Bricolage Grotesque', sans-serif; --font-body: 'Manrope', sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { min-height: 100%; }
+body {
+  font-family: var(--font-body);
+  background: radial-gradient(120% 80% at 50% -10%, rgba(61,8,80,0.06) 0%, rgba(0,0,0,0) 55%), var(--cream);
+  color: var(--ink); min-height: 100vh; display: flex; flex-direction: column;
+}
+.admin-header { flex: 0 0 auto; display: flex; align-items: center; gap: 20px; padding: 14px clamp(20px, 4vw, 40px); background: var(--cream); border-bottom: 1px solid var(--cream-dark); }
+.admin-header .logo-img { height: 40px; width: auto; display: block; }
+.header-divider { width: 1px; height: 26px; background: rgba(90,13,116,.18); }
+.header-title { font-family: var(--font-display); font-weight: 700; font-size: 16px; color: var(--purple); letter-spacing: -0.01em; }
+.header-spacer { margin-left: auto; }
+.back-btn { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; background: transparent; color: var(--purple); border: 1.5px solid rgba(90,13,116,.25); border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none; transition: background .2s, color .2s, border-color .2s; }
+.back-btn:hover { background: var(--purple); color: var(--white); border-color: var(--purple); }
+.back-btn svg { width: 15px; height: 15px; }
+
+.wrap { width: 100%; max-width: 960px; margin: 0 auto; padding: clamp(40px, 7vh, 80px) clamp(20px, 4vw, 48px) 60px; }
+.eyebrow { font-family: var(--font-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.22em; font-size: 0.78rem; color: var(--orange); margin-bottom: 12px; }
+.page-title { font-family: var(--font-display); font-weight: 800; font-size: clamp(2.2rem, 5vw, 3.4rem); line-height: 1; letter-spacing: -0.02em; color: var(--purple); margin-bottom: 14px; }
+.page-sub { font-size: 1.02rem; color: var(--muted); max-width: 58ch; line-height: 1.6; margin-bottom: clamp(34px, 5vh, 52px); }
+
+.task-label { font-family: var(--font-display); font-weight: 600; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 16px; }
+.cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 22px; }
+.task-card {
+  position: relative; display: flex; flex-direction: column; align-items: flex-start;
+  background: var(--white); border: 1px solid var(--line); border-radius: 22px;
+  padding: 34px 30px; text-decoration: none; color: var(--ink);
+  box-shadow: 0 10px 30px rgba(28,26,20,0.06);
+  transition: transform .2s ease, box-shadow .25s ease, border-color .2s ease; overflow: hidden;
+}
+.task-card::after { content:''; position:absolute; inset:0; opacity:0; transition:opacity .3s ease; background: radial-gradient(120% 120% at 100% 0%, rgba(90,13,116,.05), transparent 60%); }
+.task-card:hover { transform: translateY(-4px); box-shadow: 0 24px 52px rgba(28,26,20,0.14); }
+.task-card.cart:hover { border-color: var(--orange); }
+.task-card.exhib:hover { border-color: var(--purple-light); }
+.task-icon { width: 66px; height: 66px; display: grid; place-items: center; border-radius: 18px; color: var(--white); margin-bottom: 24px; }
+.task-icon svg { width: 32px; height: 32px; }
+.cart .task-icon { background: linear-gradient(150deg, #C8480F, #FF7A45); box-shadow: 0 14px 30px rgba(224,86,28,0.28); }
+.exhib .task-icon { background: linear-gradient(150deg, #5A0D74, #7B1E99); box-shadow: 0 14px 30px rgba(90,13,116,0.28); }
+.task-card h3 { font-family: var(--font-display); font-weight: 700; font-size: 1.5rem; letter-spacing: -0.01em; margin-bottom: 10px; }
+.task-card p { font-size: 0.98rem; color: var(--muted); line-height: 1.55; margin-bottom: 26px; }
+.task-cta { margin-top: auto; display: inline-flex; align-items: center; gap: 9px; font-family: var(--font-display); font-weight: 700; font-size: 0.96rem; padding: 12px 22px; border-radius: 999px; color: var(--white); }
+.cart .task-cta { background: var(--orange); box-shadow: 0 12px 26px rgba(224,86,28,0.3); }
+.exhib .task-cta { background: var(--purple); box-shadow: 0 12px 26px rgba(90,13,116,0.3); }
+.task-cta svg { width: 16px; height: 16px; transition: transform .2s ease; }
+.task-card:hover .task-cta svg { transform: translateX(4px); }
+.soon-tag { position: absolute; top: 20px; right: 20px; font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); background: rgba(28,26,20,0.06); border-radius: 999px; padding: 4px 10px; }
+
+@media (max-width: 720px) { .cards { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+  <header class="admin-header">
+    <a class="back-btn" href="adminweb.html">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Volver al panel
+    </a>
+    <div class="header-divider"></div>
+    <a href="index.html"><img class="logo-img" src="logo-retail-experts.png" alt="Retail Experts"></a>
+    <span class="header-title">Tareas</span>
+    <div class="header-spacer"></div>
+  </header>
+
+  <main class="wrap">
+    <p class="eyebrow">Gestión operativa</p>
+    <h1 class="page-title">Tareas</h1>
+    <p class="page-sub">Crea y asigna tareas para los reponedores en terreno. Elige el tipo de tarea que quieres generar.</p>
+
+    <p class="task-label">Crear nueva tarea</p>
+    <div class="cards">
+      <a class="task-card cart" href="admincarteleria.html">
+        <div class="task-icon">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3" y="4" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M7 9h7M7 12.5h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3>Cartelería</h3>
+        <p>Tareas de instalación y reposición de material POP, precios y señalética en el punto de venta.</p>
+        <span class="task-cta">Crear tarea de cartelería
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m0 0-6-6m6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </a>
+
+      <a class="task-card exhib" href="adminexhibiciones.html">
+        <div class="task-icon">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 7h16M5 7l1 12a2 2 0 0 0 2 1.8h8a2 2 0 0 0 2-1.8L19 7" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+            <path d="M8.5 7V5.5A2.5 2.5 0 0 1 11 3h2a2.5 2.5 0 0 1 2.5 2.5V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            <path d="M9.5 11v5M14.5 11v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3>Exhibiciones</h3>
+        <p>Tareas de armado y mantención de exhibiciones, islas, cabeceras y puntas de góndola.</p>
+        <span class="task-cta">Crear tarea de exhibiciones
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m0 0-6-6m6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </a>
+    </div>
+  </main>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-guard.js"></script>
+</body>
+</html>

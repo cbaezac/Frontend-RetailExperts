@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Comunicados · Panel de administración · Retail Experts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --purple:#5A0D74; --purple-deep:#3D0850; --purple-light:#7B1E99;
+    --orange:#FF5A1F; --orange-dark:#C8480F; --cream:#FFF8E7; --cream-dark:#F5EDD4;
+    --ink:#1A0820; --white:#FFF; --line:rgba(28,26,20,0.14); --line-soft:rgba(28,26,20,0.08);
+    --muted:#6B6557; --card:#FFFDF6; --frame:#15130E;
+    --font-display:'Bricolage Grotesque',sans-serif; --font-body:'Manrope',sans-serif;
+  }
+  html,body{ min-height:100%; }
+  body{
+    font-family:var(--font-body); color:var(--ink);
+    background:radial-gradient(120% 80% at 50% -10%, rgba(224,86,28,0.07) 0%, rgba(0,0,0,0) 55%), var(--cream);
+    min-height:100vh; display:flex; flex-direction:column;
+  }
+  .admin-header{ flex:0 0 auto; display:flex; align-items:center; gap:20px; padding:14px clamp(20px,4vw,40px); background:var(--cream); border-bottom:1px solid var(--cream-dark); }
+  .admin-header .logo-img{ height:40px; width:auto; display:block; }
+  .header-divider{ width:1px; height:26px; background:rgba(90,13,116,.18); }
+  .header-title{ font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--purple); letter-spacing:-0.01em; }
+  .header-spacer{ margin-left:auto; }
+  .back-btn{ display:inline-flex; align-items:center; gap:7px; padding:9px 16px; background:transparent; color:var(--purple); border:1.5px solid rgba(90,13,116,.25); border-radius:999px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; transition:background .2s,color .2s,border-color .2s; }
+  .back-btn:hover{ background:var(--purple); color:var(--white); border-color:var(--purple); }
+  .back-btn svg{ width:15px; height:15px; }
+
+  .wrap{ width:100%; max-width:1240px; margin:0 auto; padding:clamp(28px,5vh,52px) clamp(20px,4vw,48px) 60px; }
+  .eyebrow{ font-family:var(--font-display); font-weight:600; text-transform:uppercase; letter-spacing:.22em; font-size:.78rem; color:var(--orange); margin-bottom:12px; }
+  .page-title{ font-family:var(--font-display); font-weight:800; font-size:clamp(2rem,4.5vw,3rem); line-height:1; letter-spacing:-.02em; color:var(--purple); margin-bottom:10px; }
+  .page-sub{ font-size:1rem; color:var(--muted); max-width:56ch; line-height:1.6; margin-bottom:clamp(28px,4vh,40px); }
+  .layout{ display:grid; grid-template-columns:1.25fr .75fr; gap:clamp(28px,4vw,56px); align-items:start; }
+  .panel{ background:var(--card); border:1px solid var(--line); border-radius:20px; padding:clamp(22px,2.6vw,32px); box-shadow:0 14px 40px rgba(28,26,20,0.08); margin-bottom:22px; }
+  .panel-head{ display:flex; align-items:center; gap:11px; margin-bottom:20px; }
+  .panel-num{ width:30px; height:30px; flex:0 0 auto; display:grid; place-items:center; border-radius:9px; background:var(--purple); color:#fff; font-family:var(--font-display); font-weight:700; font-size:.9rem; }
+  .panel-head h2{ font-family:var(--font-display); font-weight:700; font-size:1.18rem; letter-spacing:-.01em; }
+  .panel-head p{ font-size:.85rem; color:var(--muted); margin-top:2px; }
+  .filters{ display:flex; flex-wrap:wrap; gap:10px; }
+  .filter-wrap{ position:relative; }
+  .filter{ display:inline-flex; align-items:center; gap:8px; font-family:var(--font-display); font-weight:600; font-size:.9rem; color:var(--ink); cursor:pointer; background:#fff; border:1.5px solid var(--line); border-radius:999px; padding:10px 16px; transition:border-color .2s; }
+  .filter:hover{ border-color:var(--ink); }
+  .filter .chev{ display:flex; transition:transform .2s ease; }
+  .filter[aria-expanded="true"] .chev{ transform:rotate(180deg); }
+  .filter.has-selection{ background:var(--frame); color:#FFF8E7; border-color:var(--frame); }
+  .filter .count{ font-size:.74rem; background:rgba(255,255,255,.22); border-radius:999px; padding:1px 7px; font-weight:700; }
+  .dropdown{ position:absolute; top:calc(100% + 9px); left:0; width:260px; background:#FFFDF6; border:1px solid var(--line); border-radius:14px; box-shadow:0 24px 60px rgba(28,26,20,.22); padding:12px; z-index:40; opacity:0; visibility:hidden; pointer-events:none; transform:translateY(-6px); transition:opacity .18s ease, transform .18s ease, visibility .18s; }
+  .filter-wrap.open .dropdown{ opacity:1; visibility:visible; pointer-events:auto; transform:translateY(0); }
+  .dd-search{ width:100%; font-family:var(--font-body); font-size:.9rem; color:var(--ink); background:#fff; border:1px solid var(--line); border-radius:9px; padding:9px 12px; margin-bottom:10px; outline:none; }
+  .dd-search:focus{ border-color:var(--orange); }
+  .dd-list{ max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:2px; }
+  .dd-item{ display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:8px; cursor:pointer; font-size:.92rem; transition:background .15s ease; }
+  .dd-item:hover{ background:rgba(28,26,20,.06); }
+  .dd-item input{ accent-color:var(--orange); width:16px; height:16px; cursor:pointer; flex:0 0 auto; }
+  .dd-empty{ padding:10px 9px; font-size:.88rem; color:var(--muted); }
+  .clear-link{ background:none; border:0; color:var(--muted); font-family:var(--font-body); font-size:.85rem; font-weight:600; cursor:pointer; text-decoration:underline; text-underline-offset:3px; padding:6px; }
+  .clear-link:hover{ color:var(--orange); }
+  .audience{ margin-top:18px; display:flex; align-items:center; gap:16px; padding:16px 18px; border-radius:14px; background:linear-gradient(120deg, rgba(90,13,116,.07), rgba(224,86,28,.06)); border:1px solid var(--line-soft); }
+  .aud-ico{ width:44px; height:44px; flex:0 0 auto; display:grid; place-items:center; border-radius:12px; background:var(--purple); color:#fff; }
+  .aud-ico svg{ width:22px; height:22px; }
+  .aud-main{ font-family:var(--font-display); font-weight:700; font-size:1.05rem; color:var(--ink); }
+  .aud-main b{ color:var(--purple); }
+  .aud-sub{ font-size:.85rem; color:var(--muted); margin-top:2px; }
+  .aud-broadcast{ margin-left:auto; font-size:.74rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--orange); background:rgba(224,86,28,.1); border:1px solid rgba(224,86,28,.2); border-radius:999px; padding:5px 12px; }
+  .field{ margin-bottom:18px; }
+  .field label{ display:block; font-family:var(--font-display); font-weight:600; font-size:.82rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:8px; }
+  .field input, .field textarea{ width:100%; font-family:var(--font-body); font-size:1rem; color:var(--ink); background:#fff; border:1.5px solid var(--line); border-radius:11px; padding:13px 15px; outline:none; transition:border-color .15s ease; resize:none; }
+  .field input:focus, .field textarea:focus{ border-color:var(--orange); }
+  .field textarea{ min-height:120px; line-height:1.5; }
+  .char-row{ display:flex; justify-content:flex-end; margin-top:7px; }
+  .char-count{ font-size:.8rem; color:var(--muted); }
+  .char-count.warn{ color:var(--orange-dark); font-weight:600; }
+  .send-row{ display:flex; align-items:center; gap:16px; margin-top:4px; }
+  .btn-send{ display:inline-flex; align-items:center; gap:10px; font-family:var(--font-display); font-weight:700; font-size:1.02rem; cursor:pointer; color:#fff; background:var(--orange); border:1.5px solid var(--orange); border-radius:999px; padding:14px 32px; box-shadow:0 14px 32px rgba(224,86,28,.3); transition:transform .18s ease, background .18s ease, box-shadow .18s ease; }
+  .btn-send:hover:not(:disabled){ transform:translateY(-2px); background:var(--orange-dark); }
+  .btn-send:disabled{ opacity:.45; cursor:not-allowed; box-shadow:none; }
+  .btn-send svg{ width:18px; height:18px; }
+  .send-hint{ font-size:.86rem; color:var(--muted); }
+  .preview-col{ position:sticky; top:24px; }
+  .preview-label{ font-family:var(--font-display); font-weight:600; text-transform:uppercase; letter-spacing:.14em; font-size:.74rem; color:var(--muted); text-align:center; margin-bottom:18px; }
+  .phone{ width:300px; max-width:100%; margin:0 auto; aspect-ratio:300/620; background:#0a0a0d; border-radius:46px; padding:11px; box-shadow:0 40px 80px rgba(28,26,20,.32), inset 0 0 0 2px rgba(255,255,255,.06); position:relative; }
+  .screen{ position:absolute; inset:11px; border-radius:36px; overflow:hidden; background:linear-gradient(165deg,#3D0850 0%,#5A0D74 42%,#C8480F 100%); display:flex; flex-direction:column; }
+  .notch{ position:absolute; top:0; left:50%; transform:translateX(-50%); width:120px; height:26px; background:#0a0a0d; border-radius:0 0 16px 16px; z-index:5; }
+  .statusbar{ display:flex; justify-content:space-between; align-items:center; padding:13px 24px 0; color:#fff; font-size:.72rem; font-weight:600; z-index:4; }
+  .statusbar .icons{ display:flex; gap:5px; align-items:center; }
+  .lock-clock{ text-align:center; color:#fff; margin-top:18px; }
+  .lock-date{ font-size:.82rem; font-weight:600; opacity:.9; letter-spacing:.02em; }
+  .lock-time{ font-family:var(--font-display); font-weight:700; font-size:4.1rem; line-height:1; letter-spacing:-.02em; margin-top:2px; }
+  .notif-area{ margin-top:auto; padding:14px 12px 28px; display:flex; flex-direction:column; gap:9px; }
+  .notif{ background:rgba(255,255,255,.86); backdrop-filter:blur(12px); border-radius:18px; padding:12px 13px; box-shadow:0 8px 24px rgba(0,0,0,.18); animation:notifIn .4s cubic-bezier(.2,.8,.3,1.2); }
+  @keyframes notifIn{ from{ opacity:0; transform:translateY(14px) scale(.96);} to{opacity:1; transform:none;} }
+  .notif-top{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .notif-icon{ width:22px; height:22px; border-radius:6px; background:linear-gradient(150deg,#5A0D74,#7B1E99); display:grid; place-items:center; color:#fff; font-family:var(--font-display); font-weight:800; font-size:.66rem; flex:0 0 auto; }
+  .notif-app{ font-size:.7rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#3a3340; flex:1; }
+  .notif-time{ font-size:.68rem; color:#8a838f; }
+  .notif-title{ font-size:.86rem; font-weight:700; color:#1a1320; line-height:1.25; word-break:break-word; }
+  .notif-body{ font-size:.82rem; color:#3a3340; line-height:1.35; margin-top:2px; word-break:break-word; white-space:pre-wrap; }
+  .notif.placeholder .notif-title, .notif.placeholder .notif-body{ color:#5a5360; font-weight:500; font-style:italic; }
+  .toast{ position:fixed; left:50%; bottom:30px; transform:translateX(-50%) translateY(20px); background:#15130E; color:#FFF8E7; font-family:var(--font-display); font-weight:600; font-size:.92rem; padding:13px 24px; border-radius:999px; box-shadow:0 16px 40px rgba(0,0,0,.3); z-index:200; opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease; display:inline-flex; align-items:center; gap:9px; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast svg{ width:16px; height:16px; }
+  @media (max-width:980px){ .layout{ grid-template-columns:1fr; } .preview-col{ position:static; } .phone{ margin-top:8px; } }
+</style>
+</head>
+<body>
+  <header class="admin-header">
+    <a class="back-btn" href="adminweb.html">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Volver al panel
+    </a>
+    <div class="header-divider"></div>
+    <a href="index.html"><img class="logo-img" src="logo-retail-experts.png" alt="Retail Experts"></a>
+    <span class="header-title">Comunicados</span>
+    <div class="header-spacer"></div>
+  </header>
+
+  <main class="wrap">
+    <p class="eyebrow">Notificaciones push</p>
+    <h1 class="page-title">Comunicados</h1>
+    <p class="page-sub">Segmenta a los reponedores, escribe tu mensaje y míralo tal como aparecerá en su celular antes de enviarlo.</p>
+
+    <div class="layout">
+      <div class="form-col">
+        <section class="panel">
+          <div class="panel-head">
+            <span class="panel-num">1</span>
+            <div><h2>Destinatarios</h2><p>Filtra a quién le llegará el comunicado. Sin filtros, se envía a todos.</p></div>
+          </div>
+          <div class="filters" id="filters"></div>
+          <button class="clear-link" id="clearFilters" type="button" style="display:none; margin-top:10px;">Limpiar segmentación</button>
+          <div class="audience">
+            <span class="aud-ico"><svg viewBox="0 0 24 24" fill="none"><path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="9" cy="7.5" r="3.2" stroke="currentColor" stroke-width="1.8"/><path d="M22 19v-1a4 4 0 0 0-3-3.85M16.5 4.3a3.2 3.2 0 0 1 0 6.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+            <div>
+              <div class="aud-main"><b id="audReponedores">17</b> reponedores</div>
+              <div class="aud-sub"><span id="audSalas">303</span> salas alcanzadas</div>
+            </div>
+            <span class="aud-broadcast" id="audBroadcast">Todos</span>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <span class="panel-num">2</span>
+            <div><h2>Mensaje</h2><p>Lo que verá el reponedor en la notificación.</p></div>
+          </div>
+          <div class="field">
+            <label for="titulo">Título</label>
+            <input type="text" id="titulo" maxlength="50" placeholder="Ej. Recordatorio de visita" />
+          </div>
+          <div class="field" style="margin-bottom:10px;">
+            <label for="mensaje">Mensaje</label>
+            <textarea id="mensaje" maxlength="180" placeholder="Escribe el comunicado que recibirán los reponedores…"></textarea>
+            <div class="char-row"><span class="char-count" id="charCount">0 / 180</span></div>
+          </div>
+          <div class="send-row">
+            <button class="btn-send" id="sendBtn" type="button" disabled>
+              <svg viewBox="0 0 24 24" fill="none"><path d="m22 2-7 20-4-9-9-4 20-7Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="m22 2-11 11" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>
+              Enviar comunicado
+            </button>
+            <span class="send-hint" id="sendHint">Escribe un mensaje para enviar</span>
+          </div>
+        </section>
+      </div>
+
+      <div class="preview-col">
+        <p class="preview-label">Previsualización</p>
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="screen">
+            <div class="statusbar">
+              <span id="sbTime">9:41</span>
+              <span class="icons">
+                <svg width="16" height="11" viewBox="0 0 18 12" fill="none"><rect x="0" y="3" width="3" height="6" rx="1" fill="#fff"/><rect x="4.5" y="1.5" width="3" height="7.5" rx="1" fill="#fff"/><rect x="9" y="0" width="3" height="9" rx="1" fill="#fff"/><rect x="13.5" y="0" width="3" height="9" rx="1" fill="#fff" opacity=".5"/></svg>
+                <svg width="22" height="11" viewBox="0 0 24 12" fill="none"><rect x="1" y="1" width="20" height="10" rx="3" stroke="#fff" stroke-opacity=".5"/><rect x="2.5" y="2.5" width="15" height="7" rx="1.5" fill="#fff"/><rect x="22" y="4" width="1.5" height="4" rx=".75" fill="#fff" opacity=".5"/></svg>
+              </span>
+            </div>
+            <div class="lock-clock">
+              <div class="lock-date" id="lockDate">lunes, 15 de junio</div>
+              <div class="lock-time" id="lockTime">9:41</div>
+            </div>
+            <div class="notif-area">
+              <div class="notif placeholder" id="notif">
+                <div class="notif-top">
+                  <span class="notif-icon">RE</span>
+                  <span class="notif-app">Retail Experts</span>
+                  <span class="notif-time">ahora</span>
+                </div>
+                <div class="notif-title" id="notifTitle">Título del comunicado</div>
+                <div class="notif-body" id="notifBody">Aquí aparecerá el mensaje que escribas para los reponedores.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    var DATA = {"clients":["adclean","bekys","bjapi","cafe_haiti","kuna foods","manare","olisur","panesco","prater","procarne","puri"],"clientLabels":["Adclean","Bekys","Bjapi","Café Haití","Kuna Foods","Manare","Olisur","Panesco","Prater","Procarne","Puri"],"formatos":["Central Mayorista","Darkstore","Hiper Líder","Jumbo","Líder Express","Santa Isabel","Tottus","Unimarc"],"rutas":["concepcion a","concepcion b","la serena","los angeles","pituto","puertos","rancagua","rm1","rm2","rm3","rm4","rm5","rm8","rm9","rm10","talca","v costa"],"nombres":["central mayorista","darkstore costanera cent","darkstore la dehesa","darkstore la florida","darkstore maipu","darkstore viña del mar","hiper lider 4 esquinas","hiper lider alameda","hiper lider antofagasta","hiper lider arica","hiper lider arica (pedro montt)","hiper lider bio bio","hiper lider buin (bernardo o higgins)","hiper lider calama","hiper lider calama (av grecia)","hiper lider calama huaytiquina","hiper lider camino la farfana (","hiper lider casona osorno","hiper lider cerrillos (oeste)","hiper lider chiguayante (manuel rodri","hiper lider chillan","hiper lider collao","hiper lider concepcion (pratt)","hiper lider concon (magallanes)","hiper lider copiapo","hiper lider coquimbo","hiper lider coronel","hiper lider curico","hiper lider curico camilo henriquez","hiper lider departamental","hiper lider einstein","hiper lider el belloto","hiper lider gran avenida","hiper lider huechuraba (mall plaza no","hiper lider independencia","hiper lider iquique","hiper lider iquique (bilbao)","hiper lider irarrazaval","hiper lider la calera","hiper lider la florida (pza.vespucio)","hiper lider la florida (santa amalia)","hiper lider la pintana","hiper lider la reina","hiper lider la serena (puertas del ma","hiper lider limache (arturo prat)","hiper lider linares","hiper lider los andes vecino","hiper lider los angeles","hiper lider los angeles (sor vicenta)","hiper lider los dominicos","hiper lider los morros","hiper lider macul","hiper lider maipu (av central)","hiper lider maipu (camino a melipilla","hiper lider maipu (el descanso)","hiper lider maipu (pajaritos)","hiper lider maipu 3 poniente","hiper lider matucana","hiper lider melipilla","hiper lider ñuñoa vespucio sur","hiper lider osorno","hiper lider outlet park","hiper lider ovalle","hiper lider penaflor (balmaceda)","hiper lider principe de gales","hiper lider puente alto (espacio urba","hiper lider puente alto (mall plaza t","hiper lider puente nuevo","hiper lider puerto montt","hiper lider puerto montt (cardonal)","hiper lider puerto montt (la paloma)","hiper lider punta arenas","hiper lider quilicura","hiper lider quilicura (lo marcoleta)","hiper lider quilin","hiper lider quillota","hiper lider rancagua","hiper lider recoleta","hiper lider recreo","hiper lider reg. arica","hiper lider renca (miraflores)","hiper lider san antonio","hiper lider san bernardo","hiper lider san bernardo (mall plaza","hiper lider san felipe","hiper lider san fernando","hiper lider san joaquin","hiper lider san pablo","hiper lider san pedro de la paz","hiper lider santa cruz","hiper lider santa rosa (san ramon)","hiper lider santiago (san bernardo","hiper lider talagante","hiper lider talca","hiper lider talca la florida","hiper lider talcahuano (perez gacitua","hiper lider temuco (barrio ingles)","hiper lider temuco (prieto)","hiper lider temuco barros arana","hiper lider valdivia","hiper lider valparaiso (av. argentina","hiper lider vicuna mackenna","hiper lider villa alemana (camino tro","hiper lider vina centro terminal","hiper lider vina del mar","hiper lider vitacura","jumbo 14 norte","jumbo alessandri hualpen","jumbo antofagasta angamos","jumbo antofagasta pedro a","jumbo antofagasta s","jumbo arica","jumbo bilbao","jumbo bosquemar","jumbo calama","jumbo chillan","jumbo colina chamis","jumbo concha y toro","jumbo copiapo","jumbo copiapo los c","jumbo costanera","jumbo curico","jumbo doña ema","jumbo el alba","jumbo el belloto","jumbo el llano subercasea","jumbo independencia","jumbo iquique","jumbo kennedy","jumbo la dehesa","jumbo la florida","jumbo la reina","jumbo la serena","jumbo la serena ulr","jumbo lo castillo","jumbo los andes","jumbo los angeles","jumbo los pablos","jumbo los trapenses","jumbo maipu","jumbo maitencillo","jumbo mall center concepc","jumbo mall talca","jumbo membrillar","jumbo ñuñoa","jumbo osorno","jumbo pajaritos","jumbo pedro de vald","jumbo peñalolen","jumbo pie andino","jumbo plaza el trebol","jumbo puente alto","jumbo puertas de ch","jumbo puerto montt","jumbo quillota","jumbo rancagua","jumbo san bernardo las li","jumbo san felipe","jumbo santa cruz","jumbo talca el arenal","jumbo temuco av.alemania","jumbo valdivia","jumbo valparaiso","jumbo vicente mende","jumbo viña del mar","lider express 10 de julio","lider express algarrobo","lider express antofagasta (perez zujovi","lider express buin (san martin)","lider express calera de tango","lider express chillan","lider express ciudad del este","lider express colina","lider express colina (piedra roja)","lider express colina el algarrobal chic","lider express con con","lider express coquimbo (el amanecer)","lider express curico alessandri","lider express estoril","lider express gran avenida","lider express grecia","lider express la dehesa","lider express la serena","lider express la serena (las parcelas)","lider express lampa valle grande ii","lider express los angeles (vicuna macke","lider express machali","lider express maitencillo","lider express mall arauco quilicura","lider express manuel montt","lider express merced","lider express mexico","lider express nonato coo","lider express nunoa (irarrazaval)","lider express padre hurtado (laguna del","lider express pedro de valdivia","lider express pedro fontova","lider express plaza de maipu","lider express plaza lyon","lider express plaza maule","lider express providencia (santa isabel","lider express pucon","lider express pudahuel (ciudad de los v","lider express puerto montt (balmaceda)","lider express puerto montt 4 terraza","lider express puerto varas","lider express puerto varas (mall)","lider express rancagua","lider express rancagua diagonal donihue","lider express rojas magallanes","lider express san javier","lider express san vicente","lider express santiago (lo campino)","lider express santiago (san martin)","lider express seminario","lider express temuco (los pablos)","lider express temuco caupolican","lider express tobalaba","lider express tomas moro","lider express valparaiso (curauma)","lider express villarrica","santa isabel antofagasta 14 de febre","santa isabel concepcion collao","santa isabel concepcion freire","santa isabel concepcion lomas de sa","santa isabel coquimbo anibal pinto","santa isabel coquimbo la cantera","santa isabel coquimbo sindempart","santa isabel curacavi playa tres","santa isabel huechuraba pedro fontov","santa isabel la serena ruta 41","santa isabel la serena san joaquin","santa isabel la union augusto grob","santa isabel lampa valle grande","santa isabel las condes plaza artesa","santa isabel los angeles ex plaza","santa isabel los angeles villagran","santa isabel maipu 3 poniente","santa isabel maipu ciudad satelite","santa isabel maipu el bosque","santa isabel ovalle vicuña mackenna","santa isabel puente alto el peñon","santa isabel puerto montt diego port","santa isabel puerto montt sargento","santa isabel puerto montt valle vol","santa isabel puerto varas colon","santa isabel puerto varas del salvad","santa isabel santa maria oriente","santa isabel santiago grajales","santa isabel santiago huerfanos","santa isabel vallenar prat","santa isabel valparaiso curauma","santa isabel victoria","santa isabel viña del mar quillota","tottus antofagasta mall","tottus antofagasta norte","tottus balmaceda la serena","tottus bio bio","tottus buin","tottus chamisero","tottus coquimbo tierras blancas","tottus curauma","tottus curico norte","tottus el bosque","tottus el trebol talcahuano","tottus factoria","tottus huechuraba","tottus kennedy ii","tottus la calera","tottus la cisternas","tottus machali","tottus maitencillo","tottus melipilla","tottus mp la serena","tottus mp los dominicos","tottus nataniel","tottus ovalle","tottus peñaflor","tottus piedra roja","tottus plaza egaña","tottus plaza oeste ii","tottus puente alto","tottus quilin","tottus quilpue","tottus rengo","tottus reñaca","tottus talagante cordillera","tottus talca","tottus talca colin","tottus viña del mar santa julia","tottus vitacura","tottus vivaceta","tottus walker martinez","unimarc juan soler puerto montt","unimarc los militares las condes","unimarc los volcanes puerto montt","unimarc marconi los angeles","unimarc paloma puerto montt","unimarc portal los angeles","unimarc rotonda puerto montt","unimarc urmeneta puerto montt"],"salas":[["cencosud","darkstore maipu","rm9",121,"Darkstore","j403"],["cencosud","darkstore viña del mar","v costa",113,"Darkstore","j408"],["cencosud","darkstore la florida","rm8",377,"Darkstore","j410"],["cencosud","darkstore costanera cent","rm3",119,"Darkstore","j411"],["cencosud","darkstore la dehesa","rm2",113,"Darkstore","j414"],["cencosud","jumbo bilbao","rm4",631,"Jumbo","j501"],["cencosud","jumbo kennedy","rm1",758,"Jumbo","j502"],["cencosud","jumbo maipu","rm9",125,"Jumbo","j503"],["cencosud","jumbo rancagua","rancagua",119,"Jumbo","j504"],["cencosud","jumbo temuco av.alemania","pituto",118,"Jumbo","j506"],["cencosud","jumbo puerto montt","puertos",126,"Jumbo","j507"],["cencosud","jumbo viña del mar","v costa",119,"Jumbo","j508"],["cencosud","jumbo la florida","rm8",1021,"Jumbo","j510"],["cencosud","jumbo costanera","pituto",759,"Jumbo","j511"],["cencosud","jumbo la reina","rm4",631,"Jumbo","j512"],["cencosud","jumbo el llano subercasea","rm5",629,"Jumbo","j513"],["cencosud","jumbo la dehesa","rm2",759,"Jumbo","j514"],["cencosud","jumbo peñalolen","rm8",767,"Jumbo","j519"],["cencosud","jumbo valparaiso","v costa",113,"Jumbo","j520"],["cencosud","jumbo la serena","la serena",383,"Jumbo","j521"],["cencosud","jumbo chillan","pituto",117,"Jumbo","j532"],["cencosud","jumbo antofagasta angamos","pituto",375,"Jumbo","j534"],["cencosud","jumbo talca el arenal","talca",373,"Jumbo","j591"],["cencosud","jumbo curico","pituto",49,"Jumbo","j592"],["cencosud","jumbo puente alto","rm10",560,"Jumbo","j613"],["cencosud","jumbo calama","pituto",369,"Jumbo","j614"],["cencosud","jumbo arica","pituto",112,"Jumbo","j619"],["cencosud","jumbo el alba","rm1",638,"Jumbo","j624"],["cencosud","jumbo alessandri hualpen","concepcion b",117,"Jumbo","j633"],["cencosud","jumbo quillota","pituto",50,"Jumbo","j646"],["cencosud","jumbo vicente mende","pituto",50,"Jumbo","j649"],["cencosud","jumbo la serena ulr","la serena",123,"Jumbo","j656"],["cencosud","jumbo concha y toro","rm10",633,"Jumbo","j659"],["cencosud","jumbo iquique","pituto",117,"Jumbo","j660"],["cencosud","jumbo plaza el trebol","concepcion b",114,"Jumbo","j671"],["cencosud","jumbo pedro de vald","concepcion a",114,"Jumbo","j676"],["cencosud","jumbo los angeles","los angeles",125,"Jumbo","j695"],["cencosud","jumbo bosquemar","v costa",119,"Jumbo","j739"],["cencosud","jumbo osorno","pituto",117,"Jumbo","j748"],["cencosud","jumbo san felipe","pituto",50,"Jumbo","j754"],["cencosud","jumbo copiapo","pituto",48,"Jumbo","j760"],["cencosud","jumbo los trapenses","rm2",634,"Jumbo","j762"],["cencosud","jumbo pajaritos","rm9",636,"Jumbo","j770"],["cencosud","jumbo ñuñoa","rm5",639,"Jumbo","j775"],["cencosud","jumbo los andes","pituto",48,"Jumbo","j780"],["cencosud","jumbo el belloto","pituto",52,"Jumbo","j781"],["cencosud","jumbo antofagasta pedro a","pituto",113,"Jumbo","j796"],["cencosud","jumbo mall center concepc","concepcion a",117,"Jumbo","j809"],["cencosud","jumbo lo castillo","rm3",118,"Jumbo","j810"],["cencosud","jumbo antofagasta s","pituto",371,"Jumbo","j817"],["cencosud","jumbo membrillar","rancagua",50,"Jumbo","j825"],["cencosud","jumbo san bernardo las li","pituto",119,"Jumbo","j843"],["cencosud","jumbo copiapo los c","pituto",1058,"Jumbo","j844"],["cencosud","jumbo santa cruz","pituto",50,"Jumbo","j851"],["cencosud","jumbo maitencillo","pituto",114,"Jumbo","j872"],["cencosud","jumbo 14 norte","v costa",118,"Jumbo","j875"],["cencosud","jumbo doña ema","puertos",58,"Jumbo","j919"],["cencosud","jumbo valdivia","pituto",114,"Jumbo","j955"],["cencosud","jumbo mall talca","talca",114,"Jumbo","j957"],["cencosud","jumbo pie andino","rm2",627,"Jumbo","j958"],["cencosud","jumbo los pablos","pituto",50,"Jumbo","j970"],["cencosud","jumbo puertas de ch","pituto",115,"Jumbo","j988"],["cencosud","jumbo independencia","rm3",881,"Jumbo","j989"],["cencosud","jumbo colina chamis","pituto",626,"Jumbo","j992"],["cencosud","santa isabel coquimbo anibal pinto","pituto",16,"Santa Isabel","n551"],["cencosud","santa isabel valparaiso curauma","pituto",16,"Santa Isabel","n561"],["cencosud","santa isabel puerto montt valle vol","pituto",16,"Santa Isabel","n587"],["cencosud","santa isabel santiago grajales","pituto",16,"Santa Isabel","n612"],["cencosud","santa isabel las condes plaza artesa","pituto",16,"Santa Isabel","n635"],["cencosud","santa isabel la serena san joaquin","la serena",24,"Santa Isabel","n648"],["cencosud","santa isabel lampa valle grande","pituto",16,"Santa Isabel","n651"],["cencosud","santa isabel maipu ciudad satelite","pituto",16,"Santa Isabel","n654"],["cencosud","santa isabel coquimbo sindempart","pituto",272,"Santa Isabel","n658"],["cencosud","santa isabel viña del mar quillota","pituto",16,"Santa Isabel","n674"],["cencosud","santa isabel huechuraba pedro fontov","pituto",16,"Santa Isabel","n692"],["cencosud","santa isabel puerto varas del salvad","puertos",24,"Santa Isabel","n733"],["cencosud","santa isabel puerto montt diego port","puertos",24,"Santa Isabel","n734"],["cencosud","santa isabel concepcion freire","concepcion a",256,"Santa Isabel","n737"],["cencosud","santa isabel los angeles villagran","los angeles",8,"Santa Isabel","n742"],["cencosud","santa isabel la union augusto grob","pituto",16,"Santa Isabel","n744"],["cencosud","santa isabel maipu 3 poniente","pituto",16,"Santa Isabel","n758"],["cencosud","santa isabel los angeles ex plaza","los angeles",24,"Santa Isabel","n761"],["cencosud","santa isabel santiago huerfanos","pituto",16,"Santa Isabel","n771"],["cencosud","santa isabel concepcion lomas de sa","concepcion b",16,"Santa Isabel","n783"],["cencosud","santa isabel antofagasta 14 de febre","pituto",272,"Santa Isabel","n797"],["cencosud","santa isabel concepcion collao","concepcion a",16,"Santa Isabel","n801"],["cencosud","santa isabel curacavi playa tres","pituto",16,"Santa Isabel","n818"],["cencosud","santa isabel la serena ruta 41","la serena",24,"Santa Isabel","n836"],["cencosud","santa isabel coquimbo la cantera","pituto",16,"Santa Isabel","n845"],["cencosud","santa isabel santa maria oriente","pituto",16,"Santa Isabel","n859"],["cencosud","santa isabel vallenar prat","pituto",16,"Santa Isabel","n901"],["cencosud","santa isabel puerto montt sargento","puertos",24,"Santa Isabel","n904"],["cencosud","santa isabel puerto varas colon","puertos",24,"Santa Isabel","n906"],["cencosud","santa isabel ovalle vicuña mackenna","pituto",16,"Santa Isabel","n908"],["cencosud","santa isabel puente alto el peñon","pituto",16,"Santa Isabel","n918"],["cencosud","santa isabel victoria","pituto",16,"Santa Isabel","n985"],["cencosud","santa isabel maipu el bosque","pituto",16,"Santa Isabel","n987"],["tottus","tottus puente alto","pituto",16,"Tottus","t103"],["tottus","tottus nataniel","pituto",312,"Tottus","t104"],["tottus","tottus el bosque","pituto",48,"Tottus","t112"],["tottus","tottus huechuraba","pituto",32,"Tottus","t116"],["tottus","tottus vitacura","rm3",56,"Tottus","t120"],["tottus","tottus plaza egaña","pituto",304,"Tottus","t121"],["tottus","tottus mp los dominicos","rm1",56,"Tottus","t123"],["tottus","tottus walker martinez","pituto",256,"Tottus","t124"],["tottus","tottus chamisero","pituto",32,"Tottus","t125"],["tottus","tottus vivaceta","pituto",288,"Tottus","t126"],["tottus","tottus piedra roja","pituto",48,"Tottus","t131"],["tottus","tottus la cisternas","pituto",272,"Tottus","t132"],["tottus","tottus factoria","pituto",16,"Tottus","t133"],["tottus","tottus quilin","rm8",312,"Tottus","t134"],["tottus","tottus plaza oeste ii","rm9",16,"Tottus","t152"],["tottus","tottus kennedy ii","pituto",56,"Tottus","t153"],["tottus","tottus peñaflor","pituto",16,"Tottus","t203"],["tottus","tottus melipilla","pituto",16,"Tottus","t204"],["tottus","tottus talagante cordillera","pituto",16,"Tottus","t206"],["tottus","tottus la calera","pituto",16,"Tottus","t207"],["tottus","tottus viña del mar santa julia","pituto",16,"Tottus","t213"],["tottus","tottus quilpue","pituto",16,"Tottus","t215"],["tottus","tottus reñaca","pituto",48,"Tottus","t219"],["tottus","tottus maitencillo","pituto",288,"Tottus","t220"],["tottus","tottus curauma","pituto",16,"Tottus","t222"],["tottus","tottus buin","pituto",48,"Tottus","t301"],["tottus","tottus rengo","pituto",272,"Tottus","t302"],["tottus","tottus talca","talca",16,"Tottus","t304"],["tottus","tottus machali","pituto",16,"Tottus","t305"],["tottus","tottus el trebol talcahuano","concepcion b",272,"Tottus","t307"],["tottus","tottus bio bio","concepcion a",16,"Tottus","t309"],["tottus","tottus talca colin","talca",16,"Tottus","t311"],["tottus","tottus curico norte","pituto",32,"Tottus","t313"],["tottus","tottus antofagasta mall","pituto",272,"Tottus","t501"],["tottus","tottus ovalle","pituto",48,"Tottus","t505"],["tottus","tottus coquimbo tierras blancas","pituto",16,"Tottus","t509"],["tottus","tottus balmaceda la serena","la serena",16,"Tottus","t510"],["tottus","tottus mp la serena","la serena",272,"Tottus","t512"],["tottus","tottus antofagasta norte","pituto",272,"Tottus","t513"],["smu","unimarc los militares las condes","pituto",16,"Unimarc","u469"],["smu","unimarc los volcanes puerto montt","puertos",8,"Unimarc","u585"],["smu","unimarc portal los angeles","los angeles",8,"Unimarc","u759"],["smu","unimarc marconi los angeles","los angeles",8,"Unimarc","u761"],["smu","unimarc juan soler puerto montt","puertos",8,"Unimarc","u763"],["smu","unimarc urmeneta puerto montt","puertos",8,"Unimarc","u764"],["smu","unimarc rotonda puerto montt","puertos",8,"Unimarc","u915"],["smu","unimarc paloma puerto montt","puertos",8,"Unimarc","u916"],["walmart","lider express plaza lyon","pituto",512,"Líder Express","w1"],["walmart","hiper lider temuco (barrio ingles)","pituto",16,"Hiper Líder","w120"],["walmart","hiper lider punta arenas","pituto",16,"Hiper Líder","w121"],["walmart","hiper lider quillota","pituto",16,"Hiper Líder","w122"],["walmart","hiper lider ovalle","pituto",16,"Hiper Líder","w125"],["walmart","hiper lider copiapo","pituto",16,"Hiper Líder","w126"],["walmart","hiper lider linares","pituto",16,"Hiper Líder","w127"],["walmart","lider express puerto varas","puertos",24,"Líder Express","w129"],["walmart","hiper lider san pablo","pituto",16,"Hiper Líder","w137"],["walmart","lider express colina (piedra roja)","pituto",16,"Líder Express","w139"],["walmart","hiper lider talca la florida","talca",272,"Hiper Líder","w143"],["walmart","lider express san javier","pituto",16,"Líder Express","w146"],["walmart","lider express colina","pituto",16,"Líder Express","w149"],["walmart","lider express estoril","rm1",16,"Líder Express","w15"],["walmart","central mayorista","rm8",256,"Central Mayorista","w159"],["walmart","lider express la dehesa","rm2",16,"Líder Express","w16"],["walmart","lider express antofagasta (perez zujovi","pituto",16,"Líder Express","w177"],["walmart","lider express manuel montt","pituto",512,"Líder Express","w18"],["walmart","lider express nunoa (irarrazaval)","pituto",16,"Líder Express","w180"],["walmart","hiper lider buin (bernardo o higgins)","pituto",528,"Hiper Líder","w182"],["walmart","lider express temuco (los pablos)","pituto",16,"Líder Express","w183"],["walmart","lider express puerto montt (balmaceda)","puertos",24,"Líder Express","w195"],["walmart","lider express pedro de valdivia","pituto",16,"Líder Express","w2"],["walmart","hiper lider outlet park","pituto",16,"Hiper Líder","w244"],["walmart","lider express mall arauco quilicura","pituto",16,"Líder Express","w248"],["walmart","lider express calera de tango","pituto",512,"Líder Express","w252"],["walmart","lider express colina el algarrobal chic","pituto",528,"Líder Express","w253"],["walmart","lider express lampa valle grande ii","pituto",528,"Líder Express","w276"],["walmart","hiper lider curico camilo henriquez","pituto",16,"Hiper Líder","w279"],["walmart","hiper lider irarrazaval","rm5",144,"Hiper Líder","w3"],["walmart","hiper lider gran avenida","rm5",152,"Hiper Líder","w32"],["walmart","hiper lider calama","pituto",1040,"Hiper Líder","w33"],["walmart","hiper lider rancagua","rancagua",16,"Hiper Líder","w35"],["walmart","hiper lider los angeles","los angeles",24,"Hiper Líder","w36"],["walmart","hiper lider matucana","rm3",24,"Hiper Líder","w37"],["walmart","hiper lider einstein","rancagua",16,"Hiper Líder","w38"],["walmart","hiper lider recreo","rancagua",272,"Hiper Líder","w39"],["walmart","hiper lider huechuraba (mall plaza no","pituto",528,"Hiper Líder","w41"],["walmart","hiper lider curico","pituto",16,"Hiper Líder","w42"],["walmart","hiper lider copiapo","pituto",16,"Hiper Líder","w425"],["walmart","hiper lider los angeles (sor vicenta)","los angeles",24,"Hiper Líder","w426"],["walmart","lider express plaza maule","talca",16,"Líder Express","w43"],["walmart","hiper lider quilin","rm8",1560,"Hiper Líder","w44"],["walmart","hiper lider maipu (el descanso)","pituto",16,"Hiper Líder","w45"],["walmart","hiper lider temuco barros arana","pituto",16,"Hiper Líder","w456"],["walmart","hiper lider villa alemana (camino tro","pituto",16,"Hiper Líder","w457"],["walmart","hiper lider calama huaytiquina","pituto",272,"Hiper Líder","w459"],["walmart","hiper lider maipu (av central)","rm9",16,"Hiper Líder","w46"],["walmart","hiper lider puente alto (mall plaza t","rm10",1048,"Hiper Líder","w48"],["walmart","hiper lider quilicura","pituto",16,"Hiper Líder","w49"],["walmart","lider express tobalaba","pituto",16,"Líder Express","w51"],["walmart","lider express machali","rancagua",16,"Líder Express","w514"],["walmart","hiper lider valparaiso (av. argentina","v costa",16,"Hiper Líder","w518"],["walmart","lider express grecia","pituto",512,"Líder Express","w52"],["walmart","lider express los angeles (vicuna macke","los angeles",8,"Líder Express","w523"],["walmart","lider express padre hurtado (laguna del","pituto",528,"Líder Express","w525"],["walmart","hiper lider coquimbo","pituto",280,"Hiper Líder","w53"],["walmart","hiper lider vicuna mackenna","pituto",16,"Hiper Líder","w54"],["walmart","hiper lider macul","pituto",528,"Hiper Líder","w55"],["walmart","lider express gran avenida","pituto",16,"Líder Express","w56"],["walmart","hiper lider vitacura","rm3",144,"Hiper Líder","w57"],["walmart","hiper lider vina del mar","v costa",16,"Hiper Líder","w58"],["walmart","hiper lider los andes vecino","pituto",16,"Hiper Líder","w602"],["walmart","lider express la serena","la serena",280,"Líder Express","w605"],["walmart","hiper lider coronel","pituto",16,"Hiper Líder","w606"],["walmart","hiper lider melipilla","pituto",16,"Hiper Líder","w607"],["walmart","hiper lider chillan","pituto",16,"Hiper Líder","w608"],["walmart","lider express plaza de maipu","pituto",16,"Líder Express","w61"],["walmart","lider express nonato coo","pituto",16,"Líder Express","w610"],["walmart","lider express rojas magallanes","rm10",536,"Líder Express","w611"],["walmart","lider express chillan","pituto",16,"Líder Express","w612"],["walmart","lider express ciudad del este","pituto",16,"Líder Express","w613"],["walmart","hiper lider maipu 3 poniente","rm9",272,"Hiper Líder","w616"],["walmart","hiper lider casona osorno","pituto",16,"Hiper Líder","w618"],["walmart","lider express puerto montt 4 terraza","puertos",24,"Líder Express","w619"],["walmart","hiper lider la florida (pza.vespucio)","pituto",16,"Hiper Líder","w62"],["walmart","hiper lider san bernardo (mall plaza","pituto",16,"Hiper Líder","w620"],["walmart","lider express merced","pituto",16,"Líder Express","w621"],["walmart","lider express con con","pituto",16,"Líder Express","w625"],["walmart","hiper lider principe de gales","pituto",16,"Hiper Líder","w626"],["walmart","lider express san vicente","pituto",16,"Líder Express","w627"],["walmart","hiper lider santa cruz","pituto",16,"Hiper Líder","w628"],["walmart","hiper lider collao","concepcion a",272,"Hiper Líder","w631"],["walmart","hiper lider vina centro terminal","v costa",16,"Hiper Líder","w632"],["walmart","hiper lider arica (pedro montt)","pituto",16,"Hiper Líder","w635"],["walmart","lider express 10 de julio","pituto",256,"Líder Express","w640"],["walmart","lider express mexico","pituto",16,"Líder Express","w643"],["walmart","lider express rancagua","rancagua",16,"Líder Express","w645"],["walmart","lider express maitencillo","pituto",16,"Líder Express","w647"],["walmart","lider express seminario","pituto",512,"Líder Express","w65"],["walmart","lider express algarrobo","pituto",16,"Líder Express","w650"],["walmart","lider express curico alessandri","pituto",16,"Líder Express","w653"],["walmart","hiper lider san antonio","pituto",16,"Hiper Líder","w654"],["walmart","hiper lider antofagasta","pituto",16,"Hiper Líder","w655"],["walmart","lider express buin (san martin)","pituto",640,"Líder Express","w656"],["walmart","lider express puerto varas (mall)","puertos",24,"Líder Express","w658"],["walmart","hiper lider talagante","pituto",16,"Hiper Líder","w66"],["walmart","hiper lider puerto montt (cardonal)","puertos",24,"Hiper Líder","w670"],["walmart","hiper lider quilicura (lo marcoleta)","pituto",16,"Hiper Líder","w671"],["walmart","lider express pedro fontova","pituto",784,"Líder Express","w674"],["walmart","lider express providencia (santa isabel","pituto",512,"Líder Express","w677"],["walmart","hiper lider iquique (bilbao)","pituto",16,"Hiper Líder","w679"],["walmart","lider express villarrica","pituto",16,"Líder Express","w680"],["walmart","lider express pucon","pituto",16,"Líder Express","w681"],["walmart","hiper lider san joaquin","rm5",24,"Hiper Líder","w682"],["walmart","hiper lider 4 esquinas","la serena",1048,"Hiper Líder","w684"],["walmart","hiper lider reg. arica","la serena",24,"Hiper Líder","w686"],["walmart","lider express temuco caupolican","pituto",16,"Líder Express","w687"],["walmart","lider express santiago (san martin)","pituto",256,"Líder Express","w689"],["walmart","hiper lider la pintana","pituto",16,"Hiper Líder","w693"],["walmart","lider express rancagua diagonal donihue","rancagua",16,"Líder Express","w695"],["walmart","lider express valparaiso (curauma)","pituto",16,"Líder Express","w696"],["walmart","hiper lider san fernando","pituto",1040,"Hiper Líder","w697"],["walmart","hiper lider ñuñoa vespucio sur","pituto",16,"Hiper Líder","w71"],["walmart","hiper lider alameda","pituto",16,"Hiper Líder","w72"],["walmart","hiper lider puente alto (espacio urba","rm10",24,"Hiper Líder","w73"],["walmart","hiper lider penaflor (balmaceda)","pituto",16,"Hiper Líder","w736"],["walmart","hiper lider maipu (camino a melipilla","rm9",272,"Hiper Líder","w739"],["walmart","lider express tomas moro","pituto",16,"Líder Express","w74"],["walmart","hiper lider concon (magallanes)","v costa",16,"Hiper Líder","w747"],["walmart","hiper lider renca (miraflores)","pituto",16,"Hiper Líder","w748"],["walmart","hiper lider maipu (pajaritos)","rm9",16,"Hiper Líder","w75"],["walmart","hiper lider departamental","pituto",16,"Hiper Líder","w76"],["walmart","hiper lider independencia","pituto",16,"Hiper Líder","w77"],["walmart","hiper lider iquique","pituto",1040,"Hiper Líder","w78"],["walmart","hiper lider talca","talca",16,"Hiper Líder","w79"],["walmart","hiper lider santiago (san bernardo","pituto",16,"Hiper Líder","w798"],["walmart","hiper lider los morros","pituto",16,"Hiper Líder","w80"],["walmart","hiper lider arica","pituto",16,"Hiper Líder","w81"],["walmart","hiper lider san bernardo","pituto",16,"Hiper Líder","w82"],["walmart","hiper lider la florida (santa amalia)","rm10",280,"Hiper Líder","w83"],["walmart","hiper lider el belloto","pituto",16,"Hiper Líder","w84"],["walmart","hiper lider cerrillos (oeste)","rm9",24,"Hiper Líder","w85"],["walmart","hiper lider recoleta","pituto",16,"Hiper Líder","w86"],["walmart","hiper lider santa rosa (san ramon)","pituto",16,"Hiper Líder","w87"],["walmart","hiper lider los dominicos","rm1",16,"Hiper Líder","w88"],["walmart","hiper lider bio bio","concepcion b",16,"Hiper Líder","w89"],["walmart","hiper lider antofagasta","pituto",16,"Hiper Líder","w91"],["walmart","hiper lider camino la farfana (","pituto",16,"Hiper Líder","w910"],["walmart","hiper lider la serena (puertas del ma","la serena",24,"Hiper Líder","w92"],["walmart","hiper lider puerto montt (la paloma)","puertos",24,"Hiper Líder","w929"],["walmart","hiper lider osorno","pituto",16,"Hiper Líder","w93"],["walmart","lider express coquimbo (el amanecer)","pituto",24,"Líder Express","w937"],["walmart","hiper lider valdivia","pituto",16,"Hiper Líder","w94"],["walmart","lider express santiago (lo campino)","pituto",512,"Líder Express","w940"],["walmart","hiper lider chiguayante (manuel rodri","pituto",16,"Hiper Líder","w945"],["walmart","hiper lider la reina","pituto",16,"Hiper Líder","w95"],["walmart","hiper lider talcahuano (perez gacitua","concepcion b",16,"Hiper Líder","w952"],["walmart","hiper lider temuco (prieto)","pituto",16,"Hiper Líder","w96"],["walmart","lider express pudahuel (ciudad de los v","pituto",528,"Líder Express","w963"],["walmart","hiper lider puente nuevo","rm2",144,"Hiper Líder","w97"],["walmart","hiper lider limache (arturo prat)","pituto",16,"Hiper Líder","w978"],["walmart","hiper lider concepcion (pratt)","concepcion a",16,"Hiper Líder","w98"],["walmart","hiper lider la calera","pituto",16,"Hiper Líder","w983"],["walmart","hiper lider san felipe","pituto",16,"Hiper Líder","w985"],["walmart","hiper lider calama (av grecia)","pituto",272,"Hiper Líder","w988"],["walmart","hiper lider puerto montt","puertos",24,"Hiper Líder","w99"],["walmart","lider express la serena (las parcelas)","la serena",24,"Líder Express","w991"],["walmart","hiper lider san pedro de la paz","concepcion a",16,"Hiper Líder","w993"]]};
+    var CLIENTS = DATA.clients, CLIENT_LABELS = DATA.clientLabels;
+    var SALAS = DATA.salas; // [cadena, nombre, ruta, bits, formato, llave]
+
+    function titleCase(s){ return String(s).replace(/\w\S*/g, function(t){ return t.charAt(0).toUpperCase()+t.substr(1); }); }
+    function fmtRuta(v){ return /^rm\s*\d+$/i.test(String(v).replace(/\s/g,'')) ? String(v).toUpperCase().replace(/\s/g,'') : titleCase(v); }
+
+    var FILTERS = [
+      { id:'cliente', label:'Cliente',      options:CLIENTS.map(function(_,i){return i;}), fmt:function(i){return CLIENT_LABELS[i];}, match:function(s,sel){ return sel.some(function(ci){ return (s[3]&(1<<ci))!==0; }); } },
+      { id:'formato', label:'Formato',      options:DATA.formatos.slice(), fmt:function(v){return v;}, match:function(s,sel){ return sel.indexOf(s[4])!==-1; } },
+      { id:'ruta',    label:'Ruta',         options:DATA.rutas.slice(),    fmt:fmtRuta, match:function(s,sel){ return sel.indexOf(s[2])!==-1; } },
+      { id:'nombre',  label:'Nombre Local', options:DATA.nombres.slice(),  fmt:titleCase, match:function(s,sel){ return sel.indexOf(s[1])!==-1; } }
+    ];
+    var selections = { cliente:[], formato:[], ruta:[], nombre:[] };
+
+    var filtersEl = document.getElementById('filters');
+    function buildFilter(f){
+      var wrap=document.createElement('div'); wrap.className='filter-wrap';
+      var btn=document.createElement('button'); btn.className='filter'; btn.type='button'; btn.setAttribute('aria-expanded','false');
+      btn.innerHTML='<span>'+f.label+'</span><span class="chev"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+      var dd=document.createElement('div'); dd.className='dropdown';
+      dd.innerHTML='<input class="dd-search" type="text" placeholder="Buscar '+f.label.toLowerCase()+'…" /><div class="dd-list"></div>';
+      var list=dd.querySelector('.dd-list');
+      f.options.forEach(function(opt){
+        var item=document.createElement('label'); item.className='dd-item';
+        var safe=String(opt).replace(/"/g,'&quot;');
+        item.innerHTML='<input type="checkbox" value="'+safe+'" /><span>'+f.fmt(opt)+'</span>';
+        list.appendChild(item);
+      });
+      wrap.appendChild(btn); wrap.appendChild(dd); filtersEl.appendChild(wrap);
+      btn.addEventListener('click', function(e){ e.stopPropagation(); var open=wrap.classList.contains('open'); closeAll(); if(!open){ wrap.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.querySelector('.dd-search').focus(); } });
+      var search=dd.querySelector('.dd-search');
+      search.addEventListener('click',function(e){e.stopPropagation();});
+      search.addEventListener('input',function(){ var q=search.value.toLowerCase().trim(); var any=false; list.querySelectorAll('.dd-item').forEach(function(it){ var match=it.textContent.toLowerCase().indexOf(q)!==-1; it.style.display=match?'flex':'none'; if(match)any=true; }); var empty=dd.querySelector('.dd-empty'); if(!any&&!empty){ empty=document.createElement('div'); empty.className='dd-empty'; empty.textContent='Sin resultados'; list.appendChild(empty);} else if(any&&empty){empty.remove();} });
+      dd.addEventListener('click',function(e){e.stopPropagation();});
+      dd.addEventListener('change',function(){
+        var checked=[].slice.call(dd.querySelectorAll('input:checked')).map(function(c){ return f.id==='cliente'?parseInt(c.value,10):c.value; });
+        selections[f.id]=checked;
+        var n=checked.length;
+        if(n>0){ btn.classList.add('has-selection'); var c=btn.querySelector('.count'); if(!c){c=document.createElement('span'); c.className='count'; btn.appendChild(c);} c.textContent=n; }
+        else { btn.classList.remove('has-selection'); var c2=btn.querySelector('.count'); if(c2)c2.remove(); }
+        updateAudience();
+      });
+    }
+    FILTERS.forEach(buildFilter);
+    function closeAll(){ document.querySelectorAll('.filter-wrap.open').forEach(function(w){ w.classList.remove('open'); w.querySelector('.filter').setAttribute('aria-expanded','false'); }); }
+    document.addEventListener('click', closeAll);
+
+    var clearBtn=document.getElementById('clearFilters');
+    clearBtn.addEventListener('click', function(){
+      selections={cliente:[],formato:[],ruta:[],nombre:[]};
+      document.querySelectorAll('.filter').forEach(function(b){ b.classList.remove('has-selection'); var c=b.querySelector('.count'); if(c)c.remove(); });
+      document.querySelectorAll('.dd-item input:checked').forEach(function(c){ c.checked=false; });
+      updateAudience();
+    });
+
+    function matchSala(s){
+      return FILTERS.every(function(f){ var sel=selections[f.id]; if(!sel.length) return true; return f.match(s,sel); });
+    }
+    function updateAudience(){
+      var anyFilter = FILTERS.some(function(f){ return selections[f.id].length; });
+      var matched = SALAS.filter(matchSala);
+      var rutas = {}; matched.forEach(function(s){ if(s[2]) rutas[s[2]]=true; });
+      var nR=Object.keys(rutas).length, nS=matched.length;
+      document.getElementById('audReponedores').textContent=nR;
+      document.getElementById('audSalas').textContent=nS;
+      document.getElementById('audBroadcast').style.display = anyFilter ? 'none' : 'inline-block';
+      clearBtn.style.display = anyFilter ? 'inline-block' : 'none';
+      window.__recipients=nR;
+      updateSendState();
+    }
+
+    var titulo=document.getElementById('titulo'), mensaje=document.getElementById('mensaje');
+    var nTitle=document.getElementById('notifTitle'), nBody=document.getElementById('notifBody'), notif=document.getElementById('notif');
+    var charCount=document.getElementById('charCount'), sendBtn=document.getElementById('sendBtn'), sendHint=document.getElementById('sendHint');
+    function updatePreview(){
+      var t=titulo.value.trim(), msg=mensaje.value;
+      var empty = !t && !msg.trim();
+      notif.classList.toggle('placeholder', empty);
+      nTitle.textContent = t || (empty?'Título del comunicado':'Retail Experts');
+      nBody.textContent = msg.trim() ? msg : (empty?'Aquí aparecerá el mensaje que escribas para los reponedores.':'');
+      charCount.textContent=msg.length+' / 180';
+      charCount.classList.toggle('warn', msg.length>160);
+      updateSendState();
+    }
+    function updateSendState(){
+      var hasMsg = mensaje.value.trim().length>0;
+      var nR = window.__recipients||0;
+      sendBtn.disabled = !hasMsg || nR===0;
+      if(!hasMsg) sendHint.textContent='Escribe un mensaje para enviar';
+      else if(nR===0) sendHint.textContent='No hay reponedores en la segmentación';
+      else sendHint.textContent='Se enviará a '+nR+(nR===1?' reponedor':' reponedores');
+    }
+    titulo.addEventListener('input', updatePreview);
+    mensaje.addEventListener('input', updatePreview);
+
+    function tick(){
+      var d=new Date(); var hh=d.getHours(), mm=('0'+d.getMinutes()).slice(-2); var tStr=hh+':'+mm;
+      document.getElementById('lockTime').textContent=tStr; document.getElementById('sbTime').textContent=tStr;
+      var dias=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+      var meses=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+      document.getElementById('lockDate').textContent=dias[d.getDay()]+', '+d.getDate()+' de '+meses[d.getMonth()];
+    }
+    tick(); setInterval(tick, 30000);
+
+    function toast(msg){
+      var el=document.getElementById('toast');
+      el.innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>'+msg+'</span>';
+      el.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(function(){ el.classList.remove('show'); }, 3200);
+    }
+    sendBtn.addEventListener('click', function(){
+      if(sendBtn.disabled) return;
+      var nR=window.__recipients||0;
+      // Placeholder: aquí se conectará el envío real de la notificación push al backend.
+      toast('Comunicado enviado a '+nR+(nR===1?' reponedor':' reponedores'));
+      notif.style.animation='none'; void notif.offsetWidth; notif.style.animation='';
+    });
+
+    updateAudience();
+    updatePreview();
+  </script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-guard.js"></script>
+</body>
+</html>
