@@ -278,8 +278,8 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
       filters:[{key:'codigo',label:'Código Producto'},{key:'cliente',label:'Cliente'},{key:'cadena',label:'Cadena'},{key:'marca',label:'Marca'},{key:'catre',label:'Categoría RE'},{key:'estado',label:'Estado'}],
       fields:[
         {key:'codigo',label:'Código Producto',type:'readonly',hint:'No editable · SKU único del producto.'},
-        {key:'cliente',label:'Cliente',type:'readonly',hint:'No editable.'},
-        {key:'cadena',label:'Cadena',type:'readonly',hint:'No editable.'},
+        {key:'cliente',label:'Cliente',type:'select',options:D.meta.clientes,required:true},
+        {key:'cadena',label:'Cadena',type:'select',options:D.meta.cadenas,required:true},
         {key:'nombre',label:'Nombre Producto',type:'text',required:true},
         {key:'ean',label:'EAN',type:'text',required:true},
         {key:'unidad',label:'Un x caja',type:'text',required:true},
@@ -295,6 +295,8 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
     };
   })();
   </script>
+  <script src="assets/js/admin-mantenedores-backend.js?v=20260630-4"></script>
+  <script src="assets/js/admin-propuestas-api.js?v=20260630-1"></script>
   <script>
 /* Motor genérico de Mantenedores · Retail Experts
    Cada página define window.MANT_CONFIG y luego carga este archivo.

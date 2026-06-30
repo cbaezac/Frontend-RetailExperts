@@ -881,12 +881,29 @@
       Object.keys(nm).forEach(function(rt){ if(om[rt]){ var od=daysStr(om[rt].days), nd=daysStr(nm[rt].days); if(od!==nd) changes.push({f:'Días · '+fmtRuta(rt),b:od||'—',a:nd||'—'}); } });
       var oldU=unionClients(oldA), newU=unionClients(clean); var added=[], removed=[];
       CLIENTS.forEach(function(c,i){ if(newU[i]&&!oldU[i]) added.push(CLIENT_LABELS[c]); if(!newU[i]&&oldU[i]) removed.push(CLIENT_LABELS[c]); });
-      if(!changes.length && !added.length && !removed.length){ toast('No hubo cambios que guardar'); closeEdit(); return; }
-      current.assignments=clean; recompute(current);
-      overrides[current.id]=serializeRow(current); persistRows();
-      changeLog.unshift({ ts:Date.now(), codigo:fmtCodigo(current.codigo), nombre:fmtNombre(current.nombre), cadena:fmtCadena(current.cadena), changes:changes, added:added, removed:removed });
-      persistLog();
-      render(); updateHistBtn(); closeEdit(); toast('Cambios guardados correctamente');
+      var selectedClients=[];
+      CLIENTS.forEach(function(c,i){ if(newU[i]) selectedClients.push(CLIENT_LABELS[c]); });
+      var unselectedClients=[];
+      CLIENTS.forEach(function(c,i){ if(!newU[i]) unselectedClients.push(CLIENT_LABELS[c]); });
+      var hasUiChanges=!!(changes.length||added.length||removed.length);
+      function commitChanges(){
+        if(hasUiChanges){
+          current.assignments=clean; recompute(current);
+          overrides[current.id]=serializeRow(current); persistRows();
+          changeLog.unshift({ ts:Date.now(), codigo:fmtCodigo(current.codigo), nombre:fmtNombre(current.nombre), cadena:fmtCadena(current.cadena), changes:changes, added:added, removed:removed });
+          persistLog(); render(); updateHistBtn();
+        }
+        closeEdit(); toast(hasUiChanges?'Cambios guardados y maestra actualizada':'Maestra Local–Producto sincronizada');
+      }
+      if(selectedClients.length||unselectedClients.length){
+        if(typeof window.sincronizarClientesDesdeRutas!=='function'){ toast('No se pudo conectar con el backend'); return; }
+        var saveButton=document.getElementById('m-save'); saveButton.disabled=true;
+        window.sincronizarClientesDesdeRutas(current.codigo,selectedClients,unselectedClients).then(commitChanges).catch(function(error){
+          toast(error.message||'No se pudo actualizar Local–Producto');
+        }).finally(function(){saveButton.disabled=false;});
+      } else {
+        commitChanges();
+      }
     }
 
     function deleteLocal(){
@@ -1126,5 +1143,6 @@
     render();
     window.addEventListener('resize', updateStickyWidths);
   </script>
+  <script src="assets/js/admin-rutas-clientes-api.js?v=20260630-3"></script>
 </body>
 </html>
