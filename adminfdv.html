@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mantenedor Fuerza de Venta · Retail Experts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root{
+    --bg:#F6ECD0; --ink:#1C1A14; --muted:#6B6557; --frame:#15130E;
+    --accent:#E0561C; --accent-soft:rgba(224,86,28,0.12);
+    --purple:#5A0D74; --purple-soft:rgba(90,13,116,0.09);
+    --green:#1F8A4C; --green-soft:rgba(31,138,76,0.12);
+    --red:#C23A2B; --red-soft:rgba(194,58,43,0.1);
+    --line:rgba(28,26,20,0.16); --line-soft:rgba(28,26,20,0.08);
+    --card:#FFFDF6; --white:#fff;
+    --font-display:'Bricolage Grotesque',sans-serif; --font-body:'Manrope',sans-serif;
+  }
+  html,body{ min-height:100%; }
+  body{ font-family:var(--font-body); color:var(--ink); background:radial-gradient(120% 80% at 50% -10%, rgba(31,138,76,0.07) 0%, rgba(0,0,0,0) 55%), var(--bg); min-height:100vh; display:flex; flex-direction:column; }
+  .admin-header{ flex:0 0 auto; display:flex; align-items:center; gap:20px; padding:14px clamp(20px,4vw,40px); background:var(--bg); border-bottom:1px solid rgba(28,26,20,0.12); }
+  .admin-header .logo-img{ height:40px; width:auto; display:block; }
+  .header-divider{ width:1px; height:26px; background:rgba(90,13,116,.18); }
+  .header-title{ font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--purple); letter-spacing:-0.01em; }
+  .header-spacer{ margin-left:auto; }
+  .back-btn{ display:inline-flex; align-items:center; gap:7px; padding:9px 16px; background:transparent; color:var(--purple); border:1.5px solid rgba(90,13,116,.25); border-radius:999px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; transition:background .2s,color .2s,border-color .2s; }
+  .back-btn:hover{ background:var(--purple); color:var(--white); border-color:var(--purple); }
+  .back-btn svg{ width:15px; height:15px; }
+
+  .wrap{ width:100%; max-width:1120px; margin:0 auto; padding:clamp(26px,4vh,44px) clamp(16px,3vw,40px) 60px; }
+  .crumb{ display:inline-flex; align-items:center; gap:8px; font-size:.86rem; color:var(--muted); margin-bottom:16px; }
+  .crumb a{ color:var(--muted); text-decoration:none; font-weight:600; }
+  .crumb a:hover{ color:var(--accent); }
+  .eyebrow{ font-family:var(--font-display); font-weight:600; text-transform:uppercase; letter-spacing:.2em; font-size:.76rem; color:var(--green); margin-bottom:10px; }
+  .page-title{ font-family:var(--font-display); font-weight:800; font-size:clamp(2rem,4.5vw,3rem); line-height:1; letter-spacing:-.02em; color:var(--purple); }
+  .page-sub{ font-size:1rem; color:var(--muted); max-width:64ch; line-height:1.6; margin:13px 0 clamp(22px,3vh,32px); }
+
+  .toolbar{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+  .search-input{ display:inline-flex; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line); border-radius:999px; padding:10px 16px; }
+  .search-input:focus-within{ border-color:var(--accent); }
+  .search-input svg{ width:15px; height:15px; color:var(--muted); flex:0 0 auto; }
+  .search-input input{ border:0; outline:none; background:transparent; font-family:var(--font-body); font-size:.92rem; color:var(--ink); width:190px; }
+  .filter-wrap{ position:relative; }
+  .filter{ display:inline-flex; align-items:center; gap:8px; font-family:var(--font-display); font-weight:600; font-size:.88rem; color:var(--ink); cursor:pointer; background:var(--card); border:1.5px solid var(--line); border-radius:999px; padding:10px 15px; transition:border-color .2s; }
+  .filter:hover{ border-color:var(--ink); }
+  .filter .chev{ display:flex; transition:transform .2s ease; }
+  .filter[aria-expanded="true"] .chev{ transform:rotate(180deg); }
+  .filter.has-selection{ background:var(--frame); color:#FFF8E7; border-color:var(--frame); }
+  .filter .count{ font-size:.72rem; background:rgba(255,255,255,.22); border-radius:999px; padding:1px 7px; font-weight:700; }
+  .dropdown{ position:absolute; top:calc(100% + 9px); left:0; width:230px; background:#FFFDF6; border:1px solid var(--line); border-radius:14px; box-shadow:0 24px 60px rgba(28,26,20,.22); padding:10px; z-index:40; opacity:0; visibility:hidden; pointer-events:none; transform:translateY(-6px); transition:opacity .18s,transform .18s,visibility .18s; }
+  .filter-wrap.open .dropdown{ opacity:1; visibility:visible; pointer-events:auto; transform:translateY(0); }
+  .dd-item{ display:flex; align-items:center; gap:10px; padding:8px 9px; border-radius:8px; cursor:pointer; font-size:.92rem; }
+  .dd-item:hover{ background:rgba(28,26,20,.06); }
+  .dd-item input{ accent-color:var(--accent); width:16px; height:16px; cursor:pointer; }
+  .spacer{ margin-left:auto; }
+  .btn{ font-family:var(--font-display); font-weight:600; font-size:.9rem; cursor:pointer; border-radius:999px; padding:11px 18px; border:1.5px solid transparent; transition:transform .15s,box-shadow .2s,background .2s; display:inline-flex; align-items:center; gap:8px; }
+  .btn svg{ width:16px; height:16px; }
+  .btn-hist{ color:var(--purple); background:var(--card); border-color:rgba(90,13,116,.25); }
+  .btn-hist:hover{ background:var(--purple); color:#fff; }
+  .hist-count{ background:var(--accent); color:#fff; border-radius:999px; font-size:.72rem; padding:1px 7px; font-weight:700; }
+  .btn-add{ color:#fff; background:var(--green); border-color:var(--green); box-shadow:0 10px 24px rgba(31,138,76,.26); }
+  .btn-add:hover{ transform:translateY(-1px); }
+
+  .table-card{ background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+  .table-scroll{ overflow-x:auto; }
+  table.fdv{ width:100%; border-collapse:collapse; font-size:0.92rem; min-width:760px; }
+  table.fdv thead th{ background:var(--frame); color:#FFF8E7; font-family:var(--font-display); font-weight:600; font-size:0.76rem; text-transform:uppercase; letter-spacing:.03em; text-align:left; padding:13px 16px; white-space:nowrap; }
+  table.fdv thead th.center{ text-align:center; }
+  table.fdv tbody td{ padding:12px 16px; border-bottom:1px solid var(--line-soft); white-space:nowrap; color:var(--ink); }
+  table.fdv tbody tr:hover{ background:rgba(31,138,76,0.05); }
+  table.fdv tbody tr:last-child td{ border-bottom:0; }
+  .id-code{ font-family:var(--font-display); font-weight:700; color:var(--purple); }
+  .tipo-badge{ display:inline-block; font-size:.78rem; padding:3px 11px; border-radius:999px; font-weight:600; }
+  .t-Interno{ background:var(--purple-soft); color:var(--purple); }
+  .t-Externo{ background:var(--accent-soft); color:var(--accent); }
+  .estado-badge{ display:inline-flex; align-items:center; gap:6px; font-size:.78rem; padding:3px 11px; border-radius:999px; font-weight:600; }
+  .estado-badge .dot{ width:7px; height:7px; border-radius:50%; }
+  .e-Activo{ background:var(--green-soft); color:var(--green); }
+  .e-Activo .dot{ background:var(--green); }
+  .e-Inactivo{ background:var(--red-soft); color:var(--red); }
+  .e-Inactivo .dot{ background:var(--red); }
+  .ruta-badge{ font-family:var(--font-display); font-weight:700; font-size:.8rem; color:var(--accent); background:var(--accent-soft); padding:2px 9px; border-radius:999px; }
+  .rut-cell{ color:var(--muted); }
+  .row-actions{ display:flex; gap:7px; justify-content:flex-end; }
+  .icon-btn{ width:32px; height:32px; display:inline-grid; place-items:center; border-radius:9px; border:1.5px solid var(--line); background:#fff; cursor:pointer; transition:all .15s; }
+  .icon-btn svg{ width:15px; height:15px; }
+  .icon-edit{ color:var(--purple); }
+  .icon-edit:hover{ background:var(--purple); color:#fff; border-color:var(--purple); }
+  .icon-del{ color:var(--red); }
+  .icon-del:hover{ background:var(--red); color:#fff; border-color:var(--red); }
+  .empty-row td{ text-align:center; padding:46px 16px; color:var(--muted); font-family:var(--font-display); }
+  .result-count{ font-family:var(--font-display); font-weight:600; font-size:.9rem; color:var(--muted); margin:14px 2px 0; }
+  .result-count b{ color:var(--green); }
+
+  /* Modal */
+  .modal-overlay{ position:fixed; inset:0; z-index:100; background:rgba(21,19,14,0.55); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:24px; opacity:0; visibility:hidden; transition:opacity .2s,visibility .2s; }
+  .modal-overlay.open{ opacity:1; visibility:visible; }
+  .modal{ width:100%; max-width:520px; max-height:90vh; overflow-y:auto; background:var(--card); border-radius:20px; border:1px solid var(--line); box-shadow:0 40px 100px rgba(0,0,0,.4); transform:translateY(12px) scale(.98); transition:transform .2s; }
+  .modal-wide{ max-width:680px; }
+  .modal-overlay.open .modal{ transform:none; }
+  .modal-head{ position:relative; padding:24px 28px 18px; border-bottom:1px solid var(--line-soft); }
+  .modal-close{ position:absolute; top:18px; right:18px; width:36px; height:36px; border-radius:50%; border:1px solid var(--line); background:#fff; color:var(--ink); font-size:.9rem; cursor:pointer; display:grid; place-items:center; transition:background .15s,color .15s; }
+  .modal-close:hover{ background:var(--frame); color:#fff; }
+  .modal-head h2{ font-family:var(--font-display); font-weight:800; font-size:1.4rem; letter-spacing:-.02em; margin:0; line-height:1.1; }
+  .modal-sub{ color:var(--muted); font-size:.9rem; margin-top:4px; }
+  .modal-body{ padding:22px 28px 8px; }
+  .field{ margin-bottom:17px; }
+  .field label{ display:block; font-family:var(--font-display); font-weight:600; font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:8px; }
+  .field label .req{ color:var(--accent); }
+  .field input, .field select{ width:100%; font-family:var(--font-body); font-size:1rem; color:var(--ink); background:#fff; border:1.5px solid var(--line); border-radius:11px; padding:12px 14px; outline:none; transition:border-color .15s; }
+  .field input:focus, .field select:focus{ border-color:var(--accent); }
+  .field select{ appearance:none; -webkit-appearance:none; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5' stroke='%236B6557' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; padding-right:38px; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .field-hint{ font-size:.78rem; color:var(--muted); margin-top:6px; }
+  .modal-foot{ position:sticky; bottom:0; display:flex; justify-content:flex-end; gap:10px; padding:18px 28px 22px; background:linear-gradient(to top, var(--card) 72%, rgba(255,253,246,0)); border-top:1px solid var(--line-soft); }
+  .mbtn{ font-family:var(--font-display); font-weight:600; font-size:.95rem; cursor:pointer; border-radius:999px; padding:12px 22px; border:1.5px solid transparent; transition:all .15s; }
+  .mbtn-ghost{ color:var(--ink); background:var(--card); border-color:var(--line); }
+  .mbtn-ghost:hover{ background:#fff; border-color:var(--ink); }
+  .mbtn-del{ color:var(--red); background:transparent; border-color:rgba(194,58,43,.3); margin-right:auto; }
+  .mbtn-del:hover{ background:var(--red); color:#fff; border-color:var(--red); }
+  .mbtn-save{ color:#FFF8E7; background:var(--accent); border-color:var(--accent); }
+  .mbtn-save:hover{ background:#c8480f; transform:translateY(-1px); }
+  /* history */
+  .log-empty{ text-align:center; padding:40px 20px; color:var(--muted); font-family:var(--font-display); }
+  .log-list{ display:flex; flex-direction:column; gap:13px; }
+  .log-entry{ border:1px solid var(--line); border-radius:14px; padding:15px 17px; background:#fff; }
+  .log-top{ display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; margin-bottom:10px; }
+  .log-top .l-id{ font-family:var(--font-display); font-weight:700; font-size:.95rem; color:var(--purple); }
+  .log-top .l-act{ font-family:var(--font-display); font-size:.72rem; padding:2px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:.04em; }
+  .l-act.add{ background:var(--green-soft); color:var(--green); }
+  .l-act.edit{ background:var(--accent-soft); color:var(--accent); }
+  .l-act.del{ background:var(--red-soft); color:var(--red); }
+  .log-top .l-time{ margin-left:auto; color:var(--muted); font-size:.82rem; }
+  .diff-row{ display:flex; align-items:center; gap:9px; flex-wrap:wrap; padding:6px 0; font-size:.88rem; border-top:1px dashed var(--line-soft); }
+  .diff-row:first-child{ border-top:none; }
+  .diff-field{ min-width:120px; color:var(--muted); font-weight:600; }
+  .diff-before{ color:#b5362a; background:var(--red-soft); padding:2px 9px; border-radius:6px; text-decoration:line-through; text-decoration-color:rgba(194,58,43,.5); }
+  .diff-after{ color:var(--green); background:var(--green-soft); padding:2px 9px; border-radius:6px; font-weight:600; }
+  .diff-arrow{ color:var(--muted); }
+  .perm-note{ display:inline-flex; align-items:center; gap:7px; margin-right:auto; font-size:.82rem; color:var(--muted); }
+  .perm-note svg{ width:14px; height:14px; }
+
+  .toast{ position:fixed; left:50%; bottom:30px; transform:translateX(-50%) translateY(20px); background:var(--frame); color:#FFF8E7; font-family:var(--font-display); font-weight:600; font-size:.92rem; padding:13px 24px; border-radius:999px; box-shadow:0 16px 40px rgba(0,0,0,.3); z-index:200; opacity:0; pointer-events:none; transition:opacity .25s,transform .25s; display:inline-flex; align-items:center; gap:9px; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast svg{ width:16px; height:16px; }
+  @media (max-width:560px){ .grid2{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+  <header class="admin-header">
+    <a class="back-btn" href="adminmantenedores.html">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Volver a Mantenedores
+    </a>
+    <div class="header-divider"></div>
+    <a href="index.html"><img class="logo-img" src="logo-retail-experts.png" alt="Retail Experts"></a>
+    <span class="header-title">Mantenedor Fuerza de Venta</span>
+    <div class="header-spacer"></div>
+  </header>
+
+  <main class="wrap">
+    <div class="crumb"><a href="adminweb.html">Panel</a> › <a href="adminmantenedores.html">Mantenedores</a> › <span>Fuerza de Venta</span></div>
+    <p class="eyebrow">Base maestra</p>
+    <h1 class="page-title">Fuerza de Venta</h1>
+    <p class="page-sub">Administra al equipo en terreno. Edita, agrega o elimina registros: tipo, ruta, RUT y nombre de cada integrante.</p>
+
+    <div class="toolbar">
+      <div class="search-input">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m20 20-3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input type="text" id="search" placeholder="Buscar por nombre, RUT o ID…" />
+      </div>
+      <div class="filter-wrap" id="tipoFilter"></div>
+      <div class="filter-wrap" id="estadoFilter"></div>
+      <div class="spacer"></div>
+      <button class="btn btn-hist" id="histBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Historial <span class="hist-count" id="histCount" style="display:none">0</span>
+      </button>
+      <button class="btn btn-add" id="addBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        Agregar reponedor
+      </button>
+    </div>
+
+    <div class="table-card">
+      <div class="table-scroll">
+        <table class="fdv">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Tipo</th>
+              <th>Ruta</th>
+              <th>RUT</th>
+              <th>Nombre Apellido</th>
+              <th>Estado</th>
+              <th class="center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <p class="result-count" id="resultCount">—</p>
+  </main>
+
+  <!-- Modal editar/agregar -->
+  <div class="modal-overlay" id="editOverlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <button class="modal-close" id="e-close" type="button" aria-label="Cerrar">✕</button>
+        <h2 id="e-title">Editar registro</h2>
+        <p class="modal-sub" id="e-sub">Modifica los datos del integrante.</p>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label for="f-id">ID</label>
+          <input type="text" id="f-id" readonly />
+          <p class="field-hint">El ID se asigna automáticamente y no es editable.</p>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label for="f-tipo">Tipo <span class="req">*</span></label>
+            <select id="f-tipo"></select>
+          </div>
+          <div class="field">
+            <label for="f-ruta">Ruta <span class="req">*</span></label>
+            <input type="text" id="f-ruta" placeholder="Ej. RM9" list="rutas-list" />
+            <datalist id="rutas-list"></datalist>
+            <p class="field-hint" id="ruta-hint" style="display:none">Los registros Externos quedan en la ruta "Pituto".</p>
+          </div>
+        </div>
+        <div class="grid2">
+          <div class="field">
+            <label for="f-rut">RUT <span class="req">*</span></label>
+            <input type="text" id="f-rut" placeholder="11.111.111-1" />
+          </div>
+          <div class="field">
+            <label for="f-nombre">Nombre Apellido <span class="req">*</span></label>
+            <input type="text" id="f-nombre" placeholder="Nombre y apellido" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="f-estado">Estado <span class="req">*</span></label>
+          <select id="f-estado"></select>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="mbtn mbtn-del" id="e-delete" type="button" style="display:none">Eliminar</button>
+        <button class="mbtn mbtn-ghost" id="e-cancel" type="button">Cancelar</button>
+        <button class="mbtn mbtn-save" id="e-save" type="button">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal historial -->
+  <div class="modal-overlay" id="histOverlay">
+    <div class="modal modal-wide" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <button class="modal-close" id="h-close" type="button" aria-label="Cerrar">✕</button>
+        <h2>Historial de cambios</h2>
+        <p class="modal-sub">Registro de altas, ediciones y bajas en la fuerza de venta.</p>
+      </div>
+      <div class="modal-body" id="h-body"></div>
+      <div class="modal-foot">
+        <span class="perm-note"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg> Registro permanente · no puede borrarse</span>
+        <button class="mbtn mbtn-save" id="h-export" type="button" style="background:var(--green);border-color:var(--green)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" style="vertical-align:-2px"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 19h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Descargar Excel</button>
+        <button class="mbtn mbtn-ghost" id="h-done" type="button">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-guard.js"></script>
+  <script src="assets/js/fdv-data.js"></script>
+  <script>
+    var F = window.FDV;
+    var TIPOS = F.tipos, ROUTES = F.routes, ESTADOS = F.estados || ['Activo','Inactivo'];
+    // Estado vivo: cargar base + overrides
+    var STORE_KEY='re_admin_fdv_v2', LOG_KEY='re_admin_fdv_log_v1';
+    var data=[]; var changeLog=[];
+    (function init(){
+      var saved=null; try{ saved=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); }catch(e){}
+      if(saved && saved.length){ data=saved; }
+      else { data=F.rows.map(function(r){ return { id:r[0], tipo:r[1], ruta:r[2], rut:r[3], nombre:r[4], estado:r[5]||'Activo' }; }); }
+      // Normalizaciones de seguridad
+      data.forEach(function(r){ if(r.id) r.id=String(r.id).replace(/^FDV-/i,'fdv'); if(!r.estado) r.estado='Activo'; if(r.estado==='Activa')r.estado='Activo'; if(r.estado==='Inactiva')r.estado='Inactivo'; });
+      try{ changeLog=JSON.parse(localStorage.getItem(LOG_KEY)||'[]'); }catch(e){ changeLog=[]; }
+    })();
+    function persist(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }catch(e){} }
+    function persistLog(){ try{ localStorage.setItem(LOG_KEY, JSON.stringify(changeLog)); }catch(e){} }
+
+    var sel={ q:'', tipo:[], estado:[] };
+    var tbody=document.getElementById('tbody');
+
+    /* ---- Tipo filter ---- */
+    (function(){
+      var wrap=document.getElementById('tipoFilter'); wrap.className='filter-wrap';
+      var btn=document.createElement('button'); btn.className='filter'; btn.type='button'; btn.setAttribute('aria-expanded','false');
+      btn.innerHTML='<span>Tipo</span><span class="chev"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+      var dd=document.createElement('div'); dd.className='dropdown';
+      TIPOS.forEach(function(t){ var it=document.createElement('label'); it.className='dd-item'; it.innerHTML='<input type="checkbox" value="'+t+'" /><span>'+t+'</span>'; dd.appendChild(it); });
+      wrap.appendChild(btn); wrap.appendChild(dd);
+      btn.addEventListener('click', function(e){ e.stopPropagation(); var open=wrap.classList.contains('open'); document.querySelectorAll('.filter-wrap.open').forEach(function(w){w.classList.remove('open');}); if(!open){ wrap.classList.add('open'); btn.setAttribute('aria-expanded','true'); } else btn.setAttribute('aria-expanded','false'); });
+      dd.addEventListener('click', function(e){ e.stopPropagation(); });
+      dd.addEventListener('change', function(){ sel.tipo=[].slice.call(dd.querySelectorAll('input:checked')).map(function(c){return c.value;}); var n=sel.tipo.length; if(n){ btn.classList.add('has-selection'); var c=btn.querySelector('.count'); if(!c){c=document.createElement('span'); c.className='count'; btn.appendChild(c);} c.textContent=n; } else { btn.classList.remove('has-selection'); var c2=btn.querySelector('.count'); if(c2)c2.remove(); } render(); });
+    })();
+    /* ---- Estado filter ---- */
+    (function(){
+      var wrap=document.getElementById('estadoFilter'); wrap.className='filter-wrap';
+      var btn=document.createElement('button'); btn.className='filter'; btn.type='button'; btn.setAttribute('aria-expanded','false');
+      btn.innerHTML='<span>Estado</span><span class="chev"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+      var dd=document.createElement('div'); dd.className='dropdown';
+      ESTADOS.forEach(function(t){ var it=document.createElement('label'); it.className='dd-item'; it.innerHTML='<input type="checkbox" value="'+t+'" /><span>'+t+'</span>'; dd.appendChild(it); });
+      wrap.appendChild(btn); wrap.appendChild(dd);
+      btn.addEventListener('click', function(e){ e.stopPropagation(); var open=wrap.classList.contains('open'); document.querySelectorAll('.filter-wrap.open').forEach(function(w){w.classList.remove('open');}); if(!open){ wrap.classList.add('open'); btn.setAttribute('aria-expanded','true'); } else btn.setAttribute('aria-expanded','false'); });
+      dd.addEventListener('click', function(e){ e.stopPropagation(); });
+      dd.addEventListener('change', function(){ sel.estado=[].slice.call(dd.querySelectorAll('input:checked')).map(function(c){return c.value;}); var n=sel.estado.length; if(n){ btn.classList.add('has-selection'); var c=btn.querySelector('.count'); if(!c){c=document.createElement('span'); c.className='count'; btn.appendChild(c);} c.textContent=n; } else { btn.classList.remove('has-selection'); var c2=btn.querySelector('.count'); if(c2)c2.remove(); } render(); });
+    })();
+    document.addEventListener('click', function(){ document.querySelectorAll('.filter-wrap.open').forEach(function(w){ w.classList.remove('open'); w.querySelector('.filter').setAttribute('aria-expanded','false'); }); });
+
+    document.getElementById('search').addEventListener('input', function(){ sel.q=this.value.trim().toLowerCase(); render(); });
+
+    /* ---- Render ---- */
+    function render(){
+      var list=data.filter(function(r){
+        if(sel.tipo.length && sel.tipo.indexOf(r.tipo)===-1) return false;
+        if(sel.estado.length && sel.estado.indexOf(r.estado)===-1) return false;
+        if(sel.q){ var hay=(r.nombre+' '+r.rut+' '+r.id+' '+r.ruta).toLowerCase(); if(hay.indexOf(sel.q)===-1) return false; }
+        return true;
+      });
+      if(list.length===0){ tbody.innerHTML='<tr class="empty-row"><td colspan="7">No hay registros que coincidan.</td></tr>'; }
+      else {
+        var html='';
+        list.forEach(function(r){
+          html+='<tr>';
+          html+='<td class="id-code">'+r.id+'</td>';
+          html+='<td>'+r.tipo+'</td>';
+          html+='<td>'+r.ruta+'</td>';
+          html+='<td class="rut-cell">'+r.rut+'</td>';
+          html+='<td>'+r.nombre+'</td>';
+          html+='<td><span class="estado-badge e-'+r.estado+'"><span class="dot"></span>'+r.estado+'</span></td>';
+          html+='<td><div class="row-actions">'+
+            '<button class="icon-btn icon-edit" type="button" data-edit="'+r.id+'" title="Editar"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20h4L18.5 9.5a2 2 0 0 0 0-3l-1-1a2 2 0 0 0-3 0L4 16v4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m13.5 7.5 3 3" stroke="currentColor" stroke-width="1.8"/></svg></button>'+
+            '<button class="icon-btn icon-del" type="button" data-del="'+r.id+'" title="Eliminar"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.7 12a2 2 0 0 1-2 1.9H7.7a2 2 0 0 1-2-1.9L5 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'+
+            '</div></td>';
+          html+='</tr>';
+        });
+        tbody.innerHTML=html;
+      }
+      document.getElementById('resultCount').innerHTML='<b>'+list.length+'</b> de '+data.length+' registros';
+    }
+
+    /* ---- Modal editar/agregar ---- */
+    var editOverlay=document.getElementById('editOverlay');
+    var fId=document.getElementById('f-id'), fTipo=document.getElementById('f-tipo'), fRuta=document.getElementById('f-ruta'), fRut=document.getElementById('f-rut'), fNombre=document.getElementById('f-nombre'), fEstado=document.getElementById('f-estado');
+    (function(){ fTipo.innerHTML='<option value="" disabled>Selecciona…</option>'+TIPOS.map(function(t){return '<option value="'+t+'">'+t+'</option>';}).join(''); fEstado.innerHTML=ESTADOS.map(function(t){return '<option value="'+t+'">'+t+'</option>';}).join(''); document.getElementById('rutas-list').innerHTML=ROUTES.map(function(r){return '<option value="'+r.replace(/"/g,'&quot;')+'"></option>';}).join(''); })();
+    var curId=null;
+
+    // Externo => ruta fija "Pituto" (bloqueada). Interno => ruta editable.
+    function applyTipoRule(){
+      var hint=document.getElementById('ruta-hint');
+      if(fTipo.value==='Externo'){ fRuta.value='Pituto'; fRuta.readOnly=true; fRuta.style.opacity='.6'; fRuta.style.cursor='not-allowed'; if(hint)hint.style.display=''; }
+      else { fRuta.readOnly=false; fRuta.style.opacity=''; fRuta.style.cursor=''; if(hint)hint.style.display='none'; }
+    }
+    fTipo.addEventListener('change', function(){ if(fTipo.value==='Externo'){ fRuta.value='Pituto'; } else if(fRuta.value==='Pituto'){ fRuta.value=''; } applyTipoRule(); });
+
+    function nextId(){
+      var max=0; data.forEach(function(r){ var m=/(\d+)/.exec(r.id); if(m){ var n=parseInt(m[1],10); if(n>max)max=n; } });
+      return 'fdv'+String(max+1).padStart(3,'0');
+    }
+    function openEdit(id){
+      curId=id; var r=data.filter(function(x){return x.id===id;})[0]; if(!r) return;
+      document.getElementById('e-title').textContent='Editar registro';
+      document.getElementById('e-sub').textContent='Modifica los datos del integrante.';
+      fId.value=r.id; fTipo.value=r.tipo; fRuta.value=r.ruta; fRut.value=r.rut; fNombre.value=r.nombre; fEstado.value=r.estado||'Activo';
+      applyTipoRule();
+      document.getElementById('e-delete').style.display='';
+      editOverlay.classList.add('open');
+    }
+    function openAdd(){
+      curId=null;
+      document.getElementById('e-title').textContent='Agregar reponedor';
+      document.getElementById('e-sub').textContent='Completa los datos del nuevo integrante.';
+      fId.value=nextId(); fTipo.value=''; fRuta.value=''; fRut.value=''; fNombre.value=''; fEstado.value='Activo';
+      applyTipoRule();
+      document.getElementById('e-delete').style.display='none';
+      editOverlay.classList.add('open');
+    }
+    function closeEdit(){ editOverlay.classList.remove('open'); curId=null; }
+
+    function saveEdit(){
+      var tipo=fTipo.value, ruta=fRuta.value.trim(), rut=fRut.value.trim(), nombre=fNombre.value.trim(), estado=fEstado.value;
+      if(!tipo){ toast('Selecciona el tipo'); return; }
+      if(tipo==='Externo') ruta='Pituto';
+      if(!ruta){ toast('Indica la ruta'); return; }
+      if(!rut){ toast('Indica el RUT'); return; }
+      if(!nombre){ toast('Indica el nombre'); return; }
+      if(!estado){ toast('Selecciona el estado'); return; }
+      if(curId){
+        var r=data.filter(function(x){return x.id===curId;})[0];
+        var changes=[];
+        if(r.tipo!==tipo) changes.push({f:'Tipo',b:r.tipo,a:tipo});
+        if(r.ruta!==ruta) changes.push({f:'Ruta',b:r.ruta,a:ruta});
+        if(r.rut!==rut) changes.push({f:'RUT',b:r.rut,a:rut});
+        if(r.nombre!==nombre) changes.push({f:'Nombre',b:r.nombre,a:nombre});
+        if((r.estado||'Activo')!==estado) changes.push({f:'Estado',b:r.estado||'Activo',a:estado});
+        if(changes.length===0){ toast('No hubo cambios'); closeEdit(); return; }
+        r.tipo=tipo; r.ruta=ruta; r.rut=rut; r.nombre=nombre; r.estado=estado;
+        logEntry('edit', r.id, changes);
+      } else {
+        var nr={ id:fId.value, tipo:tipo, ruta:ruta, rut:rut, nombre:nombre, estado:estado };
+        data.unshift(nr);
+        logEntry('add', nr.id, [{f:'Tipo',b:'—',a:tipo},{f:'Ruta',b:'—',a:ruta},{f:'RUT',b:'—',a:rut},{f:'Nombre',b:'—',a:nombre},{f:'Estado',b:'—',a:estado}]);
+      }
+      persist(); render(); closeEdit(); toast('Registro guardado');
+    }
+    function deleteCur(){
+      if(!curId) return;
+      var r=data.filter(function(x){return x.id===curId;})[0]; if(!r) return;
+      if(!confirm('¿Eliminar a '+r.nombre+' ('+r.id+') de la fuerza de venta?')) return;
+      logEntry('del', r.id, [{f:'Tipo',b:r.tipo,a:'—'},{f:'Ruta',b:r.ruta,a:'—'},{f:'RUT',b:r.rut,a:'—'},{f:'Nombre',b:r.nombre,a:'—'},{f:'Estado',b:r.estado||'Activo',a:'—'}]);
+      data=data.filter(function(x){return x.id!==curId;});
+      persist(); render(); closeEdit(); toast('Registro eliminado');
+    }
+
+    function logEntry(action, id, changes){ changeLog.unshift({ ts:Date.now(), action:action, id:id, changes:changes }); persistLog(); updateHistBtn(); }
+
+    tbody.addEventListener('click', function(e){
+      var ed=e.target.closest('[data-edit]'); if(ed){ openEdit(ed.getAttribute('data-edit')); return; }
+      var dl=e.target.closest('[data-del]'); if(dl){ curId=dl.getAttribute('data-del'); deleteCur(); return; }
+    });
+    document.getElementById('addBtn').addEventListener('click', openAdd);
+    document.getElementById('e-close').addEventListener('click', closeEdit);
+    document.getElementById('e-cancel').addEventListener('click', closeEdit);
+    document.getElementById('e-save').addEventListener('click', saveEdit);
+    document.getElementById('e-delete').addEventListener('click', deleteCur);
+    editOverlay.addEventListener('click', function(e){ if(e.target===editOverlay) closeEdit(); });
+
+    /* ---- Historial ---- */
+    var histOverlay=document.getElementById('histOverlay'), histCount=document.getElementById('histCount'), hBody=document.getElementById('h-body');
+    function updateHistBtn(){ if(changeLog.length){ histCount.style.display='inline-block'; histCount.textContent=changeLog.length; } else histCount.style.display='none'; }
+    function fmtTime(ts){ try{ return new Date(ts).toLocaleString('es-CL',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){ return new Date(ts).toLocaleString(); } }
+    var ACT={add:'Alta',edit:'Edición',del:'Baja'};
+    function renderHistory(){
+      if(!changeLog.length){ hBody.innerHTML='<p class="log-empty">Aún no se han registrado cambios.</p>'; return; }
+      var html='<div class="log-list">';
+      changeLog.forEach(function(e){
+        html+='<div class="log-entry"><div class="log-top"><span class="l-id">'+e.id+'</span><span class="l-act '+e.action+'">'+ACT[e.action]+'</span><span class="l-time">'+fmtTime(e.ts)+'</span></div>';
+        e.changes.forEach(function(c){ html+='<div class="diff-row"><span class="diff-field">'+c.f+'</span><span class="diff-before">'+c.b+'</span><span class="diff-arrow">→</span><span class="diff-after">'+c.a+'</span></div>'; });
+        html+='</div>';
+      });
+      html+='</div>'; hBody.innerHTML=html;
+    }
+    function openHist(){ renderHistory(); histOverlay.classList.add('open'); }
+    function closeHist(){ histOverlay.classList.remove('open'); }
+    document.getElementById('histBtn').addEventListener('click', openHist);
+    document.getElementById('h-close').addEventListener('click', closeHist);
+    document.getElementById('h-done').addEventListener('click', closeHist);
+    histOverlay.addEventListener('click', function(e){ if(e.target===histOverlay) closeHist(); });
+
+    function xmlEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    document.getElementById('h-export').addEventListener('click', function(){
+      if(!changeLog.length){ toast('No hay cambios para exportar'); return; }
+      var headers=['Fecha y hora','Acción','ID','Campo','Antes','Después','Usuario'];
+      var widths=[150,90,90,120,160,160,100];
+      var xml='<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
+      xml+='<Styles><Style ss:ID="hdr"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#15130E" ss:Pattern="Solid"/></Style><Style ss:ID="c"/></Styles>';
+      xml+='<Worksheet ss:Name="Cambios FDV"><Table>';
+      widths.forEach(function(w){ xml+='<Column ss:Width="'+w+'"/>'; });
+      xml+='<Row ss:Height="22">'; headers.forEach(function(h){ xml+='<Cell ss:StyleID="hdr"><Data ss:Type="String">'+xmlEsc(h)+'</Data></Cell>'; }); xml+='</Row>';
+      changeLog.forEach(function(e){ var t=fmtTime(e.ts); e.changes.forEach(function(c){ [t,ACT[e.action],e.id,c.f,c.b,c.a,'Administrador'].forEach; var vals=[t,ACT[e.action],e.id,c.f,c.b,c.a,'Administrador']; xml+='<Row>'; vals.forEach(function(v){ xml+='<Cell ss:StyleID="c"><Data ss:Type="String">'+xmlEsc(v)+'</Data></Cell>'; }); xml+='</Row>'; }); });
+      xml+='</Table></Worksheet></Workbook>';
+      var blob=new Blob([xml],{type:'application/vnd.ms-excel'}); var url=URL.createObjectURL(blob);
+      var dt=new Date(); var stamp=dt.getFullYear()+('0'+(dt.getMonth()+1)).slice(-2)+('0'+dt.getDate()).slice(-2);
+      var a=document.createElement('a'); a.href=url; a.download='cambios-fuerza-venta-'+stamp+'.xls'; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); },1000);
+      toast('Historial exportado');
+    });
+
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeEdit(); closeHist(); } });
+
+    function toast(msg){ var el=document.getElementById('toast'); el.innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>'+msg+'</span>'; el.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(function(){ el.classList.remove('show'); },2600); }
+
+    updateHistBtn();
+    render();
+  </script>
+</body>
+</html>

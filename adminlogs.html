@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mantenedor Logs · Retail Experts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --purple:#5A0D74; --purple-light:#7B1E99; --orange:#FF5A1F;
+  --cream:#FFF8E7; --cream-dark:#F5EDD4; --ink:#1A0820; --white:#fff;
+  --line:rgba(28,26,20,0.14); --line-soft:rgba(28,26,20,0.07); --muted:#6B6557; --card:#fff;
+  --green:#1F8A4C; --green-soft:rgba(31,138,76,0.12);
+  --blue:#2A6FDB; --blue-soft:rgba(42,111,219,0.12);
+  --font-display:'Bricolage Grotesque',sans-serif; --font-body:'Manrope',sans-serif;
+}
+*{ margin:0; padding:0; box-sizing:border-box; }
+html,body{ min-height:100%; }
+body{ font-family:var(--font-body); color:var(--ink);
+  background:radial-gradient(120% 80% at 50% -10%, rgba(90,13,116,0.06) 0%, rgba(0,0,0,0) 55%), var(--cream);
+  min-height:100vh; display:flex; flex-direction:column; }
+.admin-header{ flex:0 0 auto; display:flex; align-items:center; gap:20px; padding:14px clamp(20px,4vw,40px); background:var(--cream); border-bottom:1px solid var(--cream-dark); }
+.admin-header .logo-img{ height:40px; width:auto; display:block; }
+.header-divider{ width:1px; height:26px; background:rgba(90,13,116,.18); }
+.header-title{ font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--purple); letter-spacing:-0.01em; }
+.header-spacer{ margin-left:auto; }
+.back-btn{ display:inline-flex; align-items:center; gap:7px; padding:9px 16px; background:transparent; color:var(--purple); border:1.5px solid rgba(90,13,116,.25); border-radius:999px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; transition:all .2s; }
+.back-btn:hover{ background:var(--purple); color:var(--white); border-color:var(--purple); }
+.back-btn svg{ width:15px; height:15px; }
+
+.wrap{ width:100%; max-width:1240px; margin:0 auto; padding:clamp(28px,5vh,46px) clamp(20px,4vw,48px) 64px; }
+.crumb{ display:inline-flex; align-items:center; gap:8px; font-size:.86rem; color:var(--muted); margin-bottom:16px; }
+.crumb a{ color:var(--muted); text-decoration:none; font-weight:600; }
+.crumb a:hover{ color:var(--purple); }
+.eyebrow{ font-family:var(--font-display); font-weight:600; text-transform:uppercase; letter-spacing:.2em; font-size:.74rem; color:var(--orange); margin-bottom:8px; }
+.page-title{ font-family:var(--font-display); font-weight:800; font-size:clamp(2rem,4.5vw,2.9rem); line-height:1; letter-spacing:-.02em; color:var(--purple); }
+.page-sub{ font-size:1rem; color:var(--muted); max-width:64ch; line-height:1.6; margin:13px 0 26px; }
+
+.demo-note{ display:flex; gap:11px; align-items:flex-start; background:var(--blue-soft); border:1px solid rgba(42,111,219,.22); border-radius:13px; padding:13px 16px; margin-bottom:24px; font-size:.88rem; color:#234; line-height:1.5; }
+.demo-note svg{ width:18px; height:18px; flex:0 0 auto; color:var(--blue); margin-top:1px; }
+.demo-note b{ font-family:var(--font-display); }
+
+.kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:24px; }
+.kpi{ background:var(--card); border:1px solid var(--line); border-radius:15px; padding:16px 18px; box-shadow:0 8px 22px rgba(28,26,20,0.05); }
+.kpi .k-label{ font-family:var(--font-display); font-weight:600; font-size:.8rem; color:var(--muted); margin-bottom:7px; }
+.kpi .k-value{ font-family:var(--font-display); font-weight:800; font-size:1.7rem; color:var(--ink); }
+
+.toolbar{ display:flex; flex-wrap:wrap; gap:11px; align-items:flex-end; margin-bottom:18px; }
+.tb-field{ display:flex; flex-direction:column; gap:5px; }
+.tb-field label{ font-family:var(--font-display); font-weight:600; font-size:.68rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); }
+.tb-field select, .tb-field input{ font-family:var(--font-body); font-size:.86rem; color:var(--ink); background:#fff; border:1.4px solid var(--line); border-radius:9px; padding:9px 12px; outline:none; }
+.tb-field select:focus, .tb-field input:focus{ border-color:var(--orange); }
+.tb-spacer{ margin-left:auto; }
+.tb-btn{ font-family:var(--font-display); font-weight:700; font-size:.84rem; border-radius:9px; padding:10px 18px; cursor:pointer; border:1.5px solid transparent; }
+.tb-export{ color:#fff; background:var(--green); border-color:var(--green); display:inline-flex; align-items:center; gap:7px; }
+.tb-export:hover{ background:#187a40; }
+.tb-export svg{ width:15px; height:15px; }
+.tb-clear{ color:var(--muted); background:#fff; border-color:var(--line); }
+.tb-clear:hover{ border-color:#C0392B; color:#C0392B; }
+
+.panel-card{ background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:0 10px 26px rgba(28,26,20,0.05); overflow:hidden; }
+.table-scroll{ overflow-x:auto; }
+table.logs{ width:100%; border-collapse:collapse; font-size:.9rem; min-width:720px; }
+table.logs thead th{ position:sticky; top:0; background:#F4ECDF; text-align:left; padding:12px 16px; font-family:var(--font-display); font-weight:700; font-size:.74rem; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); border-bottom:1px solid var(--line); white-space:nowrap; }
+table.logs tbody td{ padding:11px 16px; border-bottom:1px solid var(--line-soft); white-space:nowrap; }
+table.logs tbody tr:hover{ background:rgba(255,90,31,0.04); }
+table.logs tbody tr:last-child td{ border-bottom:0; }
+.ev-user{ font-weight:600; }
+.badge{ display:inline-flex; align-items:center; gap:6px; font-size:.78rem; font-weight:600; padding:3px 10px; border-radius:999px; }
+.badge .bd{ width:7px; height:7px; border-radius:50%; }
+.ev-login{ background:var(--green-soft); color:var(--green); } .ev-login .bd{ background:var(--green); }
+.ev-logout{ background:rgba(192,57,43,.1); color:#C0392B; } .ev-logout .bd{ background:#C0392B; }
+.ev-dash{ background:var(--purple-soft, rgba(90,13,116,.1)); color:var(--purple); } .ev-dash .bd{ background:var(--purple); }
+.ev-fav{ background:rgba(255,90,31,.12); color:var(--orange); } .ev-fav .bd{ background:var(--orange); }
+.ev-other{ background:var(--line-soft); color:var(--muted); } .ev-other .bd{ background:var(--muted); }
+.detail{ color:var(--muted); }
+.empty{ text-align:center; padding:48px 20px; color:var(--muted); font-family:var(--font-display); }
+.empty svg{ width:40px; height:40px; opacity:.4; margin-bottom:12px; }
+</style>
+</head>
+<body>
+  <header class="admin-header">
+    <a class="back-btn" href="adminmantenedores.html">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Volver
+    </a>
+    <div class="header-divider"></div>
+    <a href="index.html"><img class="logo-img" src="logo-retail-experts.png" alt="Retail Experts"></a>
+    <span class="header-title">Mantenedor Logs</span>
+    <div class="header-spacer"></div>
+  </header>
+
+  <main class="wrap">
+    <div class="crumb"><a href="adminweb.html">Panel</a> › <a href="adminmantenedores.html">Mantenedores</a> › <span>Logs</span></div>
+    <p class="eyebrow">Registro de actividad</p>
+    <h1 class="page-title">Mantenedor Logs</h1>
+    <p class="page-sub">Trazabilidad de accesos e interacciones: cada vez que una credencial inicia sesión o abre un dashboard, queda registrado aquí con su fecha y hora.</p>
+
+    <div class="demo-note">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v5M12 7.5v.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span><b>Demo local.</b> Por ahora los eventos se registran en este navegador, por lo que ves la actividad de esta sesión/equipo. Al conectar el backend, cada evento se guardará de forma central y verás la actividad de <b>todos los usuarios</b> desde cualquier dispositivo.</span>
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="toolbar">
+      <div class="tb-field"><label for="f-user">Usuario</label><select id="f-user"><option value="">Todos</option></select></div>
+      <div class="tb-field"><label for="f-mod">Módulo</label><select id="f-mod"><option value="">Todos</option><option value="Acceso">Acceso</option><option value="Descargador">Descargador</option><option value="Galería">Galería</option><option value="Dashboards">Dashboards</option></select></div>
+      <div class="tb-field"><label for="f-q">Buscar</label><input type="text" id="f-q" placeholder="usuario, detalle…" /></div>
+      <div class="tb-spacer"></div>
+      <button class="tb-btn tb-export" id="exportBtn"><svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 19h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Descargar Excel</button>
+      <button class="tb-btn tb-clear" id="seedBtn" title="Generar eventos de ejemplo">Generar demo</button>
+    </div>
+
+    <div class="panel-card">
+      <div class="table-scroll">
+        <table class="logs">
+          <thead><tr><th>Día</th><th>Usuario</th><th>Módulo</th><th>Evento</th><th>Interacciones</th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-guard.js"></script>
+  <script>
+    var LOGKEY='re_activity_log';
+    function readLog(){ try{ var a=JSON.parse(localStorage.getItem(LOGKEY)||'[]'); return a.filter(function(e){ return e && e.day && e.modulo; }); }catch(e){ return []; } }
+    function writeLog(a){ try{ localStorage.setItem(LOGKEY, JSON.stringify(a)); }catch(e){} }
+
+    var MOD_META={
+      'Acceso':{cls:'ev-login'},
+      'Descargador':{cls:'ev-fav'},
+      'Galería':{cls:'ev-dash'},
+      'Dashboards':{cls:'ev-dash'}
+    };
+    function modCls(m){ return (MOD_META[m]||{cls:'ev-other'}).cls; }
+    function fmtDay(day){ if(!day) return '—'; var p=String(day).split('-'); return p.length===3?(p[2]+'/'+p[1]+'/'+p[0]):day; }
+
+    var sel={ user:'', mod:'', q:'' };
+    function filtered(){
+      var all=readLog().slice().sort(function(a,b){return b.ts-a.ts;});
+      return all.filter(function(e){
+        if(sel.user && e.user!==sel.user) return false;
+        if(sel.mod && e.modulo!==sel.mod) return false;
+        if(sel.q){ var hay=((e.user||'')+' '+(e.modulo||'')+' '+(e.evento||'')).toLowerCase(); if(hay.indexOf(sel.q.toLowerCase())===-1) return false; }
+        return true;
+      });
+    }
+    function render(){
+      var all=readLog();
+      var users={}; all.forEach(function(e){ if(e.user)users[e.user]=true; });
+      var usel=document.getElementById('f-user'); var cur=usel.value;
+      usel.innerHTML='<option value="">Todos</option>'+Object.keys(users).sort().map(function(u){return '<option value="'+u.replace(/"/g,'&quot;')+'">'+u+'</option>';}).join('');
+      usel.value=cur;
+      var today=new Date(); today.setHours(0,0,0,0);
+      var interToday=all.filter(function(e){return e.ts>=today.getTime();}).reduce(function(s,e){return s+(e.count||1);},0);
+      var totalInter=all.reduce(function(s,e){return s+(e.count||1);},0);
+      var logins=all.filter(function(e){return e.type==='login';}).reduce(function(s,e){return s+(e.count||1);},0);
+      document.getElementById('kpis').innerHTML=
+        '<div class="kpi"><div class="k-label">Interacciones totales</div><div class="k-value">'+totalInter+'</div></div>'
+        +'<div class="kpi"><div class="k-label">Usuarios únicos</div><div class="k-value">'+Object.keys(users).length+'</div></div>'
+        +'<div class="kpi"><div class="k-label">Inicios de sesión</div><div class="k-value">'+logins+'</div></div>'
+        +'<div class="kpi"><div class="k-label">Interacciones de hoy</div><div class="k-value">'+interToday+'</div></div>';
+      var rows=filtered();
+      var tb=document.getElementById('tbody');
+      if(rows.length===0){ tb.innerHTML='<tr><td colspan="5"><div class="empty"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.6"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><div>Aún no hay eventos registrados.</div></div></td></tr>'; return; }
+      tb.innerHTML=rows.map(function(e){
+        return '<tr><td>'+fmtDay(e.day)+'</td><td class="ev-user">'+(e.user||'—')+'</td><td><span class="badge '+modCls(e.modulo)+'"><span class="bd"></span>'+(e.modulo||'—')+'</span></td><td class="detail">'+(e.evento||'—')+'</td><td style="font-family:var(--font-display);font-weight:700">'+(e.count||1)+'</td></tr>';
+      }).join('');
+    }
+
+    document.getElementById('f-user').addEventListener('change', function(){ sel.user=this.value; render(); });
+    document.getElementById('f-mod').addEventListener('change', function(){ sel.mod=this.value; render(); });
+    document.getElementById('f-q').addEventListener('input', function(){ sel.q=this.value.trim(); render(); });
+
+    document.getElementById('exportBtn').addEventListener('click', function(){
+      var rows=filtered();
+      function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+      var xml='<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
+      xml+='<Styles><Style ss:ID="h"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#5A0D74" ss:Pattern="Solid"/></Style></Styles><Worksheet ss:Name="Logs"><Table>';
+      xml+='<Row ss:Height="22">'+['Día','Usuario','Módulo','Evento','Interacciones'].map(function(h){return '<Cell ss:StyleID="h"><Data ss:Type="String">'+esc(h)+'</Data></Cell>';}).join('')+'</Row>';
+      rows.forEach(function(e){ xml+='<Row>'+[fmtDay(e.day), e.user||'', e.modulo||'', e.evento||''].map(function(v){return '<Cell><Data ss:Type="String">'+esc(v)+'</Data></Cell>';}).join('')+'<Cell><Data ss:Type="Number">'+(e.count||1)+'</Data></Cell></Row>'; });
+      xml+='</Table></Worksheet></Workbook>';
+      var blob=new Blob([xml],{type:'application/vnd.ms-excel'}); var url=URL.createObjectURL(blob);
+      var d=new Date(); var stamp=d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2);
+      var a=document.createElement('a'); a.href=url; a.download='logs-actividad-'+stamp+'.xls'; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){URL.revokeObjectURL(url);},1000);
+    });
+
+    // Generar interacciones de ejemplo (agregadas por día/usuario/módulo/evento)
+    document.getElementById('seedBtn').addEventListener('click', function(){
+      var users=['jcardemil@retailexperts.cl','admin@retailexperts.cl'];
+      var cat={
+        'Acceso':['Inicio de sesión'],
+        'Descargador':['Levantamientos','Asistencia','B2B'],
+        'Galería':['Góndola','Cartelería','Exhibiciones','Exhibiciones Adicionales'],
+        'Dashboards':['Resumen de Negocio','Comercial · Evolutivo','Comercial · Comparativo','Abastecimiento','Forecast & Venta Perdida','Personalizado']
+      };
+      var mods=Object.keys(cat);
+      var log=readLog(); var now=Date.now();
+      function dayKey(ts){ var d=new Date(ts); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+      function bump(ts,user,mod,ev,type){
+        var day=dayKey(ts);
+        for(var i=0;i<log.length;i++){ var e=log[i]; if(e.day===day&&e.user===user&&e.modulo===mod&&e.evento===ev){ e.count=(e.count||1)+1; e.ts=Math.max(e.ts,ts); return; } }
+        log.push({ts:ts, day:day, user:user, type:type||'modulo', modulo:mod, evento:ev, count:1});
+      }
+      for(var i=0;i<40;i++){
+        var u=users[Math.floor(Math.random()*users.length)];
+        var ts=now - Math.floor(Math.random()*4*86400000);
+        if(Math.random()<0.18){ bump(ts,u,'Acceso','Inicio de sesión','login'); continue; }
+        var mod=mods[1+Math.floor(Math.random()*(mods.length-1))];
+        var evs=cat[mod]; var ev=evs[Math.floor(Math.random()*evs.length)];
+        bump(ts,u,mod,ev,'modulo');
+      }
+      writeLog(log); render();
+    });
+
+    render();
+  </script>
+</body>
+</html>

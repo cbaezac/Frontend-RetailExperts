@@ -144,6 +144,39 @@
   .btn-ghost { color: var(--ink); background: var(--card); border: 1.5px solid var(--line); }
   .btn-ghost:hover { background: #fff; border-color: var(--ink); }
   .btn-ghost.disabled { opacity: .45; pointer-events: none; }
+  .btn-add { display:inline-flex; align-items:center; gap:8px; color:#fff; background:var(--accent); border:1.5px solid var(--accent); box-shadow:0 10px 24px rgba(224,86,28,.28); }
+  .btn-add svg { display:block; }
+  .btn-add:hover { background:#c8480f; border-color:#c8480f; transform:translateY(-1px); }
+
+  /* Limpiar filtros inline (en la fila de filtros) */
+  .clear-inline { display:inline-flex; align-items:center; gap:6px; font-family:'Bricolage Grotesque',sans-serif; font-weight:600; font-size:0.86rem; color:var(--muted); background:transparent; border:0; cursor:pointer; padding:9px 6px; text-decoration:underline; text-underline-offset:3px; }
+  .clear-inline:hover { color:var(--accent); }
+  .clear-inline.disabled { opacity:0; pointer-events:none; }
+  .clear-inline svg { width:14px; height:14px; }
+
+  /* ---- Picker de locales (Agregar Local) ---- */
+  .picker-search-row { display:flex; flex-wrap:wrap; gap:9px; margin-bottom:16px; }
+  .ptable-wrap { border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  .ptable-scroll { max-height:340px; overflow-y:auto; }
+  table.ptable { width:100%; border-collapse:collapse; font-size:0.9rem; }
+  table.ptable thead th { position:sticky; top:0; z-index:2; background:#F1E9D2; text-align:left; padding:11px 14px; font-family:'Bricolage Grotesque',sans-serif; font-weight:700; font-size:0.78rem; text-transform:uppercase; letter-spacing:0.03em; color:var(--muted); border-bottom:1px solid var(--line); white-space:nowrap; }
+  table.ptable tbody td { padding:11px 14px; border-bottom:1px solid var(--line-soft); color:var(--ink); white-space:nowrap; }
+  table.ptable tbody tr { cursor:pointer; transition:background .12s ease; }
+  table.ptable tbody tr:hover { background:rgba(224,86,28,0.07); }
+  table.ptable tbody tr.sel { background:rgba(224,86,28,0.14); }
+  table.ptable tbody tr:last-child td { border-bottom:0; }
+  .pcode { font-family:'Bricolage Grotesque',sans-serif; font-weight:700; color:var(--purple); }
+  .pradio { width:18px; height:18px; border-radius:50%; border:2px solid var(--line); display:inline-grid; place-items:center; }
+  tr.sel .pradio { border-color:var(--accent); background:var(--accent); }
+  tr.sel .pradio::after { content:''; width:7px; height:7px; border-radius:50%; background:#fff; }
+  .pempty { text-align:center; padding:34px 16px; color:var(--muted); }
+  .pfmt-badge { display:inline-block; font-size:0.78rem; padding:2px 9px; border-radius:999px; background:rgba(90,13,116,0.08); color:var(--purple); font-weight:600; }
+  .picker-count { font-size:0.85rem; color:var(--muted); margin-top:12px; }
+  .new-banner { display:flex; align-items:center; gap:11px; padding:13px 16px; border-radius:13px; background:rgba(224,86,28,0.08); border:1px solid rgba(224,86,28,0.2); margin-bottom:20px; }
+  .new-banner .nb-ico { width:34px; height:34px; flex:0 0 auto; display:grid; place-items:center; border-radius:9px; background:var(--accent); color:#fff; }
+  .new-banner .nb-ico svg { width:18px; height:18px; }
+  .new-banner .nb-txt { font-size:0.88rem; color:var(--ink); line-height:1.4; }
+  .new-banner .nb-txt b { font-family:'Bricolage Grotesque',sans-serif; }
 
   /* ---- Table ---- */
   .table-card {
@@ -287,8 +320,6 @@
   .client-chip .chip-ico svg { width: 12px; height: 12px; }
   .client-chip.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
   .client-chip.on .chip-ico { background: var(--accent); color: #fff; }
-  .client-chip.pend { border-style: dashed; }
-  .chip-pend { font-family: 'Bricolage Grotesque', sans-serif; font-size: 0.7rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 1px 7px; margin-left: 4px; }
   .cli-count { font-weight: 700; color: var(--accent); }
   .modal-foot {
     position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: 10px;
@@ -297,6 +328,24 @@
   }
   .btn-save { color: #FFF8E7; background: var(--accent); border: 1.5px solid var(--accent); }
   .btn-save:hover { background: #c8480f; transform: translateY(-1px); }
+
+  /* route blocks (multi-ruta) */
+  .route-block { position:relative; border:1px solid var(--line); border-radius:14px; padding:18px 18px 4px; margin-bottom:16px; background:#fff; }
+  .route-block-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .route-block-title { font-family:'Bricolage Grotesque',sans-serif; font-weight:700; font-size:0.95rem; color:var(--purple); display:inline-flex; align-items:center; gap:8px; }
+  .route-block-title .rb-dot { width:22px; height:22px; border-radius:50%; background:var(--accent-soft); color:var(--accent); display:grid; place-items:center; font-size:0.78rem; font-weight:700; }
+  .route-remove { display:inline-flex; align-items:center; gap:5px; font-family:'Bricolage Grotesque',sans-serif; font-weight:600; font-size:0.8rem; color:var(--muted); background:transparent; border:0; cursor:pointer; padding:5px 7px; border-radius:8px; }
+  .route-remove:hover { color:#C23A2B; background:rgba(194,58,43,0.08); }
+  .route-remove svg { width:13px; height:13px; }
+  .add-route-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:13px; border:1.5px dashed var(--line); border-radius:12px; background:transparent; color:var(--purple); font-family:'Bricolage Grotesque',sans-serif; font-weight:600; font-size:0.92rem; cursor:pointer; transition:border-color .15s ease, background .15s ease; }
+  .add-route-btn:hover { border-color:var(--purple); background:rgba(90,13,116,0.04); }
+  .add-route-btn svg { width:16px; height:16px; }
+  .client-chip.taken { opacity:0.4; cursor:not-allowed; text-decoration:line-through; }
+  .client-chip:disabled { pointer-events:none; }
+  .btn-delete-local { display:inline-flex; align-items:center; gap:7px; color:#C23A2B; background:transparent; border:1.5px solid rgba(194,58,43,0.3); }
+  .btn-delete-local:hover { background:#C23A2B; color:#fff; border-color:#C23A2B; }
+  .btn-delete-local svg { width:15px; height:15px; }
+  .ruta-badge + .ruta-badge { margin-left:5px; }
   /* route select + locked rut */
   .edit-select {
     appearance: none; -webkit-appearance: none;
@@ -374,7 +423,7 @@
       <span class="result-count" id="resultCount">Mostrando <b>0</b> de 0 salas</span>
       <div class="toolbar-actions">
         <button class="btn btn-ghost" id="historyBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg> Historial <span class="hist-count" id="histCount" style="display:none">0</span></button>
-        <button class="btn btn-ghost disabled" id="clearBtn" type="button">Limpiar filtros</button>
+        <button class="btn btn-add" id="addLocalBtn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg> Agregar Local</button>
       </div>
     </div>
 
@@ -398,29 +447,17 @@
         <p class="modal-sub">Código local <b id="m-codigo"></b></p>
       </div>
       <div class="modal-body">
-        <section class="edit-block">
-          <span class="block-label">Días de visita</span>
-          <div class="days" id="m-days"></div>
-          <p class="freq-note">Frecuencia semanal: <b id="m-freq">0</b> <span class="freq-hint">— se calcula automáticamente según los días marcados</span></p>
-        </section>
-        <section class="edit-block grid2">
-          <div>
-            <label class="block-label" for="m-ruta">Ruta asociada</label>
-            <select class="edit-input edit-select" id="m-ruta"></select>
-          </div>
-          <div>
-            <label class="block-label" for="m-rut">RUT del reponedor</label>
-            <div class="rut-locked"><span id="m-rut">—</span><span class="lock-ico"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span></div>
-            <p class="rut-hint">No editable · asignado según la ruta</p>
-          </div>
-        </section>
-        <section class="edit-block">
-          <span class="block-label">Clientes asociados · <span class="cli-count" id="m-cli-count">0</span></span>
-          <div class="clients-grid" id="m-clients"></div>
-          <p class="rut-hint" style="margin-top:11px">Activar o desactivar un cliente envía una <b>solicitud</b> al mantenedor Local–Producto. El cambio se aplica solo cuando se aprueba ahí.</p>
-        </section>
+        <div id="m-routes"></div>
+        <button class="add-route-btn" id="m-add-route" type="button">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          Agregar nueva ruta al local
+        </button>
       </div>
       <div class="modal-foot">
+        <button class="btn btn-delete-local" id="m-delete" type="button" style="margin-right:auto">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.7 12a2 2 0 0 1-2 1.9H7.7a2 2 0 0 1-2-1.9L5 7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Eliminar local
+        </button>
         <button class="btn btn-ghost" id="m-cancel" type="button">Cancelar</button>
         <button class="btn btn-save" id="m-save" type="button">Guardar cambios</button>
       </div>
@@ -445,502 +482,649 @@
     </div>
   </div>
 
+  <!-- ===== Modal: Agregar Local (paso 1 selección · paso 2 datos) ===== -->
+  <div class="modal-overlay" id="addOverlay">
+    <div class="modal modal-wide" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <button class="modal-close" id="a-close" type="button" aria-label="Cerrar">✕</button>
+        <span class="cadena-badge" id="a-step-badge" style="background:rgba(224,86,28,0.12);color:var(--accent)">Paso 1 de 2</span>
+        <h2 id="a-title">Agregar local</h2>
+        <p class="modal-sub" id="a-sub">Selecciona el local que quieres incorporar a la base de rutas.</p>
+      </div>
+
+      <!-- PASO 1: selección de local -->
+      <div class="modal-body" id="a-step1">
+        <div class="picker-search-row" id="a-filters"></div>
+        <div class="ptable-wrap">
+          <div class="ptable-scroll">
+            <table class="ptable">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>Código Local Llave</th>
+                  <th>Código Local</th>
+                  <th>Cadena</th>
+                  <th>Formato</th>
+                  <th>Nombre Local</th>
+                </tr>
+              </thead>
+              <tbody id="a-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <p class="picker-count" id="a-count"></p>
+      </div>
+
+      <!-- PASO 2: datos del nuevo local (mismo formato que editar, multi-ruta) -->
+      <div class="modal-body" id="a-step2" style="display:none">
+        <div class="new-banner">
+          <span class="nb-ico"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>
+          <span class="nb-txt">Estás agregando <b id="n-localname">—</b> · <span id="n-localcode">—</span>. Completa los datos para incorporarlo a la base.</span>
+        </div>
+        <div id="n-routes"></div>
+        <button class="add-route-btn" id="n-add-route" type="button">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          Agregar nueva ruta al local
+        </button>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="a-back" type="button" style="margin-right:auto; display:none">← Volver al listado</button>
+        <button class="btn btn-ghost" id="a-cancel" type="button">Cancelar</button>
+        <button class="btn btn-save" id="a-next" type="button" disabled>Continuar</button>
+        <button class="btn btn-save" id="a-save" type="button" style="display:none">Agregar local</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
+
   <script src="assets/js/api.js"></script>
   <script src="assets/js/admin-guard.js"></script>
   <script>
+    var RAW = [["cencosud","j403","darkstore maipu","l-m-x-j-v-s","6","rm9","","si","","","si","si","si","si","","","",""],["cencosud","j408","darkstore viña del mar","l-m-x-j-v-s","6","v costa","","si","","","","si","si","si","","","",""],["cencosud","j410","darkstore la florida","l-m-x-j-v-s","6","rm8","","si","","","si","si","si","si","","si","",""],["cencosud","j411","darkstore costanera cent","l-m-x-j-v-s","6","rm3","","si","si","si","","si","si","si","","","",""],["cencosud","j414","darkstore la dehesa","l-m-x-j-v-s","6","rm2","","si","","","","si","si","si","","","",""],["cencosud","j501","jumbo bilbao","l-m-x-j-v-s","6","rm4","","si","si","si","","si","si","si","","","si",""],["cencosud","j502","jumbo kennedy","l-m-x-j-v-s","6","rm1","","","si","si","","si","si","si","si","","si",""],["cencosud","j503","jumbo maipu","l-m-x-j-v-s","6","rm9","","si","","si","si","si","si","si","","","",""],["cencosud","j504","jumbo rancagua","l-m-x-j-v-s","6","rancagua","","si","si","si","","si","si","si","","","",""],["cencosud","j506","jumbo temuco av.alemania","m-v","2","pituto","","","si","si","","si","si","si","","","",""],["cencosud","j507","jumbo puerto montt","l-m-j-v","4","puertos","","","si","si","si","si","si","si","","","",""],["cencosud","j508","jumbo viña del mar","l-m-x-j-v-s","6","v costa","","si","si","si","","si","si","si","","","",""],["cencosud","j510","jumbo la florida","l-m-x-j-v-s","6","rm8","","si","","si","si","si","si","si","si","si","si",""],["cencosud","j511","jumbo costanera","l-m-x-j-v-s","6","pituto","","si","si","si","","si","si","si","si","","si",""],["cencosud","j512","jumbo la reina","l-m-x-j-v-s","6","rm4","","si","si","si","","si","si","si","","","si",""],["cencosud","j513","jumbo el llano subercasea","l-m-x-j-v-s","6","rm5","","si","","si","","si","si","si","","","si",""],["cencosud","j514","jumbo la dehesa","l-m-x-j-v-s","6","rm2","","si","si","si","","si","si","si","si","","si",""],["cencosud","j519","jumbo peñalolen","l-m-x-j-v-s","6","rm8","","si","si","si","si","si","si","si","si","","si",""],["cencosud","j520","jumbo valparaiso","x-s","2","v costa","","si","","","","si","si","si","","","",""],["cencosud","j521","jumbo la serena","l-m-x-j-v-s","6","la serena","","si","si","si","si","si","si","si","","si","",""],["cencosud","j532","jumbo chillan","m-v","2","pituto","","si","","si","","si","si","si","","","",""],["cencosud","j534","jumbo antofagasta angamos","l-x-v","3","pituto","","si","si","si","","si","si","si","","si","",""],["cencosud","j591","jumbo talca el arenal","l-x-v","3","talca","","si","","si","","si","si","si","","si","",""],["cencosud","j592","jumbo curico","m-v","2","pituto","","si","","","","si","si","","","","",""],["cencosud","j613","jumbo puente alto","m-j-s","3","rm10","","","","","","si","si","","","","si",""],["cencosud","j614","jumbo calama","m-v","2","pituto","","si","","","","si","si","si","","si","",""],["cencosud","j619","jumbo arica","m-v","2","pituto","","","","","","si","si","si","","","",""],["cencosud","j624","jumbo el alba","l-m-x-j-v-s","6","rm1","","","si","si","si","si","si","si","","","si",""],["cencosud","j633","jumbo alessandri hualpen","l-m-x-j-v-s","6","concepcion b","","si","","si","","si","si","si","","","",""],["cencosud","j646","jumbo quillota","m-v","2","pituto","","","si","","","si","si","","","","",""],["cencosud","j649","jumbo vicente mende","m-v","2","pituto","","","si","","","si","si","","","","",""],["cencosud","j656","jumbo la serena ulr","l-x-v","3","la serena","","si","si","","si","si","si","si","","","",""],["cencosud","j659","jumbo concha y toro","l-x-v","3","rm10","","si","","","si","si","si","si","","","si",""],["cencosud","j660","jumbo iquique","m-v","2","pituto","","si","","si","","si","si","si","","","",""],["cencosud","j671","jumbo plaza el trebol","l-m-x-j-v-s","6","concepcion b","","","si","","","si","si","si","","","",""],["cencosud","j676","jumbo pedro de vald","l-m-x-j-v-s","6","concepcion a","","","si","","","si","si","si","","","",""],["cencosud","j695","jumbo los angeles","l-m-x-j-v-s","6","los angeles","","si","","si","si","si","si","si","","","",""],["cencosud","j739","jumbo bosquemar","l-j","2","v costa","","si","si","si","","si","si","si","","","",""],["cencosud","j748","jumbo osorno","m-v","2","pituto","","si","","si","","si","si","si","","","",""],["cencosud","j754","jumbo san felipe","m-v","2","pituto","","","si","","","si","si","","","","",""],["cencosud","j760","jumbo copiapo","m-v","2","pituto","","","","","","si","si","","","","",""],["cencosud","j762","jumbo los trapenses","l-m-x-j-v-s","6","rm2","","","si","","si","si","si","si","","","si",""],["cencosud","j770","jumbo pajaritos","l-x-v","3","rm9","","","","si","si","si","si","si","","","si",""],["cencosud","j775","jumbo ñuñoa","l-m-x-j-v-s","6","rm5","","si","si","si","si","si","si","si","","","si",""],["cencosud","j780","jumbo los andes","m-v","2","pituto","","","","","","si","si","","","","",""],["cencosud","j781","jumbo el belloto","m-v","2","pituto","","","","si","","si","si","","","","",""],["cencosud","j796","jumbo antofagasta pedro a","m-j-s","3","pituto","","si","","","","si","si","si","","","",""],["cencosud","j809","jumbo mall center concepc","l-m-x-j-v-s","6","concepcion a","","si","","si","","si","si","si","","","",""],["cencosud","j810","jumbo lo castillo","l-x-v","3","rm3","","","si","si","","si","si","si","","","",""],["cencosud","j817","jumbo antofagasta s","l-x-v","3","pituto","","si","si","","","si","si","si","","si","",""],["cencosud","j825","jumbo membrillar","l-x-v","3","rancagua","","","si","","","si","si","","","","",""],["cencosud","j843","jumbo san bernardo las li","m-v","2","pituto","","si","si","si","","si","si","si","","","",""],["cencosud","j844","jumbo copiapo los c","m-v","2","pituto","","","si","","","","si","","","","","si"],["cencosud","j851","jumbo santa cruz","m-v","2","pituto","","","si","","","si","si","","","","",""],["cencosud","j872","jumbo maitencillo","m-v","2","pituto","","","si","","","si","si","si","","","",""],["cencosud","j875","jumbo 14 norte","m-v","2","v costa","","","si","si","","si","si","si","","","",""],["cencosud","j919","jumbo doña ema","x-s","2","puertos","","","si","","si","si","si","","","","",""],["cencosud","j955","jumbo valdivia","m-v","2","pituto","","","si","","","si","si","si","","","",""],["cencosud","j957","jumbo mall talca","m-j-s","3","talca","","","si","","","si","si","si","","","",""],["cencosud","j958","jumbo pie andino","m-j-s","3","rm2","","si","si","","","si","si","si","","","si",""],["cencosud","j970","jumbo los pablos","m-v","2","pituto","","","si","","","si","si","","","","",""],["cencosud","j988","jumbo puertas de ch","m-j-s","3","pituto","","si","si","","","si","si","si","","","",""],["cencosud","j989","jumbo independencia","m-j-s","3","rm3","","si","","","","si","si","si","","si","si",""],["cencosud","j992","jumbo colina chamis","m-j-s","3","pituto","","","si","","","si","si","si","","","si",""],["cencosud","n551","santa isabel coquimbo anibal pinto","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n561","santa isabel valparaiso curauma","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n587","santa isabel puerto montt valle vol","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n612","santa isabel santiago grajales","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n635","santa isabel las condes plaza artesa","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n648","santa isabel la serena san joaquin","m-v","2","la serena","","","","","si","si","","","","","",""],["cencosud","n651","santa isabel lampa valle grande","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n654","santa isabel maipu ciudad satelite","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n658","santa isabel coquimbo sindempart","m-v","2","pituto","","","","","","si","","","","si","",""],["cencosud","n674","santa isabel viña del mar quillota","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n692","santa isabel huechuraba pedro fontov","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n733","santa isabel puerto varas del salvad","x-s","2","puertos","","","","","si","si","","","","","",""],["cencosud","n734","santa isabel puerto montt diego port","j","1","puertos","","","","","si","si","","","","","",""],["cencosud","n737","santa isabel concepcion freire","l-x-v","3","concepcion a","","","","","","","","","","si","",""],["cencosud","n742","santa isabel los angeles villagran","m-j","2","los angeles","","","","","si","","","","","","",""],["cencosud","n744","santa isabel la union augusto grob","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n758","santa isabel maipu 3 poniente","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n761","santa isabel los angeles ex plaza","l-v","2","los angeles","","","","","si","si","","","","","",""],["cencosud","n771","santa isabel santiago huerfanos","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n783","santa isabel concepcion lomas de sa","m-j-s","3","concepcion b","","","","","","si","","","","","",""],["cencosud","n797","santa isabel antofagasta 14 de febre","m-j","2","pituto","","","","","","si","","","","si","",""],["cencosud","n801","santa isabel concepcion collao","m-j-s","3","concepcion a","","","","","","si","","","","","",""],["cencosud","n818","santa isabel curacavi playa tres","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n836","santa isabel la serena ruta 41","l-j","2","la serena","","","","","si","si","","","","","",""],["cencosud","n845","santa isabel coquimbo la cantera","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n859","santa isabel santa maria oriente","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n901","santa isabel vallenar prat","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n904","santa isabel puerto montt sargento","m-v","2","puertos","","","","","si","si","","","","","",""],["cencosud","n906","santa isabel puerto varas colon","x-s","2","puertos","","","","","si","si","","","","","",""],["cencosud","n908","santa isabel ovalle vicuña mackenna","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n918","santa isabel puente alto el peñon","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n985","santa isabel victoria","m-v","2","pituto","","","","","","si","","","","","",""],["cencosud","n987","santa isabel maipu el bosque","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t103","tottus puente alto","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t104","tottus nataniel","m-v","2","pituto","","","","","si","si","si","","","si","",""],["tottus","t112","tottus el bosque","m-v","2","pituto","","","","","","si","si","","","","",""],["tottus","t116","tottus huechuraba","m-v","2","pituto","","","","","","","si","","","","",""],["tottus","t120","tottus vitacura","l-x-v","3","rm3","","","","","si","si","si","","","","",""],["tottus","t121","tottus plaza egaña","m-v","2","pituto","","","","","","si","si","","","si","",""],["tottus","t123","tottus mp los dominicos","m-j-s","3","rm1","","","","","si","si","si","","","","",""],["tottus","t124","tottus walker martinez","m-v","2","pituto","","","","","","","","","","si","",""],["tottus","t125","tottus chamisero","m-j-s","3","pituto","","","","","","","si","","","","",""],["tottus","t126","tottus vivaceta","m-v","2","pituto","","","","","","","si","","","si","",""],["tottus","t131","tottus piedra roja","m-j-s","3","pituto","","","","","","si","si","","","","",""],["tottus","t132","tottus la cisternas","m-v","2","pituto","","","","","","si","","","","si","",""],["tottus","t133","tottus factoria","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t134","tottus quilin","l-v","2","rm8","","","","","si","si","si","","","si","",""],["tottus","t152","tottus plaza oeste ii","m-j-s","3","rm9","","","","","","si","","","","","",""],["tottus","t153","tottus kennedy ii","l-x-v","3","pituto","","","","","si","si","si","","","","",""],["tottus","t203","tottus peñaflor","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t204","tottus melipilla","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t206","tottus talagante cordillera","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t207","tottus la calera","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t213","tottus viña del mar santa julia","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t215","tottus quilpue","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t219","tottus reñaca","m-v","2","pituto","","","","","","si","si","","","","",""],["tottus","t220","tottus maitencillo","m-v","2","pituto","","","","","","","si","","","si","",""],["tottus","t222","tottus curauma","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t301","tottus buin","m-v","2","pituto","","","","","","si","si","","","","",""],["tottus","t302","tottus rengo","m-v","2","pituto","","","","","","si","","","","si","",""],["tottus","t304","tottus talca","m-j-s","3","talca","","","","","","si","","","","","",""],["tottus","t305","tottus machali","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t307","tottus el trebol talcahuano","m-j-s","3","concepcion b","","","","","","si","","","","si","",""],["tottus","t309","tottus bio bio","m-j-s","3","concepcion a","","","","","","si","","","","","",""],["tottus","t311","tottus talca colin","l-x-v","3","talca","","","","","","si","","","","","",""],["tottus","t313","tottus curico norte","m-v","2","pituto","","","","","","","si","","","","",""],["tottus","t501","tottus antofagasta mall","l-x-v","2","pituto","","","","","","si","","","","si","",""],["tottus","t505","tottus ovalle","m-v","2","pituto","","","","","","si","si","","","","",""],["tottus","t509","tottus coquimbo tierras blancas","m-v","2","pituto","","","","","","si","","","","","",""],["tottus","t510","tottus balmaceda la serena","x-s","2","la serena","","","","","","si","","","","","",""],["tottus","t512","tottus mp la serena","x-s","2","la serena","","","","","","si","","","","si","",""],["tottus","t513","tottus antofagasta norte","m-j-s","2","pituto","","","","","","si","","","","si","",""],["smu","u469","unimarc los militares las condes","m-v","2","pituto","","","","","","si","","","","","",""],["smu","u585","unimarc los volcanes puerto montt","m-v","2","puertos","","","","","si","","","","","","",""],["smu","u759","unimarc portal los angeles","m-j","2","los angeles","","","","","si","","","","","","",""],["smu","u761","unimarc marconi los angeles","l-v","2","los angeles","","","","","si","","","","","","",""],["smu","u763","unimarc juan soler puerto montt","j","1","puertos","","","","","si","","","","","","",""],["smu","u764","unimarc urmeneta puerto montt","j","1","puertos","","","","","si","","","","","","",""],["smu","u915","unimarc rotonda puerto montt","l","1","puertos","","","","","si","","","","","","",""],["smu","u916","unimarc paloma puerto montt","m-v","2","puertos","","","","","si","","","","","","",""],["walmart","w1","lider express plaza lyon","m-v","2","pituto","","","","","","","","","","","si",""],["walmart","w120","hiper lider temuco (barrio ingles)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w121","hiper lider punta arenas","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w122","hiper lider quillota","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w125","hiper lider ovalle","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w126","hiper lider copiapo","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w127","hiper lider linares","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w129","lider express puerto varas","x-s","2","puertos","","","","","si","si","","","","","",""],["walmart","w137","hiper lider san pablo","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w139","lider express colina (piedra roja)","m-j-s","3","pituto","","","","","","si","","","","","",""],["walmart","w143","hiper lider talca la florida","l-x-v","3","talca","","","","","","si","","","","si","",""],["walmart","w146","lider express san javier","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w149","lider express colina","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w15","lider express estoril","l-x-v","3","rm1","","","","","","si","","","","","",""],["walmart","w159","central mayorista","x-v","2","rm8","","","","","","","","","","si","",""],["walmart","w16","lider express la dehesa","m-j-s","3","rm2","","","","","","si","","","","","",""],["walmart","w177","lider express antofagasta (perez zujovi","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w18","lider express manuel montt","m-v","2","pituto","","","","","","","","","","","si",""],["walmart","w180","lider express nunoa (irarrazaval)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w182","hiper lider buin (bernardo o higgins)","m-v","2","pituto","","","","","","si","","","","","si",""],["walmart","w183","lider express temuco (los pablos)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w195","lider express puerto montt (balmaceda)","l","1","puertos","","","","","si","si","","","","","",""],["walmart","w2","lider express pedro de valdivia","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w244","hiper lider outlet park","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w248","lider express mall arauco quilicura","l-x-v","3","pituto","","","","","","si","","","","","",""],["walmart","w252","lider express calera de tango","m-v","2","pituto","","","","","","","","","","","si",""],["walmart","w253","lider express colina el algarrobal chic","m-v","2","pituto","","","","","","si","","","","","si",""],["walmart","w276","lider express lampa valle grande ii","m-v","2","pituto","","","","","","si","","","","","si",""],["walmart","w279","hiper lider curico camilo henriquez","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w3","hiper lider irarrazaval","l-x-v","3","rm5","","","","","","si","","","si","","",""],["walmart","w32","hiper lider gran avenida","m-j-s","3","rm5","","","","","si","si","","","si","","",""],["walmart","w33","hiper lider calama","m-v","2","pituto","","","","","","si","","","","","","si"],["walmart","w35","hiper lider rancagua","l-x-v","3","rancagua","","","","","","si","","","","","",""],["walmart","w36","hiper lider los angeles","m-j-s","3","los angeles","","","","","si","si","","","","","",""],["walmart","w37","hiper lider matucana","m-j-s","3","rm3","","","","","si","si","","","","","",""],["walmart","w38","hiper lider einstein","l-x-v","3","rancagua","","","","","","si","","","","","",""],["walmart","w39","hiper lider recreo","m-j-s","3","rancagua","","","","","","si","","","","si","",""],["walmart","w41","hiper lider huechuraba (mall plaza no","l-x-v","3","pituto","","","","","","si","","","","","si",""],["walmart","w42","hiper lider curico","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w425","hiper lider copiapo","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w426","hiper lider los angeles (sor vicenta)","l-x-v","3","los angeles","","","","","si","si","","","","","",""],["walmart","w43","lider express plaza maule","m-j-s","3","talca","","","","","","si","","","","","",""],["walmart","w44","hiper lider quilin","m-j-s","3","rm8","","","","","si","si","","","","","si","si"],["walmart","w45","hiper lider maipu (el descanso)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w456","hiper lider temuco barros arana","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w457","hiper lider villa alemana (camino tro","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w459","hiper lider calama huaytiquina","m-v","2","pituto","","","","","","si","","","","si","",""],["walmart","w46","hiper lider maipu (av central)","l-x-v","3","rm9","","","","","","si","","","","","",""],["walmart","w48","hiper lider puente alto (mall plaza t","l-x-v","2","rm10","","","","","si","si","","","","","","si"],["walmart","w49","hiper lider quilicura","l-x-v","3","pituto","","","","","","si","","","","","",""],["walmart","w51","lider express tobalaba","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w514","lider express machali","l-x","2","rancagua","","","","","","si","","","","","",""],["walmart","w518","hiper lider valparaiso (av. argentina","x-s","2","v costa","","","","","","si","","","","","",""],["walmart","w52","lider express grecia","m-v","2","pituto","","","","","","","","","","","si",""],["walmart","w523","lider express los angeles (vicuna macke","x-s","2","los angeles","","","","","si","","","","","","",""],["walmart","w525","lider express padre hurtado (laguna del","m-v","2","pituto","","","","","","si","","","","","si",""],["walmart","w53","hiper lider coquimbo","m-v","2","pituto","","","","","si","si","","","","si","",""],["walmart","w54","hiper lider vicuna mackenna","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w55","hiper lider macul","m-v","2","pituto","","","","","","si","","","","","si",""],["walmart","w56","lider express gran avenida","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w57","hiper lider vitacura","l-x-v","3","rm3","","","","","","si","","","si","","",""],["walmart","w58","hiper lider vina del mar","m-v","2","v costa","","","","","","si","","","","","",""],["walmart","w602","hiper lider los andes vecino","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w605","lider express la serena","x-s","2","la serena","","","","","si","si","","","","si","",""],["walmart","w606","hiper lider coronel","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w607","hiper lider melipilla","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w608","hiper lider chillan","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w61","lider express plaza de maipu","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w610","lider express nonato coo","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w611","lider express rojas magallanes","m-s","2","rm10","","","","","si","si","","","","","si",""],["walmart","w612","lider express chillan","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w613","lider express ciudad del este","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w616","hiper lider maipu 3 poniente","l-x-v","3","rm9","","","","","","si","","","","si","",""],["walmart","w618","hiper lider casona osorno","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w619","lider express puerto montt 4 terraza","m-v","2","puertos","","","","","si","si","","","","","",""],["walmart","w62","hiper lider la florida (pza.vespucio)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w620","hiper lider san bernardo (mall plaza","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w621","lider express merced","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w625","lider express con con","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w626","hiper lider principe de gales","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w627","lider express san vicente","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w628","hiper lider santa cruz","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w631","hiper lider collao","m-j-s","3","concepcion a","","","","","","si","","","","si","",""],["walmart","w632","hiper lider vina centro terminal","m-v","2","v costa","","","","","","si","","","","","",""],["walmart","w635","hiper lider arica (pedro montt)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w640","lider express 10 de julio","m-v","2","pituto","","","","","","","","","","si","",""],["walmart","w643","lider express mexico","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w645","lider express rancagua","m-j","2","rancagua","","","","","","si","","","","","",""],["walmart","w647","lider express maitencillo","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w65","lider express seminario","m-v","2","pituto","","","","","","","","","","","si",""],["walmart","w650","lider express algarrobo","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w653","lider express curico alessandri","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w654","hiper lider san antonio","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w655","hiper lider antofagasta","m-j-s","2","pituto","","","","","","si","","","","","",""],["walmart","w656","lider express buin (san martin)","m-v","2","pituto","","","","","","","","","si","","si",""],["walmart","w658","lider express puerto varas (mall)","x-s","2","puertos","","","","","si","si","","","","","",""],["walmart","w66","hiper lider talagante","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w670","hiper lider puerto montt (cardonal)","l-j","2","puertos","","","","","si","si","","","","","",""],["walmart","w671","hiper lider quilicura (lo marcoleta)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w674","lider express pedro fontova","l-x-v","3","pituto","","","","","","si","","","","si","si",""],["walmart","w677","lider express providencia (santa isabel","m-v","2","pituto","","","","","","","","","","","si",""],["walmart","w679","hiper lider iquique (bilbao)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w680","lider express villarrica","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w681","lider express pucon","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w682","hiper lider san joaquin","m-j-s","3","rm5","","","","","si","si","","","","","",""],["walmart","w684","hiper lider 4 esquinas","m-v","2","la serena","","","","","si","si","","","","","","si"],["walmart","w686","hiper lider reg. arica","m-v","2","la serena","","","","","si","si","","","","","",""],["walmart","w687","lider express temuco caupolican","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w689","lider express santiago (san martin)","m-v","2","pituto","","","","","","","","","","si","",""],["walmart","w693","hiper lider la pintana","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w695","lider express rancagua diagonal donihue","m-j","2","rancagua","","","","","","si","","","","","",""],["walmart","w696","lider express valparaiso (curauma)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w697","hiper lider san fernando","m-v","2","pituto","","","","","","si","","","","","","si"],["walmart","w71","hiper lider ñuñoa vespucio sur","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w72","hiper lider alameda","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w73","hiper lider puente alto (espacio urba","m-j-s","3","rm10","","","","","si","si","","","","","",""],["walmart","w736","hiper lider penaflor (balmaceda)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w739","hiper lider maipu (camino a melipilla","l-x-v","3","rm9","","","","","","si","","","","si","",""],["walmart","w74","lider express tomas moro","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w747","hiper lider concon (magallanes)","l-j","2","v costa","","","","","","si","","","","","",""],["walmart","w748","hiper lider renca (miraflores)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w75","hiper lider maipu (pajaritos)","m-j-s","3","rm9","","","","","","si","","","","","",""],["walmart","w76","hiper lider departamental","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w77","hiper lider independencia","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w78","hiper lider iquique","m-v","2","pituto","","","","","","si","","","","","","si"],["walmart","w79","hiper lider talca","m-j-s","3","talca","","","","","","si","","","","","",""],["walmart","w798","hiper lider santiago (san bernardo","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w80","hiper lider los morros","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w81","hiper lider arica","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w82","hiper lider san bernardo","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w83","hiper lider la florida (santa amalia)","l-m-x-j-v-s","6","rm10","","","","","si","si","","","","si","",""],["walmart","w84","hiper lider el belloto","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w85","hiper lider cerrillos (oeste)","m-j-s","3","rm9","","","","","si","si","","","","","",""],["walmart","w86","hiper lider recoleta","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w87","hiper lider santa rosa (san ramon)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w88","hiper lider los dominicos","l-m-x-j-v-s","6","rm1","","","","","","si","","","","","",""],["walmart","w89","hiper lider bio bio","l-m-x-j-v-s","6","concepcion b","","","","","","si","","","","","",""],["walmart","w91","hiper lider antofagasta","l-x-v","2","pituto","","","","","","si","","","","","",""],["walmart","w910","hiper lider camino la farfana (","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w92","hiper lider la serena (puertas del ma","x-s","2","la serena","","","","","si","si","","","","","",""],["walmart","w929","hiper lider puerto montt (la paloma)","m-v","2","puertos","","","","","si","si","","","","","",""],["walmart","w93","hiper lider osorno","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w937","lider express coquimbo (el amanecer)","m-v","2","pituto","","","","","si","si","","","","","",""],["walmart","w94","hiper lider valdivia","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w940","lider express santiago (lo campino)","m-v","2","pituto","","","","","","","","","","","si",""],["walmart","w945","hiper lider chiguayante (manuel rodri","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w95","hiper lider la reina","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w952","hiper lider talcahuano (perez gacitua","l-x-v","3","concepcion b","","","","","","si","","","","","",""],["walmart","w96","hiper lider temuco (prieto)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w963","lider express pudahuel (ciudad de los v","m-v","2","pituto","","","","","","si","","","","","si",""],["walmart","w97","hiper lider puente nuevo","l-x-v","3","rm2","","","","","","si","","","si","","",""],["walmart","w978","hiper lider limache (arturo prat)","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w98","hiper lider concepcion (pratt)","l-x-v","3","concepcion a","","","","","","si","","","","","",""],["walmart","w983","hiper lider la calera","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w985","hiper lider san felipe","m-v","2","pituto","","","","","","si","","","","","",""],["walmart","w988","hiper lider calama (av grecia)","m-v","2","pituto","","","","","","si","","","","si","",""],["walmart","w99","hiper lider puerto montt","l-j","2","puertos","","","","","si","si","","","","","",""],["walmart","w991","lider express la serena (las parcelas)","l-j","2","la serena","","","","","si","si","","","","","",""],["walmart","w993","hiper lider san pedro de la paz","l-x-v","3","concepcion a","","","","","","si","","","","","",""]];
 
-(function () {
-  'use strict';
-
-  const API = window.RetailAPI;
-  if (!API || !API.requireAdminAuth()) return;
-
-  const base = '/web/admin/mantenedores';
-  const $ = (selector, root = document) => root.querySelector(selector);
-  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
-
-  const state = {
-    rows: [],
-    filteredRows: [],
-    clients: [],
-    routes: [],
-    filters: {
-      cadena: [],
-      codigo: [],
-      nombre: [],
-      ruta: [],
-      cliente: []
-    },
-    current: null,
-    dayState: {},
-    clientState: new Set()
-  };
-
-  const DAY_DEFS = [
-    ['l', 'L', 'Lunes', '1'],
-    ['m', 'M', 'Martes', '2'],
-    ['x', 'X', 'Miercoles', '3'],
-    ['j', 'J', 'Jueves', '4'],
-    ['v', 'V', 'Viernes', '5'],
-    ['s', 'S', 'Sabado', '6'],
-    ['d', 'D', 'Domingo', '7']
-  ];
-
-  const CHECK_SVG = '<span class="visit-yes"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
-  const PLUS_SVG = '<svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
-
-  function esc(value) {
-    return String(value ?? '').replace(/[&<>"']/g, function (char) {
-      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char];
-    });
-  }
-
-  function norm(value) {
-    return String(value ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
-  }
-
-  function titleCase(value) {
-    return String(value ?? '').toLowerCase().replace(/\b\w/g, function (letter) { return letter.toUpperCase(); });
-  }
-
-  function fmtCadena(value) {
-    const text = String(value ?? '').trim();
-    return norm(text) === 'smu' ? 'SMU' : titleCase(text);
-  }
-
-  function fmtCodigo(value) {
-    return String(value ?? '').trim().toUpperCase();
-  }
-
-  function fmtNombre(value) {
-    return titleCase(value);
-  }
-
-  function fmtRuta(value) {
-    const text = String(value ?? '').trim();
-    if (!text) return '';
-    if (/^rm\s*\d+$/i.test(text.replace(/\s/g, ''))) return text.toUpperCase().replace(/\s/g, '');
-    return titleCase(text);
-  }
-
-  function clientLabel(client) {
-    return fmtNombre(client && client.nombre);
-  }
-
-  function rowId(row) {
-    return fmtCodigo(row.codigo_local || row.id);
-  }
-
-  function rowClients(row) {
-    return Array.isArray(row.clientes) ? row.clientes : [];
-  }
-
-  function rowClientIds(row) {
-    return new Set(rowClients(row).map(function (client) { return String(client.id); }));
-  }
-
-  function unique(values) {
-    return Array.from(new Set(values.filter(function (value) { return value !== undefined && value !== null && String(value).trim() !== ''; }).map(String)))
-      .sort(function (a, b) { return a.localeCompare(b, 'es', { numeric: true, sensitivity: 'base' }); });
-  }
-
-  function parseDays(raw) {
-    const text = String(raw ?? '').toLowerCase().trim();
-    const out = new Set();
-    if (!text) return out;
-    const numeric = { '1': 'l', '2': 'm', '3': 'x', '4': 'j', '5': 'v', '6': 's', '7': 'd' };
-    text.split(/[-,\s]+/).forEach(function (part) {
-      if (!part) return;
-      if (numeric[part]) out.add(numeric[part]);
-      else if (DAY_DEFS.some(function (day) { return day[0] === part; })) out.add(part);
-    });
-    return out;
-  }
-
-  function encodeDays(dayState, original) {
-    const selected = DAY_DEFS.filter(function (day) { return dayState[day[0]]; });
-    const oldText = String(original ?? '');
-    if (/^\s*\d+([,\-\s]+\d+)*\s*$/.test(oldText)) {
-      return selected.map(function (day) { return day[3]; }).join(',');
-    }
-    return selected.map(function (day) { return day[0]; }).join('-');
-  }
-
-  function displayDays(raw) {
-    const set = parseDays(raw);
-    return DAY_DEFS.filter(function (day) { return set.has(day[0]); }).map(function (day) { return day[1]; }).join('-') || '';
-  }
-
-  function frequency(raw) {
-    return parseDays(raw).size;
-  }
-
-  function toast(message) {
-    const toastEl = $('#toast');
-    toastEl.innerHTML = CHECK_SVG + '<span>' + esc(message) + '</span>';
-    toastEl.classList.add('show');
-    clearTimeout(toast._timer);
-    toast._timer = setTimeout(function () { toastEl.classList.remove('show'); }, 2600);
-  }
-
-  function setLoading(on) {
-    document.body.classList.toggle('is-loading', Boolean(on));
-  }
-
-  async function loadData() {
-    setLoading(true);
-    try {
-      const options = await API.requestJson(base + '/opciones');
-      state.clients = (options.clientes || []).slice().sort(function (a, b) {
-        return String(a.nombre).localeCompare(String(b.nombre), 'es', { sensitivity: 'base' });
-      });
-      state.routes = unique((options.rutas || []).map(function (route) { return route.ruta || route; }));
-
-      const data = await API.requestJson(base + '/rutas' + API.buildQuery({ page: 1, limit: 1000 }));
-      state.rows = data.rutas || [];
-      if (!state.routes.length) state.routes = unique(state.rows.map(function (row) { return row.ruta; }));
-      buildFilters();
-      render();
-    } catch (error) {
-      toast('No se pudo cargar rutas: ' + error.message);
-      $('#tbody').innerHTML = '<tr class="empty-row"><td colspan="8">No se pudieron cargar las rutas.</td></tr>';
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  function filterConfigs() {
-    return [
-      { id: 'cadena', label: 'Cadena', values: unique(state.rows.map(function (row) { return row.cadena; })), fmt: fmtCadena },
-      { id: 'codigo', label: 'Codigo Local Llave', values: unique(state.rows.map(function (row) { return row.codigo_local || row.id; })), fmt: fmtCodigo },
-      { id: 'nombre', label: 'Nombre Local', values: unique(state.rows.map(function (row) { return row.nombre; })), fmt: fmtNombre },
-      { id: 'ruta', label: 'Ruta', values: unique(state.rows.map(function (row) { return row.ruta; })), fmt: fmtRuta },
-      { id: 'cliente', label: 'Cliente', values: state.clients.map(function (client) { return String(client.id); }), fmt: function (id) {
-        const found = state.clients.find(function (client) { return String(client.id) === String(id); });
-        return found ? clientLabel(found) : id;
-      } }
+    // Column meta (file order)
+    var COLS = [
+      { key:'cadena', label:'Cadena', type:'cadena' },
+      { key:'codigo', label:'Código Local', type:'codigo' },
+      { key:'nombre', label:'Nombre Local', type:'nombre' },
+      { key:'dias',   label:'Días', type:'dias' },
+      { key:'freq',   label:'Frec.', type:'freq' },
+      { key:'ruta',   label:'Ruta', type:'ruta' },
+      { key:'rut',    label:'RUT', type:'rut' }
     ];
-  }
-
-  function buildFilters() {
-    const filtersEl = $('#filters');
-    filtersEl.innerHTML = '<span class="flabel">Filtrar por</span>';
-    filterConfigs().forEach(function (config) {
-      const wrap = document.createElement('div');
-      wrap.className = 'filter-wrap';
-      wrap.dataset.filterWrap = config.id;
-
-      const btn = document.createElement('button');
-      btn.className = 'filter';
-      btn.type = 'button';
-      btn.setAttribute('aria-expanded', 'false');
-      btn.innerHTML = '<span>' + esc(config.label) + '</span><span class="chev" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
-
-      const dd = document.createElement('div');
-      dd.className = 'dropdown';
-      dd.innerHTML = '<input class="dd-search" type="text" placeholder="Buscar ' + esc(config.label.toLowerCase()) + '..." /><div class="dd-list"></div>';
-      const list = $('.dd-list', dd);
-
-      config.values.forEach(function (value) {
-        const item = document.createElement('label');
-        item.className = 'dd-item';
-        item.innerHTML = '<input type="checkbox" value="' + esc(value) + '" /><span>' + esc(config.fmt(value)) + '</span>';
-        const input = $('input', item);
-        input.checked = state.filters[config.id].includes(String(value));
-        list.appendChild(item);
-      });
-
-      btn.addEventListener('click', function (event) {
-        event.stopPropagation();
-        const wasOpen = wrap.classList.contains('open');
-        closeFilters();
-        if (!wasOpen) {
-          wrap.classList.add('open');
-          btn.setAttribute('aria-expanded', 'true');
-          $('.dd-search', dd).focus();
-        }
-      });
-
-      $('.dd-search', dd).addEventListener('input', function (event) {
-        const q = norm(event.target.value);
-        $$('.dd-item', list).forEach(function (item) {
-          item.style.display = norm(item.textContent).includes(q) ? 'flex' : 'none';
-        });
-      });
-
-      dd.addEventListener('click', function (event) { event.stopPropagation(); });
-      dd.addEventListener('change', function () {
-        state.filters[config.id] = $$('input[type="checkbox"]:checked', dd).map(function (input) { return input.value; });
-        updateFilterButton(wrap, config.id);
-      });
-
-      wrap.appendChild(btn);
-      wrap.appendChild(dd);
-      filtersEl.appendChild(wrap);
-      updateFilterButton(wrap, config.id);
-    });
-  }
-
-  function updateFilterButton(wrap, id) {
-    const btn = $('.filter', wrap);
-    const count = state.filters[id].length;
-    btn.classList.toggle('has-selection', count > 0);
-    let badge = $('.count', btn);
-    if (count && !badge) {
-      badge = document.createElement('span');
-      badge.className = 'count';
-      btn.appendChild(badge);
-    }
-    if (badge) {
-      badge.textContent = count;
-      if (!count) badge.remove();
-    }
-  }
-
-  function closeFilters() {
-    $$('.filter-wrap.open').forEach(function (wrap) {
-      wrap.classList.remove('open');
-      $('.filter', wrap).setAttribute('aria-expanded', 'false');
-    });
-  }
-
-  function applyFilters() {
-    state.filteredRows = state.rows.filter(function (row) {
-      if (state.filters.cadena.length && !state.filters.cadena.includes(String(row.cadena))) return false;
-      if (state.filters.codigo.length && !state.filters.codigo.includes(String(row.codigo_local || row.id))) return false;
-      if (state.filters.nombre.length && !state.filters.nombre.includes(String(row.nombre))) return false;
-      if (state.filters.ruta.length && !state.filters.ruta.includes(String(row.ruta))) return false;
-      if (state.filters.cliente.length) {
-        const active = rowClientIds(row);
-        if (!state.filters.cliente.some(function (id) { return active.has(String(id)); })) return false;
-      }
-      return true;
-    });
-  }
-
-  function render() {
-    applyFilters();
-    renderTableHead();
-    renderTableBody();
-    renderSummary();
-    updateClearButton();
-    requestAnimationFrame(updateStickyWidths);
-  }
-
-  function renderSummary() {
-    $('#resultCount').innerHTML = 'Mostrando <b>' + state.filteredRows.length + '</b> de ' + state.rows.length + ' salas';
-  }
-
-  function updateClearButton() {
-    const any = Object.values(state.filters).some(function (values) { return values.length > 0; });
-    $('#clearBtn').classList.toggle('disabled', !any);
-  }
-
-  function renderTableHead() {
-    const baseHeaders = ['Cadena', 'Codigo Local', 'Nombre Local', 'Dias', 'Frec.', 'Ruta', 'RUT'];
-    $('#theadRow').innerHTML = baseHeaders.map(function (header, index) {
-      return '<th class="' + (index < 3 ? 'sticky-col c' + index : '') + '">' + esc(header) + '</th>';
-    }).join('') + state.clients.map(function (client) {
-      return '<th class="client-col">' + esc(clientLabel(client)) + '</th>';
-    }).join('');
-  }
-
-  function renderTableBody() {
-    if (!state.filteredRows.length) {
-      $('#tbody').innerHTML = '<tr class="empty-row"><td colspan="' + (7 + state.clients.length) + '">No hay salas que coincidan con la busqueda o los filtros.</td></tr>';
-      return;
-    }
-
-    $('#tbody').innerHTML = state.filteredRows.map(function (row) {
-      const active = rowClientIds(row);
-      const id = rowId(row);
-      return '<tr>' +
-        '<td class="sticky-col c0"><span class="cadena-badge">' + esc(fmtCadena(row.cadena)) + '</span></td>' +
-        '<td class="sticky-col c1 codigo editable" data-edit="' + esc(id) + '" title="Editar sala">' + esc(id) + '</td>' +
-        '<td class="sticky-col c2 nombre editable" data-edit="' + esc(id) + '" title="Editar sala"><span class="edit-name">' + esc(fmtNombre(row.nombre)) + '</span><span class="edit-pencil"><svg viewBox="0 0 24 24" width="14" height="14" fill="none"><path d="M4 20h4L18.5 9.5a2 2 0 0 0 0-3l-1-1a2 2 0 0 0-3 0L4 16v4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m13.5 7.5 3 3" stroke="currentColor" stroke-width="1.8"/></svg></span></td>' +
-        '<td class="dias">' + esc(displayDays(row.dias_visita)) + '</td>' +
-        '<td><span class="freq">' + esc(frequency(row.dias_visita)) + '</span></td>' +
-        '<td><span class="ruta-badge">' + esc(fmtRuta(row.ruta)) + '</span></td>' +
-        '<td style="color:var(--muted)">' + esc(row.rut || '') + '</td>' +
-        state.clients.map(function (client) {
-          return '<td class="client-col">' + (active.has(String(client.id)) ? CHECK_SVG : '<span class="visit-no">-</span>') + '</td>';
-        }).join('') +
-        '</tr>';
-    }).join('');
-  }
-
-  function updateStickyWidths() {
-    const row = $('#tbody tr:not(.empty-row)') || $('#theadRow');
-    if (!row || row.children.length < 3) return;
-    document.documentElement.style.setProperty('--w0', row.children[0].getBoundingClientRect().width + 'px');
-    document.documentElement.style.setProperty('--w1', row.children[1].getBoundingClientRect().width + 'px');
-  }
-
-  function openEdit(id) {
-    const row = state.rows.find(function (item) { return rowId(item) === fmtCodigo(id); });
-    if (!row) return;
-    state.current = row;
-    state.dayState = {};
-    parseDays(row.dias_visita).forEach(function (day) { state.dayState[day] = true; });
-    state.clientState = rowClientIds(row);
-
-    $('#m-cadena').textContent = fmtCadena(row.cadena);
-    $('#m-nombre').textContent = fmtNombre(row.nombre);
-    $('#m-codigo').textContent = rowId(row);
-
-    renderDays();
-    renderRouteSelect(row);
-    renderClients();
-    $('#editOverlay').classList.add('open');
-  }
-
-  function closeEdit() {
-    $('#editOverlay').classList.remove('open');
-    state.current = null;
-  }
-
-  function renderDays() {
-    $('#m-days').innerHTML = '';
-    DAY_DEFS.forEach(function (day) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.title = day[2];
-      btn.className = 'day-toggle' + (state.dayState[day[0]] ? ' on' : '');
-      btn.textContent = day[1];
-      btn.addEventListener('click', function () {
-        state.dayState[day[0]] = !state.dayState[day[0]];
-        renderDays();
-      });
-      $('#m-days').appendChild(btn);
-    });
-    $('#m-freq').textContent = Object.values(state.dayState).filter(Boolean).length;
-  }
-
-  function renderRouteSelect(row) {
-    const routes = unique(state.routes.concat(row.ruta || []));
-    $('#m-ruta').innerHTML = routes.map(function (route) {
-      return '<option value="' + esc(route) + '">' + esc(fmtRuta(route)) + '</option>';
-    }).join('');
-    $('#m-ruta').value = row.ruta || '';
-    updateRutDisplay();
-  }
-
-  function updateRutDisplay() {
-    const route = $('#m-ruta').value;
-    const matched = state.rows.find(function (row) { return String(row.ruta || '') === String(route) && row.rut; });
-    $('#m-rut').textContent = matched && matched.rut ? matched.rut : (state.current && state.current.rut ? state.current.rut : '-');
-  }
-
-  function renderClients() {
-    $('#m-clients').innerHTML = '';
-    state.clients.forEach(function (client) {
-      const id = String(client.id);
-      const on = state.clientState.has(id);
-      const chip = document.createElement('button');
-      chip.type = 'button';
-      chip.className = 'client-chip' + (on ? ' on' : '');
-      chip.innerHTML = '<span class="chip-ico">' + (on ? CHECK_SVG.replace('visit-yes', '') : PLUS_SVG) + '</span>' + esc(clientLabel(client));
-      chip.addEventListener('click', function () {
-        if (state.clientState.has(id)) state.clientState.delete(id);
-        else state.clientState.add(id);
-        renderClients();
-      });
-      $('#m-clients').appendChild(chip);
-    });
-    $('#m-cli-count').textContent = state.clientState.size;
-  }
-
-  async function saveEdit() {
-    if (!state.current) return;
-    const row = state.current;
-    const before = rowClientIds(row);
-    const after = state.clientState;
-    const solicitudes = [];
-
-    state.clients.forEach(function (client) {
-      const id = String(client.id);
-      if (!before.has(id) && after.has(id)) {
-        solicitudes.push({ id_cliente: client.id, tipo: 'agregar', comentario: 'Solicitud creada desde Rutas' });
-      }
-      if (before.has(id) && !after.has(id)) {
-        solicitudes.push({ id_cliente: client.id, tipo: 'quitar', comentario: 'Solicitud creada desde Rutas' });
-      }
-    });
-
-    const payload = {
-      ruta: $('#m-ruta').value || null,
-      dias_visita: encodeDays(state.dayState, row.dias_visita),
-      solicitudes: solicitudes
+    var CLIENTS = ['adclean','bekys','bjapi','cafe_haiti','kuna foods','manare','olisur','panesco','prater','procarne','puri'];
+    var CLIENT_LABELS = {
+      'adclean':'Adclean','bekys':'Bekys','bjapi':'Bjapi','cafe_haiti':'Café Haití','kuna foods':'Kuna Foods','manare':'Manare','olisur':'Olisur','panesco':'Panesco','prater':'Prater','procarne':'Procarne','puri':'Puri'
     };
 
-    setLoading(true);
-    try {
-      await API.requestJson(base + '/rutas/' + encodeURIComponent(rowId(row)), {
-        method: 'PATCH',
-        body: JSON.stringify(payload)
-      });
-      closeEdit();
-      await loadData();
-      toast(solicitudes.length ? 'Cambios guardados y solicitudes enviadas' : 'Cambios guardados correctamente');
-    } catch (error) {
-      toast('No se pudo guardar: ' + error.message);
-    } finally {
-      setLoading(false);
+    // ---- formatting ----
+    function titleCase(s){ return s.replace(/\w\S*/g, function(t){ return t.charAt(0).toUpperCase()+t.substr(1); }); }
+    function fmtCadena(v){ if(v==='smu') return 'SMU'; return titleCase(v); }
+    function fmtCodigo(v){ return v.toUpperCase(); }
+    function fmtNombre(v){ return titleCase(v); }
+    function fmtDias(v){ return v.toUpperCase(); }
+    function fmtRuta(v){ if(/^rm\s*\d+$/i.test(v.replace(/\s/g,''))) return v.toUpperCase().replace(/\s/g,''); return titleCase(v); }
+    // RUT del reponedor asociado a cada ruta. En la demo se genera de forma determinista;
+    // al conectar el backend, reemplazar routeRut() por la consulta real ruta -> RUT.
+    function computeDV(num){ var s=String(num), sum=0, mul=2; for(var i=s.length-1;i>=0;i--){ sum+=parseInt(s[i],10)*mul; mul=mul===7?2:mul+1; } var r=11-(sum%11); return r===11?'0':r===10?'K':String(r); }
+    function routeRut(route){ var s=String(route||''), h=0; for(var i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))>>>0; } var body=10000000+(h%15000000); var dv=computeDV(body); var f=String(body).replace(/\B(?=(\d{3})+(?!\d))/g,'.'); return f+'-'+dv; }
+    function isVisit(v){ return String(v).trim().toLowerCase()==='si'; }
+
+    // ---- Data model: cada local puede tener varias rutas (assignments) ----
+    var DAY_ORDER=['l','m','x','j','v','s','d'];
+    function daysObjFromStr(s){ var o={}; String(s||'').split('-').forEach(function(d){ d=d.trim().toLowerCase(); if(d) o[d]=true; }); return o; }
+    function dayCount(days){ var n=0; DAY_ORDER.forEach(function(d){ if(days[d]) n++; }); return n; }
+    function daysStr(days){ return DAY_ORDER.filter(function(d){ return days[d]; }).join('-').toUpperCase(); }
+    function unionClients(arr){ return CLIENTS.map(function(_,i){ return arr.some(function(a){ return a.clients[i]; }); }); }
+    function recompute(r){
+      r.routes = r.assignments.map(function(a){ return a.ruta; }).filter(Boolean);
+      r.clientsUnion = unionClients(r.assignments);
+      var dset={}; r.assignments.forEach(function(a){ DAY_ORDER.forEach(function(d){ if(a.days[d]) dset[d]=true; }); });
+      r.diasUnion = DAY_ORDER.filter(function(d){ return dset[d]; }).join('-');
+      r.freqTotal = r.assignments.reduce(function(s,a){ return s+dayCount(a.days); }, 0);
     }
-  }
+    function serializeRow(r){
+      var o={ assignments: r.assignments.map(function(a){ return { ruta:a.ruta, days:a.days, clients:a.clients }; }) };
+      if(r.isNew){ o._new=true; o.cadena=r.cadena; o.codigo=r.codigo; o.nombre=r.nombre; }
+      return o;
+    }
 
-  function renderHistory() {
-    $('#h-body').innerHTML = '<p class="log-empty">El historial de cambios de rutas se revisa desde el backend cuando se aprueban o rechazan solicitudes.</p>';
-  }
-
-  function openHistory() {
-    renderHistory();
-    $('#histOverlay').classList.add('open');
-  }
-
-  function closeHistory() {
-    $('#histOverlay').classList.remove('open');
-  }
-
-  function clearFilters() {
-    Object.keys(state.filters).forEach(function (key) { state.filters[key] = []; });
-    buildFilters();
-    render();
-  }
-
-  function wire() {
-    document.addEventListener('click', closeFilters);
-    $('#tbody').addEventListener('click', function (event) {
-      const target = event.target.closest('[data-edit]');
-      if (target) openEdit(target.dataset.edit);
+    var ROWS = RAW.map(function(r, idx){
+      var clients = CLIENTS.map(function(_,i){ return isVisit(r[7+i]); });
+      var assignments = [];
+      if(r[5]){ assignments.push({ ruta:r[5]||'', days:daysObjFromStr(r[3]), clients:clients }); }
+      var row = { id:idx, cadena:r[0]||'', codigo:r[1]||'', nombre:r[2]||'', assignments:assignments };
+      recompute(row); return row;
     });
-    $('#clearBtn').addEventListener('click', function () {
-      if (!$('#clearBtn').classList.contains('disabled')) clearFilters();
+
+    // Cargar cambios guardados (persistencia local; luego se conecta al backend)
+    var overrides = {};
+    try { overrides = JSON.parse(localStorage.getItem('re_admin_rutas_v2') || '{}'); } catch(e){ overrides = {}; }
+    function applyOverride(r,o){
+      r.assignments = (o.assignments||[]).map(function(a){ return { ruta:a.ruta, days:Object.assign({},a.days), clients:a.clients.slice() }; });
+      recompute(r);
+    }
+    ROWS.forEach(function(r){ var o=overrides[r.id]; if(o) applyOverride(r,o); });
+    // Reconstruir locales agregados (alta) que no vienen en RAW
+    Object.keys(overrides).forEach(function(k){
+      var o=overrides[k]; if(!o || !o._new) return;
+      var id=parseInt(k,10);
+      if(ROWS.some(function(r){ return r.id===id; })) return;
+      var row={ id:id, cadena:o.cadena||'', codigo:o.codigo||'', nombre:o.nombre||'', assignments:[], isNew:true };
+      applyOverride(row,o); row.isNew=true; ROWS.unshift(row);
     });
-    $('#m-ruta').addEventListener('change', updateRutDisplay);
-    $('#m-close').addEventListener('click', closeEdit);
-    $('#m-cancel').addEventListener('click', closeEdit);
-    $('#m-save').addEventListener('click', saveEdit);
-    $('#editOverlay').addEventListener('click', function (event) { if (event.target === $('#editOverlay')) closeEdit(); });
-    $('#historyBtn').addEventListener('click', openHistory);
-    $('#h-close').addEventListener('click', closeHistory);
-    $('#h-done').addEventListener('click', closeHistory);
-    $('#h-export').addEventListener('click', function () { toast('La exportacion del historial queda para la etapa de trazabilidad'); });
-    $('#histOverlay').addEventListener('click', function (event) { if (event.target === $('#histOverlay')) closeHistory(); });
-    document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape') {
-        closeEdit();
-        closeHistory();
+    var changeLog = [];
+    try { changeLog = JSON.parse(localStorage.getItem('re_admin_asist_log_v1') || '[]'); } catch(e){ changeLog = []; }
+
+    // ---- Filters config ----
+    function distinctSorted(getter){
+      var s={};
+      ROWS.forEach(function(r){ var v=getter(r); if(v) s[v]=true; });
+      return Object.keys(s).sort(function(a,b){ return a.localeCompare(b,'es',{numeric:true}); });
+    }
+    function distinctRoutes(){
+      var s={}; ROWS.forEach(function(r){ r.routes.forEach(function(rt){ if(rt) s[rt]=true; }); });
+      return Object.keys(s).sort(function(a,b){ return a.localeCompare(b,'es',{numeric:true}); });
+    }
+    var FILTERS = [
+      { id:'cadena', label:'Cadena', options:distinctSorted(function(r){return r.cadena;}), fmt:fmtCadena, match:function(r,sel){ return sel.indexOf(r.cadena)!==-1; } },
+      { id:'codigo', label:'Código Local Llave', options:distinctSorted(function(r){return r.codigo;}), fmt:fmtCodigo, match:function(r,sel){ return sel.indexOf(r.codigo)!==-1; } },
+      { id:'nombre', label:'Nombre Local', options:distinctSorted(function(r){return r.nombre;}), fmt:fmtNombre, match:function(r,sel){ return sel.indexOf(r.nombre)!==-1; } },
+      { id:'ruta', label:'Ruta', options:distinctRoutes(), fmt:fmtRuta, match:function(r,sel){ return r.routes.some(function(rt){ return sel.indexOf(rt)!==-1; }); } },
+      { id:'cliente', label:'Cliente', options:CLIENTS.slice(), fmt:function(v){return CLIENT_LABELS[v];},
+        match:function(r,sel){ return sel.some(function(c){ var idx=CLIENTS.indexOf(c); return idx!==-1 && r.clientsUnion[idx]; }); } }
+    ];
+    var selections = {}; FILTERS.forEach(function(f){ selections[f.id]=[]; });
+
+    // ---- Build filter UI ----
+    var filtersEl = document.getElementById('filters');
+    function buildFilter(f){
+      var wrap=document.createElement('div'); wrap.className='filter-wrap';
+      var btn=document.createElement('button'); btn.className='filter'; btn.type='button'; btn.setAttribute('aria-expanded','false');
+      btn.innerHTML='<span>'+f.label+'</span><span class="chev" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+      var dd=document.createElement('div'); dd.className='dropdown';
+      dd.innerHTML='<input class="dd-search" type="text" placeholder="Buscar '+f.label.toLowerCase()+'…" /><div class="dd-list"></div>';
+      var list=dd.querySelector('.dd-list');
+      f.options.forEach(function(opt){
+        var item=document.createElement('label'); item.className='dd-item';
+        item.innerHTML='<input type="checkbox" value="'+opt+'" /><span>'+f.fmt(opt)+'</span>';
+        list.appendChild(item);
+      });
+      wrap.appendChild(btn); wrap.appendChild(dd); filtersEl.appendChild(wrap);
+
+      btn.addEventListener('click', function(e){ e.stopPropagation();
+        var open=wrap.classList.contains('open'); closeAll(); if(!open){ wrap.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.querySelector('.dd-search').focus(); }
+      });
+      var search=dd.querySelector('.dd-search');
+      search.addEventListener('click',function(e){e.stopPropagation();});
+      search.addEventListener('input',function(){
+        var q=search.value.toLowerCase().trim(); var any=false;
+        list.querySelectorAll('.dd-item').forEach(function(it){ var match=it.textContent.toLowerCase().indexOf(q)!==-1; it.style.display=match?'flex':'none'; if(match)any=true; });
+        var empty=dd.querySelector('.dd-empty');
+        if(!any&&!empty){ empty=document.createElement('div'); empty.className='dd-empty'; empty.textContent='Sin resultados'; list.appendChild(empty); }
+        else if(any&&empty){ empty.remove(); }
+      });
+      dd.addEventListener('click',function(e){e.stopPropagation();});
+      dd.addEventListener('change',function(){
+        var checked=[].slice.call(dd.querySelectorAll('input[type="checkbox"]:checked')).map(function(c){return c.value;});
+        selections[f.id]=checked;
+        var n=checked.length;
+        if(n>0){ btn.classList.add('has-selection'); var c=btn.querySelector('.count'); if(!c){c=document.createElement('span');c.className='count';btn.appendChild(c);} c.textContent=n; }
+        else { btn.classList.remove('has-selection'); var c2=btn.querySelector('.count'); if(c2)c2.remove(); }
+        render();
+      });
+    }
+    FILTERS.forEach(buildFilter);
+
+    // "Limpiar filtros" al final de la fila de filtros (a la derecha de Cliente)
+    (function(){
+      var b=document.createElement('button');
+      b.id='clearBtn'; b.type='button'; b.className='clear-inline disabled';
+      b.innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M5 5l14 14M19 5 5 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Limpiar filtros';
+      filtersEl.appendChild(b);
+    })();
+
+    function closeAll(){ document.querySelectorAll('.filter-wrap.open').forEach(function(w){ w.classList.remove('open'); w.querySelector('.filter').setAttribute('aria-expanded','false'); }); }
+    document.addEventListener('click', closeAll);
+
+    // ---- Build table head ----
+    var theadRow=document.getElementById('theadRow');
+    var headHtml='';
+    COLS.forEach(function(c,i){
+      var sticky = i<3 ? ' sticky-col c'+i : '';
+      headHtml+='<th class="'+ (i<3?'sticky-col c'+i:'') +'">'+c.label+'</th>';
+    });
+    CLIENTS.forEach(function(c,i){
+      headHtml+='<th class="client-col">'+CLIENT_LABELS[c]+'</th>';
+    });
+    theadRow.innerHTML=headHtml;
+
+    // measure sticky widths after first render
+    var tbody=document.getElementById('tbody');
+    var resultCount=document.getElementById('resultCount');
+    var checkSvg='<span class="visit-yes"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+    var PENCIL_SVG='<svg viewBox="0 0 24 24" width="14" height="14" fill="none"><path d="M4 20h4L18.5 9.5a2 2 0 0 0 0-3l-1-1a2 2 0 0 0-3 0L4 16v4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m13.5 7.5 3 3" stroke="currentColor" stroke-width="1.8"/></svg>';
+
+    function rowMatches(r){
+      return FILTERS.every(function(f){ var sel=selections[f.id]; if(!sel.length) return true; return f.match(r,sel); });
+    }
+
+    function render(){
+      var filtered=ROWS.filter(rowMatches);
+      var html='';
+      if(filtered.length===0){
+        html='<tr class="empty-row"><td colspan="'+(COLS.length+CLIENTS.length)+'">No hay salas que coincidan con los filtros.</td></tr>';
+      } else {
+        filtered.forEach(function(r){
+          html+='<tr>';
+          html+='<td class="sticky-col c0">'+fmtCadena(r.cadena)+'</td>';
+          html+='<td class="sticky-col c1 codigo editable" data-edit="'+r.id+'" title="Editar sala">'+fmtCodigo(r.codigo)+'</td>';
+          html+='<td class="sticky-col c2 nombre editable" data-edit="'+r.id+'" title="Editar sala"><span class="edit-name">'+fmtNombre(r.nombre)+'</span><span class="edit-pencil">'+PENCIL_SVG+'</span></td>';
+          html+='<td class="dias">'+(r.diasUnion?fmtDias(r.diasUnion):'<span class="visit-no">—</span>')+'</td>';
+          html+='<td><span class="freq">'+r.freqTotal+'</span></td>';
+          html+='<td>'+(r.routes.length?r.routes.map(function(rt){return '<span class="ruta-badge">'+fmtRuta(rt)+'</span>';}).join(''):'<span class="visit-no">Sin ruta</span>')+'</td>';
+          html+='<td style="color:var(--muted)">'+(r.routes.length?r.routes.map(function(rt){return routeRut(rt);}).join('<br>'):'—')+'</td>';
+          r.clientsUnion.forEach(function(on){
+            html+='<td class="client-col">'+(on?checkSvg:'<span class="visit-no">–</span>')+'</td>';
+          });
+          html+='</tr>';
+        });
       }
+      tbody.innerHTML=html;
+      resultCount.innerHTML='Mostrando <b>'+filtered.length+'</b> de '+ROWS.length+' salas';
+      // toggle clear button
+      var anySel=FILTERS.some(function(f){return selections[f.id].length;});
+      clearBtn.classList.toggle('disabled', !anySel);
+      updateStickyWidths();
+    }
+
+    function updateStickyWidths(){
+      var firstRow=tbody.querySelector('tr:not(.empty-row)');
+      var ref = firstRow || theadRow;
+      var cells = ref.children;
+      if(cells.length>=3){
+        var w0=cells[0].getBoundingClientRect().width;
+        var w1=cells[1].getBoundingClientRect().width;
+        document.documentElement.style.setProperty('--w0', w0+'px');
+        document.documentElement.style.setProperty('--w1', w1+'px');
+      }
+    }
+
+    var clearBtn=document.getElementById('clearBtn');
+    clearBtn.addEventListener('click', function(){
+      if(clearBtn.classList.contains('disabled')) return;
+      FILTERS.forEach(function(f){ selections[f.id]=[]; });
+      document.querySelectorAll('.filter').forEach(function(b){ b.classList.remove('has-selection'); var c=b.querySelector('.count'); if(c)c.remove(); });
+      document.querySelectorAll('.dd-item input:checked').forEach(function(c){ c.checked=false; });
+      render();
     });
+
+    /* ===== Editar sala (modal) + trazabilidad ===== */
+    var DAY_DEFS = [['l','L','Lunes'],['m','M','Martes'],['x','X','Miércoles'],['j','J','Jueves'],['v','V','Viernes'],['s','S','Sábado'],['d','D','Domingo']];
+    var ICO_CHECK='<svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    var ICO_PLUS='<svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
+
+    var editOverlay=document.getElementById('editOverlay');
+    var histOverlay=document.getElementById('histOverlay');
+    var mRoutesEl=document.getElementById('m-routes');
+    var toastEl=document.getElementById('toast');
+    var current=null, editAssignments=[];
+
+    function toast(msg){
+      toastEl.innerHTML=ICO_CHECK+'<span>'+msg+'</span>';
+      toastEl.classList.add('show');
+      clearTimeout(toast._t); toast._t=setTimeout(function(){ toastEl.classList.remove('show'); }, 2600);
+    }
+    function persistRows(){ try{ localStorage.setItem('re_admin_rutas_v2', JSON.stringify(overrides)); }catch(e){} }
+    function persistLog(){ try{ localStorage.setItem('re_admin_asist_log_v1', JSON.stringify(changeLog)); }catch(e){} }
+
+    // Rutas disponibles para asignar
+    var ROUTE_OPTS = distinctRoutes();
+    function escAttr(s){ return String(s).replace(/"/g,'&quot;'); }
+
+    function newAssignment(){ return { ruta:'', days:{}, clients:CLIENTS.map(function(){return false;}) }; }
+
+    function openEdit(id){
+      var r=null; for(var i=0;i<ROWS.length;i++){ if(ROWS[i].id===id){ r=ROWS[i]; break; } }
+      if(!r) return;
+      current=r;
+      document.getElementById('m-cadena').textContent=fmtCadena(r.cadena);
+      document.getElementById('m-nombre').textContent=fmtNombre(r.nombre);
+      document.getElementById('m-codigo').textContent=fmtCodigo(r.codigo);
+      editAssignments = r.assignments.map(function(a){ return { ruta:a.ruta, days:Object.assign({},a.days), clients:a.clients.slice() }; });
+      if(editAssignments.length===0){ editAssignments.push(newAssignment()); }
+      renderRoutes();
+      editOverlay.classList.add('open');
+    }
+    function closeEdit(){ editOverlay.classList.remove('open'); current=null; }
+
+    // Render genérico de bloques de ruta (usado por Editar y por Agregar local)
+    function renderAssignmentBlocks(containerEl, assignments, rerender){
+      containerEl.innerHTML='';
+      assignments.forEach(function(a, idx){
+        var block=document.createElement('section'); block.className='route-block';
+        // head
+        var head=document.createElement('div'); head.className='route-block-head';
+        head.innerHTML='<span class="route-block-title"><span class="rb-dot">'+(idx+1)+'</span> Ruta asociada</span>';
+        var rm=document.createElement('button'); rm.type='button'; rm.className='route-remove';
+        rm.innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M5 5l14 14M19 5 5 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Quitar ruta';
+        rm.addEventListener('click', function(){ assignments.splice(idx,1); if(assignments.length===0){ assignments.push(newAssignment()); } rerender(); });
+        head.appendChild(rm); block.appendChild(head);
+        // 1) Ruta + RUT (primero la ruta)
+        var g=document.createElement('div'); g.className='edit-block grid2';
+        var routeDiv=document.createElement('div');
+        routeDiv.innerHTML='<label class="block-label">Ruta asociada</label>';
+        var sel=document.createElement('select'); sel.className='edit-input edit-select';
+        var oh='<option value="" disabled'+(a.ruta?'':' selected')+'>Selecciona una ruta…</option>';
+        ROUTE_OPTS.forEach(function(rt){ oh+='<option value="'+escAttr(rt)+'"'+(a.ruta===rt?' selected':'')+'>'+fmtRuta(rt)+'</option>'; });
+        sel.innerHTML=oh;
+        var rutSpan=document.createElement('span'); rutSpan.textContent=a.ruta?routeRut(a.ruta):'—';
+        sel.addEventListener('change', function(){ a.ruta=sel.value; rutSpan.textContent=a.ruta?routeRut(a.ruta):'—'; });
+        routeDiv.appendChild(sel);
+        var rutDiv=document.createElement('div');
+        rutDiv.innerHTML='<label class="block-label">RUT del reponedor</label>';
+        var rutLock=document.createElement('div'); rutLock.className='rut-locked';
+        rutLock.appendChild(rutSpan);
+        rutLock.insertAdjacentHTML('beforeend','<span class="lock-ico"><svg viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span>');
+        rutDiv.appendChild(rutLock);
+        rutDiv.insertAdjacentHTML('beforeend','<p class="rut-hint">No editable · asignado según la ruta</p>');
+        g.appendChild(routeDiv); g.appendChild(rutDiv); block.appendChild(g);
+        // 2) Días de visita (después de la ruta)
+        var dblock=document.createElement('div'); dblock.className='edit-block';
+        dblock.innerHTML='<span class="block-label">Días de visita</span>';
+        var daysWrap=document.createElement('div'); daysWrap.className='days';
+        DAY_DEFS.forEach(function(d){ var b=document.createElement('button'); b.type='button'; b.title=d[2]; b.className='day-toggle'+(a.days[d[0]]?' on':''); b.textContent=d[1]; b.addEventListener('click', function(){ a.days[d[0]]=!a.days[d[0]]; rerender(); }); daysWrap.appendChild(b); });
+        dblock.appendChild(daysWrap);
+        dblock.insertAdjacentHTML('beforeend','<p class="freq-note">Frecuencia semanal: <b>'+dayCount(a.days)+'</b> <span class="freq-hint">— se calcula automáticamente según los días marcados</span></p>');
+        block.appendChild(dblock);
+        // 3) Clientes asociados (exclusivos entre rutas del local)
+        var cblock=document.createElement('div'); cblock.className='edit-block';
+        cblock.innerHTML='<span class="block-label">Clientes asociados · <span class="cli-count">'+a.clients.filter(Boolean).length+'</span></span>';
+        var cg=document.createElement('div'); cg.className='clients-grid';
+        CLIENTS.forEach(function(c,i){
+          var on=a.clients[i];
+          var taken=assignments.some(function(o,j){ return j!==idx && o.clients[i]; });
+          var chip=document.createElement('button'); chip.type='button';
+          chip.className='client-chip'+(on?' on':'')+(taken?' taken':'');
+          chip.innerHTML='<span class="chip-ico">'+(on?ICO_CHECK:ICO_PLUS)+'</span>'+CLIENT_LABELS[c];
+          if(taken){ chip.disabled=true; chip.title='Ya asignado a otra ruta de este local'; }
+          else { chip.addEventListener('click', function(){ a.clients[i]=!a.clients[i]; rerender(); }); }
+          cg.appendChild(chip);
+        });
+        cblock.appendChild(cg); block.appendChild(cblock);
+        containerEl.appendChild(block);
+      });
+    }
+
+    function renderRoutes(){ renderAssignmentBlocks(mRoutesEl, editAssignments, renderRoutes); }
+    function addRoute(){ editAssignments.push(newAssignment()); renderRoutes(); }
+
+    function saveEdit(){
+      if(!current) return;
+      var clean=[];
+      for(var i=0;i<editAssignments.length;i++){
+        var a=editAssignments[i]; var hasRuta=!!a.ruta; var dc=dayCount(a.days); var cc=a.clients.filter(Boolean).length;
+        if(!hasRuta && dc===0 && cc===0) continue;
+        if(!hasRuta){ toast('Selecciona la ruta en cada bloque'); return; }
+        if(dc===0){ toast('Marca al menos un día de visita en la ruta '+fmtRuta(a.ruta)); return; }
+        clean.push({ ruta:a.ruta, days:Object.assign({},a.days), clients:a.clients.slice() });
+      }
+      var seen={}; for(var k=0;k<clean.length;k++){ if(seen[clean[k].ruta]){ toast('La ruta '+fmtRuta(clean[k].ruta)+' está repetida'); return; } seen[clean[k].ruta]=true; }
+      var oldA=current.assignments;
+      function mapBy(arr){ var m={}; arr.forEach(function(x){ m[x.ruta]=x; }); return m; }
+      var om=mapBy(oldA), nm=mapBy(clean);
+      var changes=[];
+      Object.keys(nm).forEach(function(rt){ if(!om[rt]) changes.push({f:'Ruta agregada',b:'—',a:fmtRuta(rt)+' ('+(daysStr(nm[rt].days)||'sin días')+')'}); });
+      Object.keys(om).forEach(function(rt){ if(!nm[rt]) changes.push({f:'Ruta quitada',b:fmtRuta(rt)+' ('+(daysStr(om[rt].days)||'sin días')+')',a:'—'}); });
+      Object.keys(nm).forEach(function(rt){ if(om[rt]){ var od=daysStr(om[rt].days), nd=daysStr(nm[rt].days); if(od!==nd) changes.push({f:'Días · '+fmtRuta(rt),b:od||'—',a:nd||'—'}); } });
+      var oldU=unionClients(oldA), newU=unionClients(clean); var added=[], removed=[];
+      CLIENTS.forEach(function(c,i){ if(newU[i]&&!oldU[i]) added.push(CLIENT_LABELS[c]); if(!newU[i]&&oldU[i]) removed.push(CLIENT_LABELS[c]); });
+      if(!changes.length && !added.length && !removed.length){ toast('No hubo cambios que guardar'); closeEdit(); return; }
+      current.assignments=clean; recompute(current);
+      overrides[current.id]=serializeRow(current); persistRows();
+      changeLog.unshift({ ts:Date.now(), codigo:fmtCodigo(current.codigo), nombre:fmtNombre(current.nombre), cadena:fmtCadena(current.cadena), changes:changes, added:added, removed:removed });
+      persistLog();
+      render(); updateHistBtn(); closeEdit(); toast('Cambios guardados correctamente');
+    }
+
+    function deleteLocal(){
+      if(!current) return;
+      if(!confirm('¿Eliminar este local de la base de rutas? Se quitarán sus días de visita, rutas y clientes asociados.')) return;
+      var oldA=current.assignments;
+      var oldU=unionClients(oldA); var removed=[]; CLIENTS.forEach(function(c,i){ if(oldU[i]) removed.push(CLIENT_LABELS[c]); });
+      var changes=[{f:'Local eliminado',b:oldA.length+' ruta(s) asignada(s)',a:'Sin rutas asignadas'}];
+      oldA.forEach(function(a){ changes.push({f:'Ruta quitada',b:fmtRuta(a.ruta)+' ('+(daysStr(a.days)||'sin días')+')',a:'—'}); });
+      current.assignments=[]; recompute(current);
+      overrides[current.id]=serializeRow(current); persistRows();
+      changeLog.unshift({ ts:Date.now(), codigo:fmtCodigo(current.codigo), nombre:fmtNombre(current.nombre), cadena:fmtCadena(current.cadena), changes:changes, added:[], removed:removed });
+      persistLog();
+      render(); updateHistBtn(); closeEdit(); toast('Local eliminado de la base de rutas');
+    }
+
+    /* ---- Historial ---- */
+    var histBtn=document.getElementById('historyBtn'), histCount=document.getElementById('histCount'), hBody=document.getElementById('h-body');
+    function updateHistBtn(){
+      if(changeLog.length){ histCount.style.display='inline-block'; histCount.textContent=changeLog.length; }
+      else histCount.style.display='none';
+    }
+    function fmtTime(ts){
+      try { return new Date(ts).toLocaleString('es-CL',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+      catch(e){ return new Date(ts).toLocaleString(); }
+    }
+    function renderHistory(){
+      if(!changeLog.length){ hBody.innerHTML='<p class="log-empty">Aún no se han registrado cambios.</p>'; return; }
+      var html='<div class="log-list">';
+      changeLog.forEach(function(e){
+        html+='<div class="log-entry"><div class="log-top"><span class="l-name">'+e.nombre+'</span><span class="l-code">'+e.codigo+'</span><span class="l-time">'+fmtTime(e.ts)+'</span></div>';
+        e.changes.forEach(function(c){
+          html+='<div class="diff-row"><span class="diff-field">'+c.f+'</span><span class="diff-before">'+c.b+'</span><span class="diff-arrow">→</span><span class="diff-after">'+c.a+'</span></div>';
+        });
+        if(e.added.length||e.removed.length){
+          html+='<div class="diff-clients"><span class="diff-field" style="display:block;margin-bottom:5px">Clientes</span>';
+          e.added.forEach(function(x){ html+='<span class="mini-chip add">+ '+x+'</span>'; });
+          e.removed.forEach(function(x){ html+='<span class="mini-chip rem">'+x+'</span>'; });
+          html+='</div>';
+        }
+        html+='</div>';
+      });
+      html+='</div>';
+      hBody.innerHTML=html;
+    }
+    function openHist(){ renderHistory(); histOverlay.classList.add('open'); }
+    function closeHist(){ histOverlay.classList.remove('open'); }
+
+    /* ---- Exportar historial a Excel (.xls / SpreadsheetML) ---- */
+    function xmlEsc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function exportExcel(){
+      if(!changeLog.length){ toast('No hay cambios para exportar'); return; }
+      var headers=['Fecha y hora','Cadena','Código local','Nombre local','Campo modificado','Antes','Después','Usuario'];
+      var rows=[];
+      changeLog.forEach(function(e){
+        var t=fmtTime(e.ts);
+        e.changes.forEach(function(c){ rows.push([t,e.cadena,e.codigo,e.nombre,c.f,c.b,c.a,'Administrador']); });
+        e.added.forEach(function(x){ rows.push([t,e.cadena,e.codigo,e.nombre,'Cliente agregado','—',x,'Administrador']); });
+        e.removed.forEach(function(x){ rows.push([t,e.cadena,e.codigo,e.nombre,'Cliente quitado',x,'—','Administrador']); });
+      });
+      var widths=[150,90,90,180,150,150,150,100];
+      var xml='<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n';
+      xml+='<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
+      xml+='<Styles><Style ss:ID="hdr"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#15130E" ss:Pattern="Solid"/><Alignment ss:Vertical="Center"/></Style>';
+      xml+='<Style ss:ID="cell"><Alignment ss:Vertical="Center"/></Style></Styles>';
+      xml+='<Worksheet ss:Name="Historial"><Table>';
+      widths.forEach(function(w){ xml+='<Column ss:Width="'+w+'"/>'; });
+      xml+='<Row ss:Height="22">';
+      headers.forEach(function(h){ xml+='<Cell ss:StyleID="hdr"><Data ss:Type="String">'+xmlEsc(h)+'</Data></Cell>'; });
+      xml+='</Row>';
+      rows.forEach(function(r){ xml+='<Row>'; r.forEach(function(v){ xml+='<Cell ss:StyleID="cell"><Data ss:Type="String">'+xmlEsc(v)+'</Data></Cell>'; }); xml+='</Row>'; });
+      xml+='</Table></Worksheet></Workbook>';
+      var blob=new Blob([xml], {type:'application/vnd.ms-excel'});
+      var url=URL.createObjectURL(blob);
+      var d=new Date(); var stamp=d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2);
+      var a=document.createElement('a'); a.href=url; a.download='historial-cambios-rutas-'+stamp+'.xls';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      toast('Historial exportado a Excel');
+    }
+
+    /* ===== Agregar Local (picker + alta) ===== */
+    var addOverlay=document.getElementById('addOverlay');
+    var aFiltersEl=document.getElementById('a-filters');
+    var aTbody=document.getElementById('a-tbody');
+    var aCount=document.getElementById('a-count');
+    var aStep1=document.getElementById('a-step1'), aStep2=document.getElementById('a-step2');
+    var aStepBadge=document.getElementById('a-step-badge'), aTitle=document.getElementById('a-title'), aSub=document.getElementById('a-sub');
+    var aBack=document.getElementById('a-back'), aCancel=document.getElementById('a-cancel'), aNext=document.getElementById('a-next'), aSave=document.getElementById('a-save');
+
+    // Catálogo de locales disponibles (demo del futuro Mantenedor Locales).
+    // [llave, codigoLocal, cadena, formato, nombre]. Excluye los ya presentes en la base.
+    var existingLlaves={}; ROWS.forEach(function(r){ existingLlaves[String(r.codigo).toLowerCase()]=true; });
+    var CATALOG=(window.AVAILABLE_LOCALES||[]).filter(function(l){ return !existingLlaves[String(l[0]).toLowerCase()]; });
+
+    var aFilterState={ llave:'', codigo:'', cadena:'', formato:'', nombre:'' };
+    var pickedLocal=null;
+
+    // ---- column filters ----
+    function uniqCol(idx){ var s={}; CATALOG.forEach(function(l){ if(l[idx]) s[l[idx]]=true; }); return Object.keys(s).sort(function(a,b){return a.localeCompare(b,'es',{numeric:true});}); }
+    (function buildPickerFilters(){
+      function txt(key, ph){ var i=document.createElement('input'); i.className='dd-search'; i.type='text'; i.placeholder=ph; i.style.width='150px'; i.style.margin='0'; i.addEventListener('input',function(){ aFilterState[key]=i.value.trim(); renderCatalog(); }); return i; }
+      function sel(key, ph, opts, fmt){ var s=document.createElement('select'); s.className='edit-input edit-select'; s.style.width='auto'; s.style.minWidth='150px'; s.style.padding='9px 34px 9px 13px'; var html='<option value="">'+ph+'</option>'; opts.forEach(function(o){ html+='<option value="'+String(o).replace(/"/g,'&quot;')+'">'+(fmt?fmt(o):o)+'</option>'; }); s.innerHTML=html; s.addEventListener('change',function(){ aFilterState[key]=s.value; renderCatalog(); }); return s; }
+      aFiltersEl.appendChild(txt('llave','Código llave…'));
+      aFiltersEl.appendChild(txt('codigo','Código local…'));
+      aFiltersEl.appendChild(sel('cadena','Todas las cadenas', uniqCol(2), fmtCadena));
+      aFiltersEl.appendChild(sel('formato','Todos los formatos', uniqCol(3)));
+      aFiltersEl.appendChild(txt('nombre','Nombre local…'));
+    })();
+
+    function renderCatalog(){
+      var f=aFilterState;
+      var list=CATALOG.filter(function(l){
+        if(f.llave && String(l[0]).toLowerCase().indexOf(f.llave.toLowerCase())===-1) return false;
+        if(f.codigo && String(l[1]).toLowerCase().indexOf(f.codigo.toLowerCase())===-1) return false;
+        if(f.cadena && l[2]!==f.cadena) return false;
+        if(f.formato && l[3]!==f.formato) return false;
+        if(f.nombre && String(l[4]).toLowerCase().indexOf(f.nombre.toLowerCase())===-1) return false;
+        return true;
+      });
+      if(list.length===0){ aTbody.innerHTML='<tr><td colspan="6" class="pempty">No hay locales que coincidan con los filtros.</td></tr>'; }
+      else {
+        var html='';
+        list.forEach(function(l){
+          var isSel=pickedLocal && pickedLocal[0]===l[0];
+          html+='<tr data-llave="'+l[0]+'"'+(isSel?' class="sel"':'')+'>';
+          html+='<td><span class="pradio"></span></td>';
+          html+='<td class="pcode">'+fmtCodigo(l[0])+'</td>';
+          html+='<td>'+fmtCodigo(l[1])+'</td>';
+          html+='<td>'+fmtCadena(l[2])+'</td>';
+          html+='<td><span class="pfmt-badge">'+l[3]+'</span></td>';
+          html+='<td>'+fmtNombre(l[4])+'</td>';
+          html+='</tr>';
+        });
+        aTbody.innerHTML=html;
+      }
+      aCount.textContent='Mostrando '+list.length+' de '+CATALOG.length+' locales disponibles';
+    }
+
+    aTbody.addEventListener('click', function(e){
+      var tr=e.target.closest('tr[data-llave]'); if(!tr) return;
+      var llave=tr.getAttribute('data-llave');
+      pickedLocal=CATALOG.filter(function(l){ return l[0]===llave; })[0] || null;
+      aTbody.querySelectorAll('tr').forEach(function(x){ x.classList.remove('sel'); });
+      tr.classList.add('sel');
+      aNext.disabled=!pickedLocal;
+    });
+
+    // ---- step 2: datos del nuevo local (multi-ruta, mismo render que editar) ----
+    var nRoutesEl=document.getElementById('n-routes');
+    var newAssignments=[];
+    function renderNRoutes(){ renderAssignmentBlocks(nRoutesEl, newAssignments, renderNRoutes); }
+    function addNRoute(){ newAssignments.push(newAssignment()); renderNRoutes(); }
+
+    // ---- step nav ----
+    function openAdd(){
+      pickedLocal=null; aFilterState={llave:'',codigo:'',cadena:'',formato:'',nombre:''};
+      aFiltersEl.querySelectorAll('input').forEach(function(i){ i.value=''; });
+      aFiltersEl.querySelectorAll('select').forEach(function(s){ s.selectedIndex=0; });
+      showStep(1); renderCatalog(); addOverlay.classList.add('open');
+    }
+    function closeAdd(){ addOverlay.classList.remove('open'); }
+    function showStep(n){
+      if(n===1){
+        aStep1.style.display=''; aStep2.style.display='none';
+        aStepBadge.textContent='Paso 1 de 2'; aTitle.textContent='Agregar local';
+        aSub.textContent='Selecciona el local que quieres incorporar a la base de rutas.';
+        aBack.style.display='none'; aNext.style.display=''; aNext.disabled=!pickedLocal; aSave.style.display='none';
+      } else {
+        aStep1.style.display='none'; aStep2.style.display='';
+        aStepBadge.textContent='Paso 2 de 2'; aTitle.textContent='Datos del nuevo local';
+        aSub.textContent='Define los días de visita, el responsable y los clientes asociados.';
+        aBack.style.display=''; aNext.style.display='none'; aSave.style.display='';
+      }
+    }
+    function goStep2(){
+      if(!pickedLocal) return;
+      document.getElementById('n-localname').textContent=fmtNombre(pickedLocal[4]);
+      document.getElementById('n-localcode').textContent=fmtCodigo(pickedLocal[0]);
+      newAssignments=[ newAssignment() ];
+      renderNRoutes();
+      showStep(2);
+    }
+    function saveNew(){
+      if(!pickedLocal) return;
+      var clean=[];
+      for(var i=0;i<newAssignments.length;i++){
+        var a=newAssignments[i]; var hasRuta=!!a.ruta; var dc=dayCount(a.days); var cc=a.clients.filter(Boolean).length;
+        if(!hasRuta && dc===0 && cc===0) continue;
+        if(!hasRuta){ toast('Selecciona la ruta en cada bloque'); return; }
+        if(dc===0){ toast('Marca al menos un día de visita en la ruta '+fmtRuta(a.ruta)); return; }
+        clean.push({ ruta:a.ruta, days:Object.assign({},a.days), clients:a.clients.slice() });
+      }
+      if(clean.length===0){ toast('Agrega al menos una ruta con sus días'); return; }
+      var seen={}; for(var k=0;k<clean.length;k++){ if(seen[clean[k].ruta]){ toast('La ruta '+fmtRuta(clean[k].ruta)+' está repetida'); return; } seen[clean[k].ruta]=true; }
+      var nextId=ROWS.reduce(function(mx,r){ return Math.max(mx,r.id); }, -1)+1;
+      var row={ id:nextId, cadena:pickedLocal[2], codigo:pickedLocal[0], nombre:pickedLocal[4], assignments:clean, isNew:true };
+      recompute(row);
+      ROWS.unshift(row);
+      overrides[nextId]=serializeRow(row); persistRows();
+      var union=unionClients(clean); var added=[]; CLIENTS.forEach(function(c,i){ if(union[i]) added.push(CLIENT_LABELS[c]); });
+      var changes=[ {f:'Local agregado',b:'—',a:'Alta en base de rutas ('+clean.length+' ruta'+(clean.length>1?'s':'')+')'} ];
+      clean.forEach(function(a){ changes.push({f:'Ruta agregada',b:'—',a:fmtRuta(a.ruta)+' ('+(daysStr(a.days)||'sin días')+')'}); });
+      changeLog.unshift({ ts:Date.now(), codigo:fmtCodigo(row.codigo), nombre:fmtNombre(row.nombre), cadena:fmtCadena(row.cadena), changes:changes, added:added, removed:[] });
+      persistLog();
+      render(); updateHistBtn(); closeAdd(); toast('Local agregado correctamente');
+    }
+
+    document.getElementById('addLocalBtn').addEventListener('click', openAdd);
+    document.getElementById('a-close').addEventListener('click', closeAdd);
+    aCancel.addEventListener('click', closeAdd);
+    aNext.addEventListener('click', goStep2);
+    document.getElementById('n-add-route').addEventListener('click', addNRoute);
+    aBack.addEventListener('click', function(){ showStep(1); });
+    aSave.addEventListener('click', saveNew);
+    addOverlay.addEventListener('click', function(e){ if(e.target===addOverlay) closeAdd(); });
+
+    document.getElementById('m-close').addEventListener('click', closeEdit);
+    document.getElementById('m-cancel').addEventListener('click', closeEdit);
+    document.getElementById('m-save').addEventListener('click', saveEdit);
+    document.getElementById('m-add-route').addEventListener('click', addRoute);
+    document.getElementById('m-delete').addEventListener('click', deleteLocal);
+    editOverlay.addEventListener('click', function(e){ if(e.target===editOverlay) closeEdit(); });
+    histBtn.addEventListener('click', openHist);
+    document.getElementById('h-export').addEventListener('click', exportExcel);
+    document.getElementById('h-close').addEventListener('click', closeHist);
+    document.getElementById('h-done').addEventListener('click', closeHist);
+    histOverlay.addEventListener('click', function(e){ if(e.target===histOverlay) closeHist(); });
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeEdit(); closeHist(); closeAdd(); } });
+
+    tbody.addEventListener('click', function(e){
+      var cell=e.target.closest('[data-edit]');
+      if(cell){ openEdit(parseInt(cell.getAttribute('data-edit'),10)); }
+    });
+    updateHistBtn();
+
+    render();
     window.addEventListener('resize', updateStickyWidths);
-  }
-
-  wire();
-  loadData();
-})();
-
   </script>
 </body>
 </html>
