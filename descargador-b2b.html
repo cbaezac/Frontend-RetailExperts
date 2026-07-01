@@ -268,10 +268,59 @@
 
   <div class="toast" id="toast"></div>
 
-  <script src="b2b-data.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="activity-log.js"></script>
   <script>
-    var B = window.B2B;
-    var LOCALES = B.locales, PRODUCTOS = B.productos;
+    if(!window.RetailAPI || !window.RetailAPI.requireAuth()) throw new Error('Sesion requerida');
+    if(window.logEvent){ try{ logEvent('Descargador','B2B'); }catch(e){} }
+
+    /* ---------- Scoping por cliente (usuarios internos deben elegir uno) ---------- */
+    var CURRENT_USER = window.RetailAPI.getUser();
+    var IS_INTERNAL = !!(CURRENT_USER && ['admin','interno'].indexOf(CURRENT_USER.rol) !== -1);
+    var CLIENTE_KEY = 're_admin_cliente_id';
+    var CLIENTE_ID = IS_INTERNAL ? Number(sessionStorage.getItem(CLIENTE_KEY) || 0) || null : null;
+    function withCliente(params){
+      params = params || {};
+      if(IS_INTERNAL && CLIENTE_ID) params.cliente_id = CLIENTE_ID;
+      return params;
+    }
+    function renderClienteBadge(nombre){
+      if(!IS_INTERNAL) return;
+      var spacer=document.querySelector('.header-spacer'); if(!spacer) return;
+      var el=document.createElement('span');
+      el.style.cssText='margin-left:auto;margin-right:14px;font-size:.86rem;color:var(--muted);cursor:pointer;text-decoration:underline;';
+      el.textContent='Cliente: '+(nombre||CLIENTE_ID)+' (cambiar)';
+      el.addEventListener('click', function(){ sessionStorage.removeItem(CLIENTE_KEY); location.reload(); });
+      spacer.parentNode.insertBefore(el, spacer);
+    }
+    function showClientGate(onReady){
+      var ov=document.createElement('div');
+      ov.style.cssText='position:fixed;inset:0;z-index:500;background:rgba(44,18,64,.55);display:flex;align-items:center;justify-content:center;padding:24px;';
+      ov.innerHTML='<div style="background:#fff;border-radius:16px;max-width:420px;width:100%;padding:28px;text-align:center;font-family:var(--font-body)">'
+        + '<div style="font-family:var(--font-display);font-weight:800;font-size:1.2rem;margin-bottom:10px;color:var(--accent-strong)">Elige un cliente</div>'
+        + '<p style="color:var(--muted);margin-bottom:18px;font-size:.92rem">Como usuario interno, debes elegir de qué cliente quieres descargar datos.</p>'
+        + '<select id="clienteGateSelect" style="width:100%;padding:11px;border-radius:10px;border:1.5px solid var(--line);margin-bottom:14px;font-size:.95rem"><option value="">Cargando…</option></select>'
+        + '<button id="clienteGateGo" type="button" disabled style="width:100%;padding:12px;border-radius:999px;border:0;background:var(--accent-strong);color:#fff;font-family:var(--font-display);font-weight:700;cursor:pointer;opacity:.5">Continuar</button>'
+        + '</div>';
+      document.body.appendChild(ov);
+      var select=ov.querySelector('#clienteGateSelect'), go=ov.querySelector('#clienteGateGo');
+      window.RetailAPI.requestJson('/web/clientes').then(function(data){
+        var clientes=data.clientes||[];
+        select.innerHTML='<option value="">Selecciona…</option>'+clientes.map(function(c){ return '<option value="'+c.id+'">'+c.nombre+'</option>'; }).join('');
+      }).catch(function(){
+        select.innerHTML='<option value="">No se pudo cargar la lista</option>';
+      });
+      select.addEventListener('change', function(){ go.disabled=!select.value; go.style.opacity=select.value?'1':'.5'; });
+      go.addEventListener('click', function(){
+        if(!select.value) return;
+        sessionStorage.setItem(CLIENTE_KEY, select.value);
+        sessionStorage.setItem(CLIENTE_KEY+'_nombre', select.options[select.selectedIndex].textContent);
+        CLIENTE_ID = Number(select.value);
+        renderClienteBadge(select.options[select.selectedIndex].textContent);
+        document.body.removeChild(ov);
+        onReady();
+      });
+    }
 
     var INDICADORES = [
       {key:'venta_pesos', label:'Venta pesos'},
@@ -282,24 +331,28 @@
       {key:'stock_cd', label:'Stock en CD'}
     ];
     var LOC_ATTRS = [
-      {key:'cadena', label:'Cadena'},
-      {key:'formato', label:'Formato'},
-      {key:'codigo', label:'Código Local'},
-      {key:'nombre', label:'Nombre Local'},
-      {key:'region', label:'Región'},
+      {key:'cadena', label:'Cadena', opt:'cadenas'},
+      {key:'formato', label:'Formato', opt:'formatos'},
+      {key:'codigo', label:'Código Local', opt:'codigos_local', param:'codigo_local'},
+      {key:'nombre', label:'Nombre Local', opt:'nombres_local', param:'nombre_local'},
+      {key:'region', label:'Región', opt:'regiones'},
       {key:'direccion', label:'Dirección'}
     ];
     var PROD_ATTRS = [
-      {key:'codigo', label:'Código Producto'},
-      {key:'nombre', label:'Nombre Producto'},
+      {key:'codigo', label:'Código Producto', opt:'codigos_producto', param:'codigo_producto'},
+      {key:'nombre', label:'Nombre Producto', opt:'nombres_producto', param:'nombre_producto'},
       {key:'ean', label:'EAN'},
       {key:'unidadCaja', label:'Unidad x caja'},
-      {key:'marca', label:'Marca'},
-      {key:'cat1', label:'Categoría I'},
+      {key:'marca', label:'Marca', opt:'marcas'},
+      {key:'cat1', label:'Categoría I', opt:'categorias', param:'categoria'},
       {key:'cat2', label:'Categoría II'},
-      {key:'catRE', label:'Categoría RE'},
-      {key:'estado', label:'Estado'}
+      {key:'catRE', label:'Categoría RE', opt:'categorias_re', param:'categoria_re'},
+      {key:'estado', label:'Estado', opt:'estados'}
     ];
+
+    // Mapa fila-real (venta_historica) -> claves usadas por la UI
+    var LOC_FIELD = {cadena:'cadena', formato:'formato', codigo:'codigo_local', nombre:'nombre_local', region:'region', direccion:'direccion'};
+    var PROD_FIELD = {codigo:'codigo_producto', nombre:'nombre_producto', ean:'ean', unidadCaja:'un_x_caja', marca:'marca', cat1:'categoria', cat2:'categoria2', catRE:'categoria_re', estado:'estado'};
 
     // Estado de la configuración
     var state = {
@@ -310,17 +363,19 @@
       formato:'xlsx'
     };
 
-    function distinctValues(arr, key){
-      var s={}; arr.forEach(function(o){ var v=o[key]; if(v!==undefined&&v!=='') s[String(v)]=true; });
-      return Object.keys(s).sort(function(a,b){ return a.localeCompare(b,'es',{numeric:true}); });
+    var OPCIONES = null;
+    function optionsFor(attr){
+      if(!OPCIONES || !attr.opt) return [];
+      return (OPCIONES[attr.opt]||[]).slice().sort(function(a,b){ return String(a).localeCompare(String(b),'es',{numeric:true}); });
     }
 
     /* ---------- Indicadores ---------- */
     var indGrid=document.getElementById('indGrid');
     INDICADORES.forEach(function(it){
       var el=document.createElement('button'); el.type='button'; el.className='ind'; el.setAttribute('data-key',it.key);
-      el.innerHTML='<span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>'+it.label+'</span>';
-      el.addEventListener('click', function(){ if(state.indicadores[it.key]) delete state.indicadores[it.key]; else state.indicadores[it.key]=true; el.classList.toggle('on', !!state.indicadores[it.key]); updateSummary(); });
+      el.innerHTML='<span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>'+it.label+(it.disabled?' <small style="opacity:.6">(sin datos aún)</small>':'')+'</span>';
+      if(it.disabled){ el.disabled=true; el.style.opacity='.45'; el.style.cursor='not-allowed'; }
+      else el.addEventListener('click', function(){ if(state.indicadores[it.key]) delete state.indicadores[it.key]; else state.indicadores[it.key]=true; el.classList.toggle('on', !!state.indicadores[it.key]); updateSummary(); });
       indGrid.appendChild(el);
     });
 
@@ -349,9 +404,9 @@
     });
 
     /* ---------- Attribute rows (locales / productos) ---------- */
-    function buildAttrRows(container, attrs, dataArr, inclState, filterState){
+    function buildAttrRows(container, attrs, inclState, filterState){
       attrs.forEach(function(at){
-        var values=distinctValues(dataArr, at.key);
+        var values=optionsFor(at);
         var row=document.createElement('div'); row.className='attr-row'; row.setAttribute('data-key',at.key);
         // include checkbox
         var chk=document.createElement('label'); chk.className='attr-chk';
@@ -393,8 +448,15 @@
     function closeAllDD(){ document.querySelectorAll('.dropdown.open').forEach(function(d){ d.classList.remove('open'); }); }
     document.addEventListener('click', closeAllDD);
 
-    buildAttrRows(document.getElementById('locList'), LOC_ATTRS, LOCALES, state.locIncl, state.locFilters);
-    buildAttrRows(document.getElementById('prodList'), PROD_ATTRS, PRODUCTOS, state.prodIncl, state.prodFilters);
+    function loadOpciones(){
+      return window.RetailAPI.requestJson('/web/b2b/opciones'+window.RetailAPI.buildQuery(withCliente())).then(function(data){
+        OPCIONES = data || {};
+        buildAttrRows(document.getElementById('locList'), LOC_ATTRS, state.locIncl, state.locFilters);
+        buildAttrRows(document.getElementById('prodList'), PROD_ATTRS, state.prodIncl, state.prodFilters);
+      }).catch(function(err){
+        toast(err.message || 'No se pudieron cargar los filtros');
+      });
+    }
 
     /* ---------- Formato ---------- */
     document.getElementById('fmtSeg').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; state.formato=b.getAttribute('data-fmt'); this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); }); });
@@ -420,62 +482,52 @@
     /* ---------- Descarga ---------- */
     function toast(msg){ var el=document.getElementById('toast'); el.innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>'+msg+'</span>'; el.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(function(){ el.classList.remove('show'); }, 2800); }
 
-    function filteredArr(dataArr, filterState){
-      var keys=Object.keys(filterState);
-      if(!keys.length) return dataArr.slice();
-      return dataArr.filter(function(o){ return keys.every(function(k){ return filterState[k].indexOf(String(o[k]))!==-1; }); });
+    function buildVentasQuery(){
+      var params={ limit:20000 };
+      if(state.fStart) params.fecha_desde=state.fStart;
+      if(state.fEnd) params.fecha_hasta=state.fEnd;
+      LOC_ATTRS.forEach(function(a){ var vals=state.locFilters[a.key]; if(a.param && vals && vals.length) params[a.param]=vals; });
+      PROD_ATTRS.forEach(function(a){ var vals=state.prodFilters[a.key]; if(a.param && vals && vals.length) params[a.param]=vals; });
+      return withCliente(params);
     }
-    function hashNum(s){ var h=2166136261; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619);} return h>>>0; }
-    function indicatorValue(key, loc, prod){
-      var seed=hashNum(key+loc.codigo+prod.codigo);
-      switch(key){
-        case 'venta_pesos': return 50000+(seed%4000000);
-        case 'venta_costo': return 30000+(seed%2500000);
-        case 'venta_unidades': return 5+(seed%900);
-        case 'stock': return seed%600;
-        case 'stock_transito': return seed%180;
-        case 'stock_cd': return seed%1200;
-      }
-      return 0;
+    function fetchVentas(){
+      return window.RetailAPI.requestJson('/web/b2b/ventas'+window.RetailAPI.buildQuery(buildVentasQuery()));
     }
-
-    var MAX_ROWS=2000;
-    function buildRows(){
-      var locs=filteredArr(LOCALES, state.locFilters);
-      var prods=filteredArr(PRODUCTOS, state.prodFilters);
+    function buildRows(payload){
+      var filas=payload.filas||[];
       var locCols=LOC_ATTRS.filter(function(a){ return state.locIncl[a.key]; });
       var prodCols=PROD_ATTRS.filter(function(a){ return state.prodIncl[a.key]; });
-      var indCols=INDICADORES.filter(function(it){ return state.indicadores[it.key]; });
-      var headers=[];
-      if(state.fStart||state.fEnd){ headers.push('Período'); }
+      var indCols=INDICADORES.filter(function(it){ return state.indicadores[it.key] && !it.disabled; });
+      var headers=['Período'];
       locCols.forEach(function(a){ headers.push(a.label); });
       prodCols.forEach(function(a){ headers.push(a.label); });
       indCols.forEach(function(it){ headers.push(it.label); });
-      var period=(state.fStart||state.fEnd)?(fmtFechaTxt(state.fStart)+' a '+fmtFechaTxt(state.fEnd)):'';
-      var rows=[]; var truncated=false;
-      outer:
-      for(var li=0; li<locs.length; li++){
-        for(var pi=0; pi<prods.length; pi++){
-          if(rows.length>=MAX_ROWS){ truncated=true; break outer; }
-          var loc=locs[li], prod=prods[pi];
-          var row=[];
-          if(state.fStart||state.fEnd) row.push(period);
-          locCols.forEach(function(a){ row.push(loc[a.key]); });
-          prodCols.forEach(function(a){ row.push(prod[a.key]); });
-          indCols.forEach(function(it){ row.push(indicatorValue(it.key, loc, prod)); });
-          rows.push(row);
-        }
-      }
-      return { headers:headers, rows:rows, truncated:truncated, numericFrom: 1 + (state.fStart||state.fEnd?1:0)*0 + locCols.length + prodCols.length, indCount:indCols.length };
+      var period=fmtFechaTxt(payload.fecha_desde)+' a '+fmtFechaTxt(payload.fecha_hasta);
+      var rows=filas.map(function(row){
+        var out=[period];
+        locCols.forEach(function(a){ out.push(row[LOC_FIELD[a.key]]); });
+        prodCols.forEach(function(a){ out.push(row[PROD_FIELD[a.key]]); });
+        indCols.forEach(function(it){ out.push(Number(row[it.key]||0)); });
+        return out;
+      });
+      return { headers:headers, rows:rows, truncated:(payload.total||0)>filas.length, indCount:indCols.length };
     }
 
     function download(){
       if(downloadBtn.disabled) return;
-      var built=buildRows();
-      if(built.rows.length===0){ toast('Los filtros no devuelven datos'); return; }
-      var dt=new Date(); var stamp=dt.getFullYear()+('0'+(dt.getMonth()+1)).slice(-2)+('0'+dt.getDate()).slice(-2);
-      if(state.formato==='csv') downloadCSV(built, stamp); else downloadXLS(built, stamp);
-      toast('Descarga generada'+(built.truncated?' (muestra de '+MAX_ROWS+' filas)':''));
+      var original=downloadBtn.innerHTML; downloadBtn.disabled=true; downloadBtn.textContent='Generando…';
+      function reset(){ downloadBtn.disabled=false; downloadBtn.innerHTML=original; updateSummary(); }
+      fetchVentas().then(function(payload){
+        var built=buildRows(payload);
+        if(built.rows.length===0){ toast('Los filtros no devuelven datos'); reset(); return; }
+        var dt=new Date(); var stamp=dt.getFullYear()+('0'+(dt.getMonth()+1)).slice(-2)+('0'+dt.getDate()).slice(-2);
+        if(state.formato==='csv') downloadCSV(built, stamp); else downloadXLS(built, stamp);
+        var msg='Descarga generada';
+        if(payload.defaultDateApplied) msg+=' (últimos 30 días, sin rango elegido)';
+        if(built.truncated) msg+=' — hay más filas que las descargadas, acota los filtros';
+        toast(msg);
+        reset();
+      }).catch(function(err){ toast(err.message||'No se pudo generar la descarga'); reset(); });
     }
     function downloadCSV(built, stamp){
       function esc(v){ v=String(v); if(/[",\n;]/.test(v)) return '"'+v.replace(/"/g,'""')+'"'; return v; }
@@ -552,6 +604,12 @@
     document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ favOverlay.classList.remove('open'); closeAllDD(); } });
 
     renderFavs();
+    if(IS_INTERNAL && !CLIENTE_ID){
+      showClientGate(loadOpciones);
+    } else {
+      if(IS_INTERNAL) renderClienteBadge(sessionStorage.getItem(CLIENTE_KEY+'_nombre'));
+      loadOpciones();
+    }
   </script>
 </body>
 </html>

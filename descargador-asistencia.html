@@ -274,8 +274,10 @@
 
   <div class="toast" id="toast"></div>
 
+  <script src="activity-log.js"></script>
   <script src="asistencia-data.js"></script>
   <script>
+    if(window.logEvent){ try{ logEvent('Descargador','Asistencia'); }catch(e){} }
     var D = window.ASISTENCIA;
     var DATES = D.dates, CLIENTS = D.clients, CLIENT_LABELS = D.clientLabels, LOCALES = D.locales, ROWS = D.rows;
     // ROWS: [dateIdx, localIdx, clientIdx, plan, real]
@@ -337,8 +339,8 @@
       var btn=document.createElement('button'); btn.className='filter'; btn.type='button'; btn.setAttribute('aria-expanded','false');
       btn.innerHTML='<span>Fecha</span><span class="chev"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
       var dd=document.createElement('div'); dd.className='dropdown dropdown-date';
-      dd.innerHTML='<div class="dd-field"><label>Fecha de inicio</label><input type="date" class="dd-date" data-role="start" min="'+DATES[0]+'" max="'+DATES[DATES.length-1]+'" /></div>'+
-        '<div class="dd-field"><label>Fecha de término</label><input type="date" class="dd-date" data-role="end" min="'+DATES[0]+'" max="'+DATES[DATES.length-1]+'" /></div>'+
+      dd.innerHTML='<div class="dd-field"><label>Fecha de inicio</label><input type="date" class="dd-date" data-role="start" min="'+(DATES[0]||'')+'" max="'+(DATES[DATES.length-1]||'')+'" /></div>'+
+        '<div class="dd-field"><label>Fecha de término</label><input type="date" class="dd-date" data-role="end" min="'+(DATES[0]||'')+'" max="'+(DATES[DATES.length-1]||'')+'" /></div>'+
         '<div class="dd-actions"><button type="button" class="dd-clear">Limpiar</button><button type="button" class="dd-apply">Aplicar</button></div>';
       wrap.appendChild(btn); wrap.appendChild(dd); filtersEl.appendChild(wrap);
       var startEl=dd.querySelector('[data-role="start"]'), endEl=dd.querySelector('[data-role="end"]');
@@ -354,6 +356,7 @@
       dd.querySelector('.dd-clear').addEventListener('click', function(){ startEl.value=''; endEl.value=''; endEl.min=DATES[0]; sel.fStart=''; sel.fEnd=''; btn.classList.remove('has-selection'); var c=btn.querySelector('.count'); if(c)c.remove(); closeAll(); applyAll(); });
 
       // Default: mes en curso (primer día del mes → hoy), ajustado al rango de datos disponible
+      if(DATES.length===0) return;
       (function(){
         var now=new Date();
         function iso(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
@@ -450,7 +453,10 @@
       return '<span class="cov-na">—</span>';
     }
     function renderPage(){
-      if(filtered.length===0){ tbody.innerHTML='<tr class="empty-row"><td colspan="7">No hay registros para los filtros seleccionados.</td></tr>'; document.getElementById('resultCount').innerHTML='Sin resultados'; renderPager(); return; }
+      if(filtered.length===0){
+        var msg = ROWS.length===0 ? 'Aún no hay datos de asistencia conectados. Esta sección estará disponible próximamente.' : 'No hay registros para los filtros seleccionados.';
+        tbody.innerHTML='<tr class="empty-row"><td colspan="7">'+msg+'</td></tr>'; document.getElementById('resultCount').innerHTML='Sin resultados'; renderPager(); return;
+      }
       var totalPages=Math.ceil(filtered.length/PAGE_SIZE);
       if(page>=totalPages) page=totalPages-1;
       var startI=page*PAGE_SIZE, endI=Math.min(startI+PAGE_SIZE, filtered.length);
