@@ -276,22 +276,37 @@
 
   <script src="assets/js/api.js"></script>
   <script src="assets/js/admin-guard.js"></script>
-  <script src="assets/js/fdv-data.js"></script>
   <script>
-    var F = window.FDV;
-    var TIPOS = F.tipos, ROUTES = F.routes, ESTADOS = F.estados || ['Activo','Inactivo'];
-    // Estado vivo: cargar base + overrides
-    var STORE_KEY='re_admin_fdv_v2', LOG_KEY='re_admin_fdv_log_v1';
+    // Conectado a la tabla usuario del backend (fuerza de venta real).
+    if (!window.RetailAPI) {
+      document.getElementById('tbody').innerHTML = '<tr class="empty-row"><td colspan="7">No se pudo cargar assets/js/api.js — abre esta página desde el sitio (servidor local o Netlify), no como archivo suelto.</td></tr>';
+      throw new Error('RetailAPI no disponible');
+    }
+    var API = window.RetailAPI;
+    var TIPOS = ['Interno','Externo'], ESTADOS = ['Activo','Inactivo'];
+    var ROUTES = [];
+    var LOG_KEY='re_admin_fdv_log_v1';
     var data=[]; var changeLog=[];
-    (function init(){
-      var saved=null; try{ saved=JSON.parse(localStorage.getItem(STORE_KEY)||'null'); }catch(e){}
-      if(saved && saved.length){ data=saved; }
-      else { data=F.rows.map(function(r){ return { id:r[0], tipo:r[1], ruta:r[2], rut:r[3], nombre:r[4], estado:r[5]||'Activo' }; }); }
-      // Normalizaciones de seguridad
-      data.forEach(function(r){ if(r.id) r.id=String(r.id).replace(/^FDV-/i,'fdv'); if(!r.estado) r.estado='Activo'; if(r.estado==='Activa')r.estado='Activo'; if(r.estado==='Inactiva')r.estado='Inactivo'; });
-      try{ changeLog=JSON.parse(localStorage.getItem(LOG_KEY)||'[]'); }catch(e){ changeLog=[]; }
-    })();
-    function persist(){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(data)); }catch(e){} }
+    function cap(s){ s=String(s||''); return s ? s.charAt(0).toUpperCase()+s.slice(1) : s; }
+    function fromApi(r){ return { id:r.id, tipo:cap(r.tipo), ruta:r.ruta||'', rut:r.rut, nombre:r.nombre, estado:cap(r.estado||'activo') }; }
+    function apiErrorMsg(e){
+      var msg = e && e.message || 'Error de conexión';
+      try { var j = JSON.parse(msg); if (j.message) msg = Array.isArray(j.message) ? j.message.join(', ') : j.message; } catch(_){}
+      return msg;
+    }
+    function loadData(){
+      API.requestJson('/web/admin/fdv').then(function(r){
+        data=(r.fdv||[]).map(fromApi); render();
+      }).catch(function(e){
+        tbody.innerHTML='<tr class="empty-row"><td colspan="7">No se pudo cargar la fuerza de venta.</td></tr>';
+        toast(apiErrorMsg(e));
+      });
+    }
+    API.requestJson('/rutas').then(function(rutas){
+      ROUTES=rutas||[];
+      document.getElementById('rutas-list').innerHTML=ROUTES.map(function(r){return '<option value="'+String(r).replace(/"/g,'&quot;')+'"></option>';}).join('');
+    }).catch(function(){});
+    try{ changeLog=JSON.parse(localStorage.getItem(LOG_KEY)||'[]'); }catch(e){ changeLog=[]; }
     function persistLog(){ try{ localStorage.setItem(LOG_KEY, JSON.stringify(changeLog)); }catch(e){} }
 
     var sel={ q:'', tipo:[], estado:[] };
@@ -358,21 +373,16 @@
     /* ---- Modal editar/agregar ---- */
     var editOverlay=document.getElementById('editOverlay');
     var fId=document.getElementById('f-id'), fTipo=document.getElementById('f-tipo'), fRuta=document.getElementById('f-ruta'), fRut=document.getElementById('f-rut'), fNombre=document.getElementById('f-nombre'), fEstado=document.getElementById('f-estado');
-    (function(){ fTipo.innerHTML='<option value="" disabled>Selecciona…</option>'+TIPOS.map(function(t){return '<option value="'+t+'">'+t+'</option>';}).join(''); fEstado.innerHTML=ESTADOS.map(function(t){return '<option value="'+t+'">'+t+'</option>';}).join(''); document.getElementById('rutas-list').innerHTML=ROUTES.map(function(r){return '<option value="'+r.replace(/"/g,'&quot;')+'"></option>';}).join(''); })();
+    (function(){ fTipo.innerHTML='<option value="" disabled>Selecciona…</option>'+TIPOS.map(function(t){return '<option value="'+t+'">'+t+'</option>';}).join(''); fEstado.innerHTML=ESTADOS.map(function(t){return '<option value="'+t+'">'+t+'</option>';}).join(''); })();
     var curId=null;
 
     // Externo => ruta fija "Pituto" (bloqueada). Interno => ruta editable.
     function applyTipoRule(){
       var hint=document.getElementById('ruta-hint');
-      if(fTipo.value==='Externo'){ fRuta.value='Pituto'; fRuta.readOnly=true; fRuta.style.opacity='.6'; fRuta.style.cursor='not-allowed'; if(hint)hint.style.display=''; }
+      if(fTipo.value==='Externo'){ fRuta.value='pituto'; fRuta.readOnly=true; fRuta.style.opacity='.6'; fRuta.style.cursor='not-allowed'; if(hint)hint.style.display=''; }
       else { fRuta.readOnly=false; fRuta.style.opacity=''; fRuta.style.cursor=''; if(hint)hint.style.display='none'; }
     }
-    fTipo.addEventListener('change', function(){ if(fTipo.value==='Externo'){ fRuta.value='Pituto'; } else if(fRuta.value==='Pituto'){ fRuta.value=''; } applyTipoRule(); });
-
-    function nextId(){
-      var max=0; data.forEach(function(r){ var m=/(\d+)/.exec(r.id); if(m){ var n=parseInt(m[1],10); if(n>max)max=n; } });
-      return 'fdv'+String(max+1).padStart(3,'0');
-    }
+    fTipo.addEventListener('change', function(){ if(fTipo.value==='Externo'){ fRuta.value='pituto'; } else if(fRuta.value.toLowerCase()==='pituto'){ fRuta.value=''; } applyTipoRule(); });
     function openEdit(id){
       curId=id; var r=data.filter(function(x){return x.id===id;})[0]; if(!r) return;
       document.getElementById('e-title').textContent='Editar registro';
@@ -386,7 +396,7 @@
       curId=null;
       document.getElementById('e-title').textContent='Agregar reponedor';
       document.getElementById('e-sub').textContent='Completa los datos del nuevo integrante.';
-      fId.value=nextId(); fTipo.value=''; fRuta.value=''; fRut.value=''; fNombre.value=''; fEstado.value='Activo';
+      fId.value='Automático'; fTipo.value=''; fRuta.value=''; fRut.value=''; fNombre.value=''; fEstado.value='Activo';
       applyTipoRule();
       document.getElementById('e-delete').style.display='none';
       editOverlay.classList.add('open');
@@ -396,43 +406,50 @@
     function saveEdit(){
       var tipo=fTipo.value, ruta=fRuta.value.trim(), rut=fRut.value.trim(), nombre=fNombre.value.trim(), estado=fEstado.value;
       if(!tipo){ toast('Selecciona el tipo'); return; }
-      if(tipo==='Externo') ruta='Pituto';
+      if(tipo==='Externo') ruta='pituto';
       if(!ruta){ toast('Indica la ruta'); return; }
       if(!rut){ toast('Indica el RUT'); return; }
       if(!nombre){ toast('Indica el nombre'); return; }
       if(!estado){ toast('Selecciona el estado'); return; }
+      var payload={ tipo:tipo.toLowerCase(), ruta:ruta.toLowerCase(), rut:rut, nombre:nombre.toLowerCase(), estado:estado.toLowerCase() };
+      var saveBtn=document.getElementById('e-save'); saveBtn.disabled=true;
       if(curId){
         var r=data.filter(function(x){return x.id===curId;})[0];
         var changes=[];
         if(r.tipo!==tipo) changes.push({f:'Tipo',b:r.tipo,a:tipo});
-        if(r.ruta!==ruta) changes.push({f:'Ruta',b:r.ruta,a:ruta});
+        if(r.ruta!==payload.ruta) changes.push({f:'Ruta',b:r.ruta,a:payload.ruta});
         if(r.rut!==rut) changes.push({f:'RUT',b:r.rut,a:rut});
-        if(r.nombre!==nombre) changes.push({f:'Nombre',b:r.nombre,a:nombre});
+        if(r.nombre!==payload.nombre) changes.push({f:'Nombre',b:r.nombre,a:payload.nombre});
         if((r.estado||'Activo')!==estado) changes.push({f:'Estado',b:r.estado||'Activo',a:estado});
-        if(changes.length===0){ toast('No hubo cambios'); closeEdit(); return; }
-        r.tipo=tipo; r.ruta=ruta; r.rut=rut; r.nombre=nombre; r.estado=estado;
-        logEntry('edit', r.id, changes);
+        if(changes.length===0){ saveBtn.disabled=false; toast('No hubo cambios'); closeEdit(); return; }
+        API.requestJson('/web/admin/fdv/'+curId,{ method:'PATCH', body:JSON.stringify(payload) })
+          .then(function(){ logEntry('edit', curId, changes); closeEdit(); toast('Registro guardado'); loadData(); })
+          .catch(function(e){ toast(apiErrorMsg(e)); })
+          .finally(function(){ saveBtn.disabled=false; });
       } else {
-        var nr={ id:fId.value, tipo:tipo, ruta:ruta, rut:rut, nombre:nombre, estado:estado };
-        data.unshift(nr);
-        logEntry('add', nr.id, [{f:'Tipo',b:'—',a:tipo},{f:'Ruta',b:'—',a:ruta},{f:'RUT',b:'—',a:rut},{f:'Nombre',b:'—',a:nombre},{f:'Estado',b:'—',a:estado}]);
+        API.requestJson('/web/admin/fdv',{ method:'POST', body:JSON.stringify(payload) })
+          .then(function(r){ logEntry('add', r.id, [{f:'Tipo',b:'—',a:tipo},{f:'Ruta',b:'—',a:payload.ruta},{f:'RUT',b:'—',a:rut},{f:'Nombre',b:'—',a:payload.nombre},{f:'Estado',b:'—',a:estado}]); closeEdit(); toast('Registro creado'); loadData(); })
+          .catch(function(e){ toast(apiErrorMsg(e)); })
+          .finally(function(){ saveBtn.disabled=false; });
       }
-      persist(); render(); closeEdit(); toast('Registro guardado');
     }
     function deleteCur(){
       if(!curId) return;
       var r=data.filter(function(x){return x.id===curId;})[0]; if(!r) return;
-      if(!confirm('¿Eliminar a '+r.nombre+' ('+r.id+') de la fuerza de venta?')) return;
-      logEntry('del', r.id, [{f:'Tipo',b:r.tipo,a:'—'},{f:'Ruta',b:r.ruta,a:'—'},{f:'RUT',b:r.rut,a:'—'},{f:'Nombre',b:r.nombre,a:'—'},{f:'Estado',b:r.estado||'Activo',a:'—'}]);
-      data=data.filter(function(x){return x.id!==curId;});
-      persist(); render(); closeEdit(); toast('Registro eliminado');
+      if(!confirm('¿Eliminar a '+r.nombre+' ('+r.rut+') de la fuerza de venta?\nSi tiene historial (rutas, visitas), quedará como inactivo.')) return;
+      API.requestJson('/web/admin/fdv/'+curId,{ method:'DELETE' })
+        .then(function(res){
+          logEntry('del', curId, [{f:'Tipo',b:r.tipo,a:'—'},{f:'Ruta',b:r.ruta,a:'—'},{f:'RUT',b:r.rut,a:'—'},{f:'Nombre',b:r.nombre,a:'—'},{f:'Estado',b:r.estado||'Activo',a:res.inactivado?'Inactivo':'—'}]);
+          closeEdit(); toast(res.inactivado ? 'Tiene historial: quedó inactivo' : 'Registro eliminado'); loadData();
+        })
+        .catch(function(e){ toast(apiErrorMsg(e)); });
     }
 
     function logEntry(action, id, changes){ changeLog.unshift({ ts:Date.now(), action:action, id:id, changes:changes }); persistLog(); updateHistBtn(); }
 
     tbody.addEventListener('click', function(e){
-      var ed=e.target.closest('[data-edit]'); if(ed){ openEdit(ed.getAttribute('data-edit')); return; }
-      var dl=e.target.closest('[data-del]'); if(dl){ curId=dl.getAttribute('data-del'); deleteCur(); return; }
+      var ed=e.target.closest('[data-edit]'); if(ed){ openEdit(Number(ed.getAttribute('data-edit'))); return; }
+      var dl=e.target.closest('[data-del]'); if(dl){ curId=Number(dl.getAttribute('data-del')); deleteCur(); return; }
     });
     document.getElementById('addBtn').addEventListener('click', openAdd);
     document.getElementById('e-close').addEventListener('click', closeEdit);
@@ -487,7 +504,8 @@
     function toast(msg){ var el=document.getElementById('toast'); el.innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>'+msg+'</span>'; el.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(function(){ el.classList.remove('show'); },2600); }
 
     updateHistBtn();
-    render();
+    tbody.innerHTML='<tr class="empty-row"><td colspan="7">Cargando fuerza de venta…</td></tr>';
+    loadData();
   </script>
 </body>
 </html>

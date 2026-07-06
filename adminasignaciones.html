@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Asignaciones por Local · Retail Experts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  :root{
+    --bg:#F6ECD0; --ink:#1C1A14; --muted:#6B6557; --frame:#15130E;
+    --accent:#E0561C; --accent-soft:rgba(224,86,28,0.12);
+    --purple:#5A0D74; --purple-soft:rgba(90,13,116,0.09);
+    --green:#1F8A4C; --green-soft:rgba(31,138,76,0.12);
+    --red:#C23A2B; --red-soft:rgba(194,58,43,0.1);
+    --line:rgba(28,26,20,0.16); --line-soft:rgba(28,26,20,0.08);
+    --card:#FFFDF6; --white:#fff;
+    --font-display:'Bricolage Grotesque',sans-serif; --font-body:'Manrope',sans-serif;
+  }
+  html,body{ min-height:100%; }
+  body{ font-family:var(--font-body); color:var(--ink); background:radial-gradient(120% 80% at 50% -10%, rgba(90,13,116,0.06) 0%, rgba(0,0,0,0) 55%), var(--bg); min-height:100vh; display:flex; flex-direction:column; }
+  .admin-header{ flex:0 0 auto; display:flex; align-items:center; gap:20px; padding:14px clamp(20px,4vw,40px); background:var(--bg); border-bottom:1px solid rgba(28,26,20,0.12); }
+  .admin-header .logo-img{ height:40px; width:auto; display:block; }
+  .header-divider{ width:1px; height:26px; background:rgba(90,13,116,.18); }
+  .header-title{ font-family:var(--font-display); font-weight:700; font-size:16px; color:var(--purple); letter-spacing:-0.01em; }
+  .header-spacer{ margin-left:auto; }
+  .back-btn{ display:inline-flex; align-items:center; gap:7px; padding:9px 16px; background:transparent; color:var(--purple); border:1.5px solid rgba(90,13,116,.25); border-radius:999px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; transition:background .2s,color .2s,border-color .2s; }
+  .back-btn:hover{ background:var(--purple); color:var(--white); border-color:var(--purple); }
+  .back-btn svg{ width:15px; height:15px; }
+
+  .wrap{ width:100%; max-width:1200px; margin:0 auto; padding:clamp(26px,4vh,44px) clamp(16px,3vw,40px) 60px; }
+  .crumb{ display:inline-flex; align-items:center; gap:8px; font-size:.86rem; color:var(--muted); margin-bottom:16px; }
+  .crumb a{ color:var(--muted); text-decoration:none; font-weight:600; }
+  .crumb a:hover{ color:var(--accent); }
+  .eyebrow{ font-family:var(--font-display); font-weight:600; text-transform:uppercase; letter-spacing:.2em; font-size:.76rem; color:var(--purple); margin-bottom:10px; }
+  .page-title{ font-family:var(--font-display); font-weight:800; font-size:clamp(2rem,4.5vw,3rem); line-height:1; letter-spacing:-.02em; color:var(--purple); }
+  .page-sub{ font-size:1rem; color:var(--muted); max-width:70ch; line-height:1.6; margin:13px 0 clamp(22px,3vh,32px); }
+
+  .toolbar{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+  .search-input{ display:inline-flex; align-items:center; gap:8px; background:var(--card); border:1.5px solid var(--line); border-radius:999px; padding:10px 16px; }
+  .search-input:focus-within{ border-color:var(--accent); }
+  .search-input svg{ width:15px; height:15px; color:var(--muted); flex:0 0 auto; }
+  .search-input input{ border:0; outline:none; background:transparent; font-family:var(--font-body); font-size:.92rem; color:var(--ink); width:220px; }
+  .toggle-inactivas{ display:inline-flex; align-items:center; gap:8px; font-size:.88rem; color:var(--muted); cursor:pointer; user-select:none; background:var(--card); border:1.5px solid var(--line); border-radius:999px; padding:10px 15px; font-family:var(--font-display); font-weight:600; }
+  .toggle-inactivas input{ accent-color:var(--accent); width:15px; height:15px; cursor:pointer; }
+  .spacer{ margin-left:auto; }
+  .btn{ font-family:var(--font-display); font-weight:600; font-size:.9rem; cursor:pointer; border-radius:999px; padding:11px 18px; border:1.5px solid transparent; transition:transform .15s,box-shadow .2s,background .2s; display:inline-flex; align-items:center; gap:8px; }
+  .btn svg{ width:16px; height:16px; }
+  .btn-add{ color:#fff; background:var(--green); border-color:var(--green); box-shadow:0 10px 24px rgba(31,138,76,.26); }
+  .btn-add:hover{ transform:translateY(-1px); }
+
+  .table-card{ background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
+  .table-scroll{ overflow-x:auto; }
+  table.asg{ width:100%; border-collapse:collapse; font-size:0.92rem; min-width:900px; }
+  table.asg thead th{ background:var(--frame); color:#FFF8E7; font-family:var(--font-display); font-weight:600; font-size:0.76rem; text-transform:uppercase; letter-spacing:.03em; text-align:left; padding:13px 16px; white-space:nowrap; }
+  table.asg thead th.center{ text-align:center; }
+  table.asg tbody td{ padding:12px 16px; border-bottom:1px solid var(--line-soft); color:var(--ink); vertical-align:middle; }
+  table.asg tbody tr:hover{ background:rgba(90,13,116,0.04); }
+  table.asg tbody tr:last-child td{ border-bottom:0; }
+  .id-code{ font-family:var(--font-display); font-weight:700; color:var(--purple); white-space:nowrap; }
+  .sub-name{ display:block; font-size:.78rem; color:var(--muted); font-weight:400; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rut-cell{ color:var(--muted); white-space:nowrap; }
+  .ruta-badge{ font-family:var(--font-display); font-weight:700; font-size:.8rem; color:var(--accent); background:var(--accent-soft); padding:2px 9px; border-radius:999px; white-space:nowrap; }
+  .dias-badge{ font-family:var(--font-display); font-weight:700; font-size:.82rem; color:var(--purple); background:var(--purple-soft); padding:2px 9px; border-radius:999px; white-space:nowrap; }
+  .chips{ display:flex; gap:5px; flex-wrap:wrap; max-width:320px; }
+  .chip{ font-size:.76rem; font-weight:600; padding:2px 9px; border-radius:999px; background:var(--purple-soft); color:var(--purple); white-space:nowrap; }
+  .chip-todos{ background:var(--green-soft); color:var(--green); }
+  .estado-badge{ display:inline-flex; align-items:center; gap:6px; font-size:.78rem; padding:3px 11px; border-radius:999px; font-weight:600; white-space:nowrap; }
+  .estado-badge .dot{ width:7px; height:7px; border-radius:50%; }
+  .e-activa{ background:var(--green-soft); color:var(--green); }
+  .e-activa .dot{ background:var(--green); }
+  .e-inactiva{ background:var(--red-soft); color:var(--red); }
+  .e-inactiva .dot{ background:var(--red); }
+  .row-actions{ display:flex; gap:7px; justify-content:flex-end; }
+  .icon-btn{ width:32px; height:32px; display:inline-grid; place-items:center; border-radius:9px; border:1.5px solid var(--line); background:#fff; cursor:pointer; transition:all .15s; }
+  .icon-btn svg{ width:15px; height:15px; }
+  .icon-edit{ color:var(--purple); }
+  .icon-edit:hover{ background:var(--purple); color:#fff; border-color:var(--purple); }
+  .empty-row td{ text-align:center; padding:46px 16px; color:var(--muted); font-family:var(--font-display); }
+  .result-count{ font-family:var(--font-display); font-weight:600; font-size:.9rem; color:var(--muted); margin:14px 2px 0; }
+  .result-count b{ color:var(--purple); }
+
+  /* Modal */
+  .modal-overlay{ position:fixed; inset:0; z-index:100; background:rgba(21,19,14,0.55); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:24px; opacity:0; visibility:hidden; transition:opacity .2s,visibility .2s; }
+  .modal-overlay.open{ opacity:1; visibility:visible; }
+  .modal{ width:100%; max-width:540px; max-height:90vh; overflow-y:auto; background:var(--card); border-radius:20px; border:1px solid var(--line); box-shadow:0 40px 100px rgba(0,0,0,.4); transform:translateY(12px) scale(.98); transition:transform .2s; }
+  .modal-overlay.open .modal{ transform:none; }
+  .modal-head{ position:relative; padding:24px 28px 18px; border-bottom:1px solid var(--line-soft); }
+  .modal-close{ position:absolute; top:18px; right:18px; width:36px; height:36px; border-radius:50%; border:1px solid var(--line); background:#fff; color:var(--ink); font-size:.9rem; cursor:pointer; display:grid; place-items:center; transition:background .15s,color .15s; }
+  .modal-close:hover{ background:var(--frame); color:#fff; }
+  .modal-head h2{ font-family:var(--font-display); font-weight:800; font-size:1.4rem; letter-spacing:-.02em; margin:0; line-height:1.1; }
+  .modal-sub{ color:var(--muted); font-size:.9rem; margin-top:4px; }
+  .modal-body{ padding:22px 28px 8px; }
+  .field{ margin-bottom:17px; }
+  .field label{ display:block; font-family:var(--font-display); font-weight:600; font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:8px; }
+  .field label .req{ color:var(--accent); }
+  .field input, .field select{ width:100%; font-family:var(--font-body); font-size:1rem; color:var(--ink); background:#fff; border:1.5px solid var(--line); border-radius:11px; padding:12px 14px; outline:none; transition:border-color .15s; }
+  .field input:focus, .field select:focus{ border-color:var(--accent); }
+  .field input[readonly]{ opacity:.65; cursor:not-allowed; background:rgba(28,26,20,0.03); }
+  .field select{ appearance:none; -webkit-appearance:none; cursor:pointer; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5' stroke='%236B6557' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; padding-right:38px; }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .field-hint{ font-size:.78rem; color:var(--muted); margin-top:6px; line-height:1.45; }
+  .dias-picker{ display:flex; gap:7px; flex-wrap:wrap; }
+  .dia-toggle{ font-family:var(--font-display); font-weight:700; font-size:.85rem; width:44px; padding:9px 0; text-align:center; border-radius:11px; border:1.5px solid var(--line); background:#fff; color:var(--muted); cursor:pointer; transition:all .13s; }
+  .dia-toggle.on{ background:var(--purple); color:#fff; border-color:var(--purple); }
+  .scope-box{ border:1.5px solid var(--line); border-radius:13px; overflow:hidden; }
+  .scope-opt{ display:flex; align-items:flex-start; gap:11px; padding:13px 15px; cursor:pointer; border-bottom:1px solid var(--line-soft); transition:background .13s; }
+  .scope-opt:last-child{ border-bottom:0; }
+  .scope-opt:hover{ background:rgba(28,26,20,0.03); }
+  .scope-opt input{ accent-color:var(--accent); width:16px; height:16px; margin-top:2px; cursor:pointer; }
+  .scope-opt .s-title{ font-weight:700; font-size:.93rem; }
+  .scope-opt .s-desc{ font-size:.8rem; color:var(--muted); margin-top:2px; line-height:1.4; }
+  .cliente-checks{ display:none; padding:4px 15px 13px 42px; gap:7px; flex-wrap:wrap; }
+  .cliente-checks.visible{ display:flex; }
+  .cli-check{ display:inline-flex; align-items:center; gap:7px; font-size:.86rem; font-weight:600; padding:7px 13px; border:1.5px solid var(--line); border-radius:999px; cursor:pointer; user-select:none; transition:all .13s; background:#fff; }
+  .cli-check input{ display:none; }
+  .cli-check.on{ background:var(--purple); color:#fff; border-color:var(--purple); }
+  .modal-foot{ position:sticky; bottom:0; display:flex; justify-content:flex-end; gap:10px; padding:18px 28px 22px; background:linear-gradient(to top, var(--card) 72%, rgba(255,253,246,0)); border-top:1px solid var(--line-soft); }
+  .mbtn{ font-family:var(--font-display); font-weight:600; font-size:.95rem; cursor:pointer; border-radius:999px; padding:12px 22px; border:1.5px solid transparent; transition:all .15s; }
+  .mbtn:disabled{ opacity:.55; cursor:wait; }
+  .mbtn-ghost{ color:var(--ink); background:var(--card); border-color:var(--line); }
+  .mbtn-ghost:hover{ background:#fff; border-color:var(--ink); }
+  .mbtn-save{ color:#FFF8E7; background:var(--accent); border-color:var(--accent); }
+  .mbtn-save:hover{ background:#c8480f; transform:translateY(-1px); }
+
+  .toast{ position:fixed; left:50%; bottom:30px; transform:translateX(-50%) translateY(20px); background:var(--frame); color:#FFF8E7; font-family:var(--font-display); font-weight:600; font-size:.92rem; padding:13px 24px; border-radius:999px; box-shadow:0 16px 40px rgba(0,0,0,.3); z-index:200; opacity:0; pointer-events:none; transition:opacity .25s,transform .25s; display:inline-flex; align-items:center; gap:9px; max-width:90vw; }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.error{ background:var(--red); }
+  .toast svg{ width:16px; height:16px; flex:0 0 auto; }
+  @media (max-width:560px){ .grid2{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+  <header class="admin-header">
+    <a class="back-btn" href="adminmantenedores.html">
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Volver a Mantenedores
+    </a>
+    <div class="header-divider"></div>
+    <a href="index.html"><img class="logo-img" src="logo-retail-experts.png" alt="Retail Experts"></a>
+    <span class="header-title">Asignaciones por Local</span>
+    <div class="header-spacer"></div>
+  </header>
+
+  <main class="wrap">
+    <div class="crumb"><a href="adminweb.html">Panel</a> › <a href="adminmantenedores.html">Mantenedores</a> › <span>Asignaciones</span></div>
+    <p class="eyebrow">Operación en terreno</p>
+    <h1 class="page-title">Asignaciones por Local</h1>
+    <p class="page-sub">Quién visita cada local, qué días y qué clientes atiende. Un local puede tener varios reponedores, cada uno con su propio alcance de clientes. Los cambios rigen de inmediato en la app.</p>
+
+    <div class="toolbar">
+      <div class="search-input">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.8"/><path d="m20 20-3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <input type="text" id="search" placeholder="Buscar por local, reponedor o RUT…" />
+      </div>
+      <label class="toggle-inactivas"><input type="checkbox" id="verInactivas" /> Ver inactivas</label>
+      <div class="spacer"></div>
+      <button class="btn btn-add" id="addBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        Agregar asignación
+      </button>
+    </div>
+
+    <div class="table-card">
+      <div class="table-scroll">
+        <table class="asg">
+          <thead>
+            <tr>
+              <th>Local</th>
+              <th>Cadena</th>
+              <th>Reponedor</th>
+              <th>RUT</th>
+              <th>Ruta</th>
+              <th>Días</th>
+              <th>Clientes</th>
+              <th>Estado</th>
+              <th class="center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"><tr class="empty-row"><td colspan="9">Cargando asignaciones…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <p class="result-count" id="resultCount">—</p>
+  </main>
+
+  <!-- Modal editar asignación -->
+  <div class="modal-overlay" id="editOverlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <button class="modal-close" id="e-close" type="button" aria-label="Cerrar">✕</button>
+        <h2 id="e-title">Editar asignación</h2>
+        <p class="modal-sub" id="e-sub"></p>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>Días de visita</label>
+          <div class="dias-picker" id="e-dias"></div>
+          <p class="field-hint">Las tandas de la semana se reparten según estos días.</p>
+        </div>
+        <div class="field">
+          <label>Estado</label>
+          <select id="e-activo"><option value="true">Activa</option><option value="false">Inactiva</option></select>
+        </div>
+        <div class="field">
+          <label>Clientes que atiende</label>
+          <div class="scope-box">
+            <label class="scope-opt">
+              <input type="radio" name="scope" value="todos" id="scope-todos" />
+              <span><span class="s-title">Todos los clientes del local</span>
+              <span class="s-desc" style="display:block">Ve todo lo gestionado según la maestra. Si mañana se agrega un cliente al local, lo ve automáticamente.</span></span>
+            </label>
+            <label class="scope-opt">
+              <input type="radio" name="scope" value="explicito" id="scope-explicito" />
+              <span><span class="s-title">Solo clientes seleccionados</span>
+              <span class="s-desc" style="display:block">Su cuestionario, fotos exigidas y asistencia se limitan a estos clientes.</span></span>
+            </label>
+            <div class="cliente-checks" id="e-clientes"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="mbtn mbtn-ghost" id="e-cancel" type="button">Cancelar</button>
+        <button class="mbtn mbtn-save" id="e-save" type="button">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal agregar asignación -->
+  <div class="modal-overlay" id="addOverlay">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <button class="modal-close" id="a-close" type="button" aria-label="Cerrar">✕</button>
+        <h2>Agregar asignación</h2>
+        <p class="modal-sub">Asigna un reponedor a un local. Si existía una asignación inactiva entre ambos, se reactiva.</p>
+      </div>
+      <div class="modal-body">
+        <div class="grid2">
+          <div class="field">
+            <label for="a-local">Código local <span class="req">*</span></label>
+            <input type="text" id="a-local" placeholder="Ej. J511" />
+          </div>
+          <div class="field">
+            <label for="a-rut">Reponedor <span class="req">*</span></label>
+            <input type="text" id="a-rut" placeholder="Nombre o RUT…" list="usuarios-list" />
+            <datalist id="usuarios-list"></datalist>
+            <p class="field-hint">Escribe el nombre y selecciona de la lista, o ingresa el RUT directo.</p>
+          </div>
+        </div>
+        <div class="field">
+          <label>Días de visita</label>
+          <div class="dias-picker" id="a-dias"></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="mbtn mbtn-ghost" id="a-cancel" type="button">Cancelar</button>
+        <button class="mbtn mbtn-save" id="a-save" type="button">Crear asignación</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/admin-guard.js"></script>
+  <script>
+  (function(){
+    var API = window.RetailAPI;
+    var DIAS_LBL = { 1:'Lun', 2:'Mar', 3:'Mié', 4:'Jue', 5:'Vie', 6:'Sáb', 7:'Dom' };
+    var rows = [];            // asignaciones cargadas del backend
+    var usuarios = [];        // fuerza de venta para el datalist
+    var sel = { q:'', inactivas:false };
+    var tbody = document.getElementById('tbody');
+
+    function esc(s){ return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function toast(msg, isError){
+      var el = document.getElementById('toast');
+      el.className = 'toast' + (isError ? ' error' : '');
+      el.innerHTML = (isError
+        ? '<svg viewBox="0 0 24 24" fill="none"><path d="M12 8v5m0 3.5v.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>')
+        + '<span>' + esc(msg) + '</span>';
+      el.classList.add('show');
+      clearTimeout(toast._t); toast._t = setTimeout(function(){ el.classList.remove('show'); }, 3600);
+    }
+    function apiError(e){
+      var msg = e && e.message || 'Error de conexión';
+      try { var j = JSON.parse(msg); if (j.message) msg = Array.isArray(j.message) ? j.message.join(', ') : j.message; } catch(_){}
+      toast(msg, true);
+    }
+    function diasTexto(dias){
+      if (!dias) return '—';
+      return String(dias).split(',').map(function(d){ return DIAS_LBL[parseInt(d,10)] || d; }).join(' · ');
+    }
+
+    /* ---- Carga ---- */
+    function load(){
+      tbody.innerHTML = '<tr class="empty-row"><td colspan="9">Cargando asignaciones…</td></tr>';
+      var params = { limit: 500 };
+      if (sel.inactivas) params.activo = 'false';
+      API.requestJson('/web/admin/asignaciones' + API.buildQuery(params))
+        .then(function(r){ rows = r.asignaciones || []; render(); })
+        .catch(function(e){ tbody.innerHTML = '<tr class="empty-row"><td colspan="9">No se pudieron cargar las asignaciones.</td></tr>'; apiError(e); });
+    }
+    API.requestJson('/web/admin/asignaciones/opciones').then(function(o){
+      usuarios = (o.usuarios || []).filter(function(u){ return u.estado !== 'inactivo'; });
+      document.getElementById('usuarios-list').innerHTML = usuarios.map(function(u){
+        return '<option value="' + esc(u.rut) + '">' + esc(u.nombre) + ' · ' + esc(u.ruta || u.tipo) + '</option>';
+      }).join('');
+    }).catch(function(){ /* datalist opcional */ });
+
+    /* ---- Render ---- */
+    function render(){
+      var list = rows.filter(function(r){
+        if (!sel.q) return true;
+        var hay = (r.id_local + ' ' + (r.nombre_local||'') + ' ' + (r.reponedor||'') + ' ' + (r.rut||'') + ' ' + (r.ruta||'')).toLowerCase();
+        return hay.indexOf(sel.q) !== -1;
+      });
+      if (!list.length){
+        tbody.innerHTML = '<tr class="empty-row"><td colspan="9">No hay asignaciones que coincidan.</td></tr>';
+      } else {
+        var html = '';
+        list.forEach(function(r){
+          var cl = r.clientes || { modo:'todos', lista:[] };
+          var chips;
+          if (cl.modo === 'todos') {
+            chips = '<span class="chip chip-todos">Todos (' + cl.lista.length + ')</span>';
+          } else {
+            chips = cl.lista.map(function(c){ return '<span class="chip">' + esc(c.nombre) + '</span>'; }).join('');
+            if (!cl.lista.length) chips = '<span class="chip">— sin clientes vigentes —</span>';
+          }
+          html += '<tr>';
+          html += '<td><span class="id-code">' + esc(r.id_local) + '</span><span class="sub-name">' + esc(r.nombre_local||'') + '</span></td>';
+          html += '<td>' + esc(r.cadena||'—') + '</td>';
+          html += '<td>' + esc(r.reponedor||'—') + '</td>';
+          html += '<td class="rut-cell">' + esc(r.rut||'—') + '</td>';
+          html += '<td>' + (r.ruta ? '<span class="ruta-badge">' + esc(r.ruta) + '</span>' : '—') + '</td>';
+          html += '<td><span class="dias-badge">' + esc(diasTexto(r.dias_visita)) + '</span></td>';
+          html += '<td><div class="chips">' + chips + '</div></td>';
+          html += '<td><span class="estado-badge ' + (r.activo ? 'e-activa' : 'e-inactiva') + '"><span class="dot"></span>' + (r.activo ? 'Activa' : 'Inactiva') + '</span></td>';
+          html += '<td><div class="row-actions"><button class="icon-btn icon-edit" type="button" data-edit="' + r.id + '" title="Editar"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20h4L18.5 9.5a2 2 0 0 0 0-3l-1-1a2 2 0 0 0-3 0L4 16v4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m13.5 7.5 3 3" stroke="currentColor" stroke-width="1.8"/></svg></button></div></td>';
+          html += '</tr>';
+        });
+        tbody.innerHTML = html;
+      }
+      document.getElementById('resultCount').innerHTML = '<b>' + list.length + '</b> de ' + rows.length + ' asignaciones' + (sel.inactivas ? ' inactivas' : '');
+    }
+
+    document.getElementById('search').addEventListener('input', function(){ sel.q = this.value.trim().toLowerCase(); render(); });
+    document.getElementById('verInactivas').addEventListener('change', function(){ sel.inactivas = this.checked; load(); });
+
+    /* ---- Selector de días (compartido) ---- */
+    function buildDiasPicker(container, selected){
+      container.innerHTML = '';
+      [1,2,3,4,5,6,7].forEach(function(d){
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'dia-toggle' + (selected.indexOf(d) !== -1 ? ' on' : '');
+        b.textContent = DIAS_LBL[d]; b.dataset.dia = d;
+        b.onclick = function(){ b.classList.toggle('on'); };
+        container.appendChild(b);
+      });
+    }
+    function readDiasPicker(container){
+      var out = [];
+      container.querySelectorAll('.dia-toggle.on').forEach(function(b){ out.push(parseInt(b.dataset.dia,10)); });
+      return out.sort(function(a,b){ return a - b; }).join(',');
+    }
+
+    /* ---- Modal editar ---- */
+    var editOverlay = document.getElementById('editOverlay');
+    var cur = null;            // asignación en edición
+    var universoClientes = []; // clientes del local (maestra)
+
+    function openEdit(id){
+      cur = rows.filter(function(r){ return r.id === id; })[0];
+      if (!cur) return;
+      document.getElementById('e-sub').textContent = cur.reponedor + ' → ' + cur.id_local + ' · ' + (cur.nombre_local || '');
+      buildDiasPicker(document.getElementById('e-dias'), (cur.dias_visita || '').split(',').map(function(d){ return parseInt(d,10); }).filter(Boolean));
+      document.getElementById('e-activo').value = String(!!cur.activo);
+
+      var cl = cur.clientes || { modo:'todos', lista:[] };
+      // Universo = clientes gestionados del local. Si el alcance es explícito,
+      // la lista de la fila solo trae los seleccionados: pedir el universo a
+      // cualquier asignación del mismo local en modo todos, o al backend.
+      var universoP;
+      var hermanaTodos = rows.filter(function(r){ return r.id_local === cur.id_local && (r.clientes||{}).modo === 'todos'; })[0];
+      if (cl.modo === 'todos') universoP = Promise.resolve(cl.lista);
+      else if (hermanaTodos) universoP = Promise.resolve(hermanaTodos.clientes.lista);
+      else universoP = API.requestJson('/web/admin/mantenedores/rutas' + API.buildQuery({ id_local: cur.id_local, limit: 1 }))
+        .then(function(r){ return ((r.rutas||[])[0]||{}).clientes || []; });
+
+      universoP.then(function(universo){
+        universoClientes = universo;
+        var seleccionados = {};
+        if (cl.modo === 'explicito') cl.lista.forEach(function(c){ seleccionados[c.id] = true; });
+        var checksHtml = universo.map(function(c){
+          var on = !!seleccionados[c.id];
+          return '<label class="cli-check' + (on ? ' on' : '') + '"><input type="checkbox" value="' + c.id + '"' + (on ? ' checked' : '') + ' />' + esc(c.nombre) + '</label>';
+        }).join('');
+        var checksBox = document.getElementById('e-clientes');
+        checksBox.innerHTML = checksHtml || '<span class="field-hint">Este local no tiene clientes gestionados en la maestra.</span>';
+        checksBox.querySelectorAll('.cli-check input').forEach(function(inp){
+          inp.addEventListener('change', function(){ inp.parentElement.classList.toggle('on', inp.checked); });
+        });
+        document.getElementById('scope-' + cl.modo).checked = true;
+        checksBox.classList.toggle('visible', cl.modo === 'explicito');
+        editOverlay.classList.add('open');
+      }).catch(apiError);
+    }
+    document.querySelectorAll('input[name="scope"]').forEach(function(radio){
+      radio.addEventListener('change', function(){
+        document.getElementById('e-clientes').classList.toggle('visible', radio.value === 'explicito' && radio.checked);
+      });
+    });
+    function closeEdit(){ editOverlay.classList.remove('open'); cur = null; }
+
+    function saveEdit(){
+      if (!cur) return;
+      var dias = readDiasPicker(document.getElementById('e-dias'));
+      var activo = document.getElementById('e-activo').value === 'true';
+      var modo = document.getElementById('scope-explicito').checked ? 'explicito' : 'todos';
+      var idClientes = [];
+      if (modo === 'explicito') {
+        document.getElementById('e-clientes').querySelectorAll('input:checked').forEach(function(i){ idClientes.push(Number(i.value)); });
+        if (!idClientes.length){ toast('Selecciona al menos un cliente o marca "Todos"', true); return; }
+        // Marcarlos todos equivale a "todos": mejor sin filas explícitas.
+        if (idClientes.length === universoClientes.length) { modo = 'todos'; idClientes = []; }
+      }
+      var clAntes = cur.clientes || { modo:'todos', lista:[] };
+      var idsAntes = clAntes.modo === 'explicito' ? clAntes.lista.map(function(c){ return Number(c.id); }).sort().join(',') : '';
+      var idsAhora = idClientes.slice().sort().join(',');
+      var cambioClientes = (clAntes.modo === 'explicito' ? idsAntes : '') !== (modo === 'explicito' ? idsAhora : '');
+      var cambioBase = dias !== (cur.dias_visita || '') || activo !== !!cur.activo;
+      if (!cambioBase && !cambioClientes){ toast('No hubo cambios'); closeEdit(); return; }
+
+      var btn = document.getElementById('e-save'); btn.disabled = true;
+      var chain = Promise.resolve();
+      if (cambioBase) chain = chain.then(function(){
+        return API.requestJson('/web/admin/asignaciones/' + cur.id, { method:'PATCH', body: JSON.stringify({ dias_visita: dias, activo: activo }) });
+      });
+      if (cambioClientes) chain = chain.then(function(){
+        return API.requestJson('/web/admin/asignaciones/' + cur.id + '/clientes', { method:'PUT', body: JSON.stringify({ id_clientes: idClientes }) });
+      });
+      chain.then(function(){ toast('Asignación actualizada'); closeEdit(); load(); })
+        .catch(apiError)
+        .finally(function(){ btn.disabled = false; });
+    }
+
+    /* ---- Modal agregar ---- */
+    var addOverlay = document.getElementById('addOverlay');
+    function openAdd(){
+      document.getElementById('a-local').value = '';
+      document.getElementById('a-rut').value = '';
+      buildDiasPicker(document.getElementById('a-dias'), []);
+      addOverlay.classList.add('open');
+    }
+    function closeAdd(){ addOverlay.classList.remove('open'); }
+    function saveAdd(){
+      var local = document.getElementById('a-local').value.trim().toUpperCase();
+      var rut = document.getElementById('a-rut').value.trim();
+      var dias = readDiasPicker(document.getElementById('a-dias'));
+      if (!local){ toast('Indica el código del local', true); return; }
+      if (!rut){ toast('Indica el reponedor (RUT)', true); return; }
+      var btn = document.getElementById('a-save'); btn.disabled = true;
+      API.requestJson('/web/admin/asignaciones', { method:'POST', body: JSON.stringify({ id_local: local, rut: rut, dias_visita: dias || null }) })
+        .then(function(r){ toast(r.reactivada ? 'Asignación reactivada' : 'Asignación creada'); closeAdd(); load(); })
+        .catch(apiError)
+        .finally(function(){ btn.disabled = false; });
+    }
+
+    /* ---- Wire ---- */
+    tbody.addEventListener('click', function(e){
+      var ed = e.target.closest('[data-edit]');
+      if (ed) openEdit(Number(ed.getAttribute('data-edit')));
+    });
+    document.getElementById('addBtn').addEventListener('click', openAdd);
+    document.getElementById('e-close').addEventListener('click', closeEdit);
+    document.getElementById('e-cancel').addEventListener('click', closeEdit);
+    document.getElementById('e-save').addEventListener('click', saveEdit);
+    document.getElementById('a-close').addEventListener('click', closeAdd);
+    document.getElementById('a-cancel').addEventListener('click', closeAdd);
+    document.getElementById('a-save').addEventListener('click', saveAdd);
+    editOverlay.addEventListener('click', function(e){ if (e.target === editOverlay) closeEdit(); });
+    addOverlay.addEventListener('click', function(e){ if (e.target === addOverlay) closeAdd(); });
+    document.addEventListener('keydown', function(e){ if (e.key === 'Escape'){ closeEdit(); closeAdd(); } });
+
+    load();
+  })();
+  </script>
+</body>
+</html>

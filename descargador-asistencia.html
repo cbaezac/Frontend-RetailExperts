@@ -275,18 +275,20 @@
   <div class="toast" id="toast"></div>
 
   <script src="activity-log.js"></script>
+  <script src="assets/js/api.js"></script>
   <script src="asistencia-data.js"></script>
   <script>
     if(window.logEvent){ try{ logEvent('Descargador','Asistencia'); }catch(e){} }
+  function __initAsistencia(){
     var D = window.ASISTENCIA;
     var DATES = D.dates, CLIENTS = D.clients, CLIENT_LABELS = D.clientLabels, LOCALES = D.locales, ROWS = D.rows;
     // ROWS: [dateIdx, localIdx, clientIdx, plan, real]
     // LOCALES: [cadena, codigoLocal, nombre, ruta]
 
     // Datos provenientes de la base (solo lectura para el cliente).
-    // Se reflejan los ajustes oficiales realizados desde administración; aquí no se pueden editar.
+    // Ajustes manuales desactivados por ahora: se muestran los datos tal cual.
     function ovKey(r){ return r[0]+':'+r[1]+':'+r[2]; }
-    var overrides={}; try{ overrides=JSON.parse(localStorage.getItem('re_admin_asistencia_v1')||'{}'); }catch(e){ overrides={}; }
+    var overrides={};
     function eff(r){ var o=overrides[ovKey(r)]; return o?o:{plan:r[3],real:r[4]}; }
 
     function titleCase(s){ return String(s).replace(/\w\S*/g, function(t){ return t.charAt(0).toUpperCase()+t.substr(1); }); }
@@ -527,6 +529,9 @@
     function toast(msg){ var el=document.getElementById('toast'); el.innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>'+msg+'</span>'; el.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(function(){ el.classList.remove('show'); }, 2800); }
 
     applyAll();
+  }
+  if (window.ASISTENCIA && window.ASISTENCIA.ready) __initAsistencia();
+  else document.addEventListener('asistencia:ready', __initAsistencia);
   </script>
 </body>
 </html>

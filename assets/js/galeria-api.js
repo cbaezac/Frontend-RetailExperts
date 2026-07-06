@@ -5,11 +5,13 @@
     'Góndola': 'gondola',
     'Cartelería': 'carteleria',
     'Exhibiciones': 'exhibicion',
-    'Exhibiciones Adicionales': 'exhibicion_adicional'
+    'Exhibiciones Adicionales': 'exhibicion_adicional',
+    'Espacios Adicionales': 'exhibicion_adicional'
   };
   var PARAM_BY_FILTER = {
     'Cadena': 'cadena',
     'Formato': 'formato',
+    'Región': 'region',
     'Código Local': 'codigo_local',
     'Nombre Local': 'nombre_local',
     'Cliente': 'cliente',
@@ -48,6 +50,7 @@
 
   var style = document.createElement('style');
   style.textContent = '.photo img{width:100%;height:100%;object-fit:cover;display:block}.photo-meta{position:absolute;left:12px;right:72px;bottom:12px;min-height:48px;display:flex;align-items:center;padding:10px 13px;border-radius:9px;background:linear-gradient(90deg,rgba(0,0,0,.82),rgba(0,0,0,.66));color:#fff;text-align:left;box-shadow:0 8px 18px rgba(0,0,0,.24);backdrop-filter:blur(2px)}.photo-meta-main{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font:900 13px/1.2 Inter,sans-serif;letter-spacing:.01em}.photo-meta-date{font-weight:800;color:#fff1c8}.photo-expand{position:absolute;right:12px;bottom:12px;z-index:3;width:50px;height:50px;border-radius:14px;border:0;background:rgba(26,25,22,.9);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 22px rgba(0,0,0,.3);transition:transform .18s ease,background .18s ease}.photo-expand:hover{background:#33312b;transform:translateY(-1px)}.photo-expand svg{width:27px;height:27px}.gallery-empty{grid-column:1/-1;padding:48px 18px;text-align:center;color:rgba(28,26,20,.58);font-weight:700}.gallery-loading{grid-column:1/-1;padding:48px 18px;text-align:center;color:rgba(28,26,20,.62);font-weight:700}.gallery-pager{display:flex;align-items:center;justify-content:center;gap:16px;margin:34px 0 6px;flex-wrap:wrap}.gallery-pager-info{font:700 14px Inter,sans-serif;color:rgba(28,26,20,.64)}.gallery-load-more{border:0;border-radius:999px;background:#11100b;color:#fff8e7;font:800 15px Inter,sans-serif;padding:14px 28px;cursor:pointer;box-shadow:0 14px 30px rgba(28,26,20,.18)}.gallery-load-more:hover{transform:translateY(-1px)}.gallery-load-more:disabled{opacity:.45;cursor:not-allowed;transform:none}.btn-clear-filters{border:0;border-radius:999px;padding:13px 22px;font:800 14px Inter,sans-serif;background:rgba(28,26,20,.08);color:rgba(28,26,20,.54);cursor:pointer}.btn-clear-filters.active{background:#e0561c;color:#fff8e7;box-shadow:0 12px 26px rgba(224,86,28,.26)}.photo-lightbox{position:fixed;inset:0;z-index:9999;background:rgba(16,14,10,.88);display:none;align-items:center;justify-content:center;padding:28px}.photo-lightbox.open{display:flex}.photo-lightbox-dialog{position:relative;width:min(1180px,96vw);max-height:94vh;display:grid;grid-template-rows:auto minmax(0,1fr);gap:12px}.photo-lightbox-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#fff8e7;font:700 13px Inter,sans-serif}.photo-lightbox-meta{padding:10px 12px;border-radius:8px;background:rgba(0,0,0,.58);overflow-wrap:anywhere}.photo-lightbox-close{border:0;border-radius:50%;width:42px;height:42px;background:#fff8e7;color:#11100b;font:900 22px Inter,sans-serif;cursor:pointer}.photo-lightbox img{max-width:100%;max-height:calc(94vh - 76px);object-fit:contain;justify-self:center;align-self:center;border-radius:4px;box-shadow:0 22px 60px rgba(0,0,0,.38)}';
+  style.textContent += '.photo{display:flex;flex-direction:column;background:#fffdf8}.photo img{height:auto;aspect-ratio:1/1;object-fit:cover;border-bottom:1px solid rgba(28,26,20,.28)}.photo-meta{position:static;display:block;min-height:74px;padding:9px 10px 10px;background:#fffdf8;color:#1c1a14;text-align:left;box-shadow:none;backdrop-filter:none;border-radius:0}.photo-meta-main{display:block;font:600 12px/1.45 Manrope,sans-serif;letter-spacing:0}.photo-meta-line{display:block}.photo-meta-local{font-weight:700}.photo-meta-date{font-weight:500;color:rgba(28,26,20,.68)}.photo-expand{left:10px;right:auto;top:10px;bottom:auto;width:36px;height:36px;border-radius:8px}.photo-expand svg{width:20px;height:20px}';
   document.head.appendChild(style);
 
   var clearFiltersBtn = document.createElement('button');
@@ -99,6 +102,7 @@
     if (!filterOptions) return [];
     if (name === 'Cadena') return unique(filterOptions.cadenas);
     if (name === 'Formato') return unique(filterOptions.formatos);
+    if (name === 'Región') return unique(filterOptions.regiones);
     if (name === 'Código Local') return unique(filterOptions.codigos_local);
     if (name === 'Nombre Local') return unique(filterOptions.nombres_local);
     if (name === 'Cliente') return unique(filterOptions.clientes);
@@ -182,6 +186,10 @@
 
   function formatPhotoDateTime(value) {
     if (!value) return '';
+    var direct = String(value).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+    if (direct && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(String(value))) {
+      return direct[3] + '-' + direct[2] + '-' + direct[1] + ' ' + direct[4] + ':' + direct[5];
+    }
     var date = new Date(value);
     if (Number.isNaN(date.getTime())) return formatPhotoDate(value);
     var parts = new Intl.DateTimeFormat('es-CL', {
@@ -239,8 +247,8 @@
       var id = String(photo.id_foto || photo.id);
       var rutaArchivo = photo.ruta_archivo || '';
       var formattedDate = formatPhotoDateTime(photo.creado_en) || formatPhotoDate(photo.fecha);
-      var metaItems = [photo.cadena, photo.codigo_local].filter(Boolean);
-      if (formattedDate) metaItems.push(formattedDate);
+      var formatAndCode = [photo.formato, photo.codigo_local].filter(Boolean).join(' · ');
+      var localName = photo.nombre_local || photo.codigo_local || 'Local sin nombre';
       photos.push(photo);
       var card = document.createElement('div');
       card.className = 'photo';
@@ -251,10 +259,9 @@
         '<img src="' + escapeHtml(photo.url) + '" alt="Fotografía ' + escapeHtml(id) + '" loading="lazy">' +
         '<div class="photo-meta">' +
           '<span class="photo-meta-main">' +
-            metaItems.map(function (item, index) {
-              var value = index === metaItems.length - 1 && formattedDate ? '<span class="photo-meta-date">' + escapeHtml(item) + '</span>' : escapeHtml(item);
-              return index ? '<span aria-hidden="true">·</span> ' + value : value;
-            }).join(' ') +
+            '<span class="photo-meta-line">' + escapeHtml(formatAndCode || photo.codigo_local || 'Sin formato') + '</span>' +
+            '<span class="photo-meta-line photo-meta-local">' + escapeHtml(localName) + '</span>' +
+            '<span class="photo-meta-line photo-meta-date">' + escapeHtml(formattedDate || 'Sin fecha') + '</span>' +
           '</span>' +
         '</div>' +
         '<button class="photo-expand" type="button" aria-label="Ampliar foto">' +
@@ -392,7 +399,7 @@
     lightboxMeta.textContent = [
       'ID foto: ' + id,
       'Ruta: ' + (photo.ruta_archivo || ''),
-      [photo.clientes, photo.cadena, photo.codigo_local, formatPhotoDateTime(photo.creado_en) || formatPhotoDate(photo.fecha)].filter(Boolean).join(' · ')
+      [photo.formato, photo.nombre_local || photo.codigo_local, formatPhotoDateTime(photo.creado_en) || formatPhotoDate(photo.fecha)].filter(Boolean).join(' · ')
     ].filter(Boolean).join(' | ');
     lightbox.classList.add('open');
   }

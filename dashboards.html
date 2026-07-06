@@ -44,11 +44,11 @@
   .wrap{ width:100%; max-width:1500px; margin:0 auto; padding:clamp(20px,3vh,34px) clamp(16px,3vw,40px) 60px; }
 
   /* Area tabs */
-  .tabs{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
-  .tab{ display:inline-flex; align-items:center; gap:9px; font-family:var(--font-display); font-weight:600; font-size:.95rem; color:var(--muted); background:var(--card); border:1.5px solid var(--line); border-radius:999px; padding:11px 20px; cursor:pointer; transition:all .18s; }
+  .tabs{ display:flex; flex-wrap:nowrap; gap:8px; margin-bottom:18px; }
+  .tab{ flex:1 1 0; justify-content:center; white-space:nowrap; display:inline-flex; align-items:center; gap:clamp(4px,.5vw,7px); font-family:var(--font-display); font-weight:600; font-size:clamp(.66rem,.85vw,.82rem); color:var(--muted); background:var(--card); border:1.5px solid var(--line); border-radius:999px; padding:9px clamp(4px,.7vw,12px); cursor:pointer; transition:all .18s; min-width:0; }
   .tab:hover{ border-color:var(--ink); color:var(--ink); }
   .tab.on{ background:var(--ink); color:#fff; border-color:var(--ink); }
-  .tab .t-ico{ width:18px; height:18px; }
+  .tab .t-ico{ width:16px; height:16px; flex:0 0 auto; }
   .tab .t-ico svg{ width:100%; height:100%; }
 
   /* Filter bar */
@@ -281,6 +281,7 @@
     <!-- Area tabs -->
     <div class="tabs" id="tabs">
       <button class="tab on" data-area="resumen" type="button"><span class="t-ico"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg></span> Resumen de Negocio</button>
+      <button class="tab" data-area="mapa" type="button"><span class="t-ico"><svg viewBox="0 0 24 24" fill="none"><path d="M12 21s7-6.4 7-11.5A7 7 0 0 0 5 9.5C5 14.6 12 21 12 21Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="9.5" r="2.4" stroke="currentColor" stroke-width="1.8"/></svg></span> Mapa</button>
       <button class="tab" data-area="comercial" type="button"><span class="t-ico"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5M4 19h16M8 16v-5M12 16V8M16 16v-3" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Comercial - Evolutivo</button>
       <button class="tab" data-area="comparativo" type="button"><span class="t-ico"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5M4 19h16M9 16V9M15 16v-4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Comercial - Comparativo</button>
       <button class="tab" data-area="abastecimiento" type="button"><span class="t-ico"><svg viewBox="0 0 24 24" fill="none"><path d="M3.5 7.5 12 3l8.5 4.5v9L12 21l-8.5-4.5v-9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m3.5 7.5 8.5 4.5 8.5-4.5M12 12v9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span> Abastecimiento</button>
@@ -345,23 +346,22 @@
 
   <script src="assets/js/api.js"></script>
   <script src="activity-log.js"></script>
+  <script src="assets/js/dashboard-demo-data.js"></script>
+  <script src="dashboards-mapa.js"></script>
   <script>
     if(!window.RetailAPI || !window.RetailAPI.requireAuth()) throw new Error('Sesion requerida');
 
-    // Estas dos banderas quedan en false hasta que existan fuentes reales:
-    // metas de venta (no hay tabla de objetivos en la BD) e indicadores
-    // operacionales OSA/Instock/DOH/Quiebres (indicadores_abastecimiento_diario
-    // esta creada pero vacia). Todo lo que dependa de ellas debe mostrar
-    // "Sin datos" en vez de calcular con datos vacios.
-    var HAS_METAS = false;
-    var HAS_OPS = false;
-
-    var D = { weeks: [], resumen: null, comercial: { aperturas: {} } };
+    // Modo demo para la publicación Netlify: sólo esta página usa datos ficticios.
+    // El resto del sitio conserva sus integraciones reales sin cambios.
+    var HAS_METAS = true;
+    var HAS_OPS = true;
+    var D = window.DASH_DEMO;
+    if(!D) throw new Error('No se pudieron cargar los datos demo del dashboard');
     function setDataBadge(ok){
       var el=document.getElementById('dataBadge'); if(!el) return;
       el.innerHTML = ok
-        ? '<span class="dot"></span> Datos reales'
-        : '<span class="dot"></span> Error cargando datos';
+        ? '<span class="dot"></span> Datos demostrativos'
+        : '<span class="dot"></span> Error cargando demo';
     }
 
     /* ---------- Scoping por cliente (usuarios internos deben elegir uno) ---------- */
@@ -393,12 +393,8 @@
         + '</div>';
       document.body.appendChild(ov);
       var select=ov.querySelector('#clienteGateSelect'), go=ov.querySelector('#clienteGateGo');
-      window.RetailAPI.requestJson('/web/clientes').then(function(data){
-        var clientes=data.clientes||[];
-        select.innerHTML='<option value="">Selecciona…</option>'+clientes.map(function(c){ return '<option value="'+c.id+'">'+c.nombre+'</option>'; }).join('');
-      }).catch(function(){
-        select.innerHTML='<option value="">No se pudo cargar la lista</option>';
-      });
+      var clientes=[{id:1,nombre:'Cliente demostrativo'}];
+      select.innerHTML='<option value="">Selecciona…</option>'+clientes.map(function(c){ return '<option value="'+c.id+'">'+c.nombre+'</option>'; }).join('');
       select.addEventListener('change', function(){ go.disabled=!select.value; go.style.opacity=select.value?'1':'.5'; });
       go.addEventListener('click', function(){
         if(!select.value) return;
@@ -581,10 +577,7 @@
     function comKpis(){ var vals=dimValues(); var tP=0,tC=0,tU=0,tMeta=0,lyP=0,lyC=0,lyU=0; vals.forEach(function(v){ var p=sumArr(v.pesos),c=sumArr(v.costo),u=sumArr(v.unidades); tP+=p;tC+=c;tU+=u;tMeta+=v.meta||0; lyP+=v.ly; lyC+=p&&c?v.ly*(c/p):0; lyU+=p&&u?v.ly/(p/u):0; }); var price=tU?tP/tU:0, lyPrice=lyU?lyP/lyU:0; function d(n,o){return o?(n/o-1)*100:0;} return { pesos:{v:tP,d:d(tP,lyP)}, costo:{v:tC,d:d(tC,lyC)}, unidades:{v:tU,d:d(tU,lyU)}, precio:{v:price,d:d(price,lyPrice)}, meta:{v:tMeta,avance:tMeta?tP/tMeta*100:0,d:d(tP,lyP)} }; }
 
     function loadComercial(apertura){
-      return window.RetailAPI.requestJson('/web/dashboard/comercial'+window.RetailAPI.buildQuery(withCliente({apertura:apertura}))).then(function(data){
-        D.weeks = data.weeks||[];
-        COM.aperturas[apertura] = { values: (data.values||[]).map(function(v){ return {label:v.label, pesos:v.pesos, costo:v.costo, unidades:v.unidades, ly:v.ly||0, meta:v.meta||0}; }) };
-      });
+      return Promise.resolve(COM.aperturas[apertura]);
     }
 
     var comPeriodLabel='01 jun – 25 jun 2026';
@@ -993,7 +986,7 @@
     }
 
     /* ---------- Resumen de Negocio ---------- */
-    var RES = null;
+    var RES = D.resumen;
     var resMetric = 'vp';
     var RES_MET = { vp:{label:'Venta pesos', fmtFull:clp, ly:'vpLy', meta:'mVp'}, vc:{label:'Venta costo', fmtFull:clp, ly:'vcLy', meta:'mVc'}, vu:{label:'Venta unidades', fmtFull:num, ly:'vuLy', meta:'mVu'} };
     function secTitle(txt, icon, bg, color, first){ return '<div class="sec-title'+(first?' first':'')+'"><span class="sec-ico" style="background:'+bg+';color:'+color+'">'+icon+'</span>'+txt+'</div>'; }
@@ -1016,19 +1009,8 @@
         mVp:0, mVc:0, mVu:0, osa:0, ins:0, doh:0, qb:0 };
     }
     function loadResumen(){
-      return window.RetailAPI.requestJson('/web/dashboard/resumen-comercial'+window.RetailAPI.buildQuery(withCliente())).then(function(data){
-        RES = {
-          locales: (data.locales||[]).map(mapLocalResumen),
-          monthLabels: (data.meses||[]).map(function(m){ return fmtMesLabel(m.mes); }),
-          mPesos: (data.meses||[]).map(function(m){ return m.pesos; }),
-          mUnidades: (data.meses||[]).map(function(m){ return m.unidades; }),
-          cadenaResumen: (data.cadenas||[]).map(function(c){ return {cadena:c.label, vp:c.venta_pesos, vu:c.venta_unidades}; })
-        };
-        setDataBadge(true);
-      }).catch(function(err){
-        host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--red)">No se pudieron cargar los datos de venta.</div>';
-        throw err;
-      });
+      setDataBadge(true);
+      return Promise.resolve(RES);
     }
     function panelResumen(){
       if(!RES){
@@ -1487,30 +1469,23 @@
       }); });
     }
 
-    function panelProximamente(title){
-      return function(){
-        host.innerHTML='<div class="panel-card full" style="text-align:center;padding:70px 24px;">'
-          + '<div class="pc-title" style="margin-bottom:10px">'+title+'</div>'
-          + '<p style="color:var(--muted);max-width:52ch;margin:0 auto">Esta sección todavía no tiene una fuente de datos real conectada. Próximamente.</p>'
-          + '</div>';
-      };
-    }
     var RENDER = {
       resumen:panelResumen,
+      mapa:function(){ if(window.__renderMapa){ window.__renderMapa(host); } },
       comercial:panelComercial,
-      comparativo:panelProximamente('Comercial - Comparativo'),
-      abastecimiento:panelProximamente('Abastecimiento'),
-      forecast:panelProximamente('Forecast & Venta Perdida'),
-      personalizado:panelProximamente('Personalizado')
+      comparativo:panelComparativo,
+      abastecimiento:panelAbastecimiento,
+      forecast:panelForecast,
+      personalizado:panelPersonalizado
     };
-    var AREA_LOG={resumen:'Resumen de Negocio',comercial:'Comercial · Evolutivo',comparativo:'Comercial · Comparativo',abastecimiento:'Abastecimiento',forecast:'Forecast & Venta Perdida',personalizado:'Personalizado'};
+    var AREA_LOG={resumen:'Resumen de Negocio',mapa:'Mapa',comercial:'Comercial · Evolutivo',comparativo:'Comercial · Comparativo',abastecimiento:'Abastecimiento',forecast:'Forecast & Venta Perdida',personalizado:'Personalizado'};
     var _lastLoggedArea=null;
     function showArea(area){
       if(window.logEvent && area!==_lastLoggedArea){ _lastLoggedArea=area; try{ logEvent('Dashboards', AREA_LOG[area]||area); }catch(e){} }
       // Período editable en todas las áreas EXCEPTO Resumen de Negocio (bloqueado)
       // Comercial-Evolutivo y Comparativo traen su propio período en el panel; ocultar solo el chip de período
       var ownPeriod = (area==='comercial' || area==='comparativo' || area==='personalizado');
-      var fb=document.querySelector('.filterbar'); if(fb) fb.style.display='flex';
+      var fb=document.querySelector('.filterbar'); if(fb) fb.style.display=(area==='mapa')?'none':'flex';
       var pc=document.querySelector('.period-chip'); if(pc) pc.style.display=ownPeriod?'none':'flex';
       var pd=document.querySelector('.fb-divider'); if(pd) pd.style.display=ownPeriod?'none':'block';
       var locked = (area==='resumen');
@@ -1578,7 +1553,7 @@
     document.addEventListener('click', function(){ document.querySelectorAll('.ms2-pop.open').forEach(function(p){p.classList.remove('open');}); });
 
     /* ---- Favoritos (consultas guardadas por usuario y dashboard) ---- */
-    var AREA_LABEL={resumen:'Resumen de Negocio',comercial:'Comercial · Evolutivo',comparativo:'Comercial · Comparativo',abastecimiento:'Abastecimiento',forecast:'Forecast & Venta Perdida',personalizado:'Personalizado'};
+    var AREA_LABEL={resumen:'Resumen de Negocio',mapa:'Mapa',comercial:'Comercial · Evolutivo',comparativo:'Comercial · Comparativo',abastecimiento:'Abastecimiento',forecast:'Forecast & Venta Perdida',personalizado:'Personalizado'};
     function favUser(){ try{ return localStorage.getItem('re_current_user')||'invitado'; }catch(e){ return 'invitado'; } }
     function favStore(){ try{ return JSON.parse(localStorage.getItem('re_dash_favs')||'{}'); }catch(e){ return {}; } }
     function favSaveStore(s){ try{ localStorage.setItem('re_dash_favs', JSON.stringify(s)); }catch(e){} }
@@ -1669,14 +1644,13 @@
     }
 
     function startDashboard(){
+      setDataBadge(true);
       requestAnimationFrame(function(){ buildMultiFilters(); showArea('resumen'); renderFavs(); });
     }
-    if(IS_INTERNAL && !CLIENTE_ID){
-      showClientGate(startDashboard);
-    } else {
-      if(IS_INTERNAL) renderClienteBadge(sessionStorage.getItem(CLIENTE_KEY+'_nombre'));
-      startDashboard();
-    }
+    startDashboard();
   </script>
+  <!-- Pop-up "módulo no contratado": desactivado vía POPUP_PAGO_ACTIVO=false
+       dentro del script. Se activará cuando el backend envíe dashboards_contratado. -->
+  <script src="assets/js/modulo-no-contratado.js"></script>
 </body>
 </html>
