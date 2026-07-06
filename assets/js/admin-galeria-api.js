@@ -354,7 +354,8 @@
       }
     });
     dd.addEventListener('click', function (event) { event.stopPropagation(); });
-    dd.addEventListener('change', function () {
+    dd.addEventListener('change', function (event) {
+      if (event.target && event.target.matches && event.target.matches('input[type="checkbox"]')) event.target.removeAttribute('data-auto');
       var count = dd.querySelectorAll('input[type="checkbox"]:checked').length;
       btn.classList.toggle('has-selection', count > 0);
       updateClearFiltersButton();
@@ -362,10 +363,21 @@
     var search = dd.querySelector('.dd-search');
     if (search) {
       search.addEventListener('input', function () {
-        var q = search.value.toLowerCase();
+        var q = search.value.toLowerCase().trim();
         dd.querySelectorAll('.dd-item').forEach(function (item) {
-          item.style.display = item.textContent.toLowerCase().indexOf(q) === -1 ? 'none' : 'flex';
+          var match = item.textContent.toLowerCase().indexOf(q) !== -1;
+          item.style.display = match ? 'flex' : 'none';
+          var cb = item.querySelector('input[type="checkbox"]');
+          if (!cb) return;
+          if (q && match && !cb.checked) {
+            cb.checked = true;
+            cb.setAttribute('data-auto', '1');
+          } else if (cb.getAttribute('data-auto') === '1' && (!q || !match)) {
+            cb.checked = false;
+            cb.removeAttribute('data-auto');
+          }
         });
+        dd.dispatchEvent(new Event('change'));
       });
     }
     var clear = dd.querySelector('.dd-clear');

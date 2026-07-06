@@ -337,6 +337,31 @@
       kpi(fmtInt(a.down), 'Locales con Decrecimiento', 'neg') +
       '</div>';
   }
+  function galCam(ap, val, nav) {
+    return '<span class="drill-cue mapa-galcue" title="Opciones" data-gal-ap="' + ap + '" data-gal-val="' + String(val).replace(/"/g, '&quot;') + '"' + (nav ? ' data-nav="' + nav + '"' : '') + '><svg viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+  }
+  document.addEventListener('click', function (e) {
+    var c = e.target.closest && e.target.closest('.mapa-galcue');
+    if (!c) return;
+    e.preventDefault(); e.stopPropagation();
+    if (!window.__openDrillMenu) return;
+    var nav = c.getAttribute('data-nav');
+    var opts = [];
+    if (nav === 'chain') opts = [['local', 'Local']];
+    else if (nav === 'loc') opts = [['producto', 'Producto']];
+    var det = document.getElementById('mapaDetail');
+    window.__openDrillMenu(c, {
+      options: opts,
+      gallery: { ap: c.getAttribute('data-gal-ap'), val: c.getAttribute('data-gal-val') },
+      onPick: function () {
+        var row = c.closest('[data-chain],[data-loc]');
+        if (row && row.getAttribute('data-chain') != null) { drill = row.getAttribute('data-chain'); drillLoc = null; }
+        else if (row && row.getAttribute('data-loc') != null) { drillLoc = parseInt(row.getAttribute('data-loc'), 10); }
+        renderDetail(); if (det) det.scrollTop = 0;
+      }
+    });
+  }, true);
+
   function chainTable(chains, clickable) {
     var head = '<div class="mapa-chead">' +
       '<span></span><span>Cadena</span>' +
@@ -346,7 +371,7 @@
       var a = c.agg[mode];
       return '<div class="mapa-crow' + (clickable ? ' click' : '') + '"' + (clickable ? ' data-chain="' + c.k + '"' : '') + '>' +
         '<span class="mapa-cdot" style="background:' + c.dot + '"></span>' +
-        '<span class="mapa-cname">' + c.k + (clickable ? '<svg class="mapa-chev" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '') + '</span>' +
+        '<span class="mapa-cname">' + c.k + (clickable ? galCam('cadena', c.k, 'chain') : galCam('cadena', c.k)) + '</span>' +
         '<span class="mapa-cnum">' + fmtInt(a.total) + '</span>' +
         '<span class="mapa-cperf ' + cls(a.crec) + '">' + fmtPct(a.crec) + '</span>' +
         '<span class="mapa-cup">' + fmtInt(a.up) + '</span>' +
@@ -374,11 +399,11 @@
       head = '<div class="mapa-dhead">' +
         '<div class="mapa-pinrow"><span class="mapa-roman">' + r.roman + '</span><span class="mapa-pinbadge">● Fijado</span>' +
         '<button type="button" class="mapa-unpin" data-act="unpin">✕ Quitar</button></div>' +
-        '<div class="mapa-dname">' + r.name + '</div>' +
+        '<div class="mapa-dname">' + r.name + galCam('region', r.name) + '</div>' +
         '<div class="mapa-dsub">Haz clic en una cadena para ver sus locales</div></div>';
     } else {
       head = '<div class="mapa-dhead"><span class="mapa-roman">' + r.roman + '</span>' +
-        '<div class="mapa-dname">' + r.name + '</div>' +
+        '<div class="mapa-dname">' + r.name + galCam('region', r.name) + '</div>' +
         '<div class="mapa-dhint">Haz clic para fijar y explorar por cadena</div></div>';
     }
     return head + kpiGrid(r.agg[mode]) +
@@ -395,7 +420,7 @@
       var l = o.l;
       return '<div class="mapa-lrow click" data-loc="' + o.i + '">' +
         '<span class="mapa-lcode">' + l.cod + '</span>' +
-        '<span class="mapa-lname">' + l.nombre + '<svg class="mapa-chev" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>' +
+        '<span class="mapa-lname">' + l.nombre + galCam('codlocal', l.cod, 'loc') + '</span>' +
         '<span class="mapa-lperf ' + cls(l.cr[mode]) + '">' + fmtPct(l.cr[mode]) + '</span>' +
         '</div>';
     }).join('');

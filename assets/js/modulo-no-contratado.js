@@ -15,7 +15,7 @@
   // INTERRUPTOR GENERAL: mientras el backend no envíe `dashboards_contratado`
   // en el login, el pop-up queda desactivado para todos. Para activarlo,
   // cambiar a true (y el backend decide por cliente con ese campo).
-  var POPUP_PAGO_ACTIVO = false;
+  var POPUP_PAGO_ACTIVO = true;
   if (!POPUP_PAGO_ACTIVO) return;
 
   // ¿El cliente tiene contratado este módulo? -> no mostrar nada.

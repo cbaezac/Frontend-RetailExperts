@@ -104,7 +104,7 @@
     background: var(--card);
     border: 1.5px solid var(--line);
     border-radius: 18px;
-    padding: clamp(22px, 3vw, 38px) 18px;
+    padding: clamp(17px, 2.4vw, 30px) 18px;
     text-align: center;
     line-height: 1.15;
     box-shadow: 0 8px 22px rgba(44,18,64,0.05);
@@ -262,16 +262,16 @@
   .btn-apply {
     display: inline-flex;
     align-items: center;
-    gap: 11px;
+    gap: 9px;
     font-family: 'Bricolage Grotesque', sans-serif;
     font-weight: 700;
-    font-size: 1.06rem;
+    font-size: 0.95rem;
     cursor: pointer;
     color: #fff;
     background: var(--accent-strong);
     border: none;
     border-radius: 999px;
-    padding: 16px 40px;
+    padding: 12px 28px;
     box-shadow: 0 14px 32px rgba(109,31,168,0.28);
     transition: transform .2s ease, gap .2s ease, box-shadow .2s ease;
   }
@@ -289,16 +289,16 @@
   .btn-secondary {
     display: inline-flex;
     align-items: center;
-    gap: 9px;
+    gap: 8px;
     font-family: 'Bricolage Grotesque', sans-serif;
     font-weight: 700;
-    font-size: 1rem;
+    font-size: 0.9rem;
     cursor: pointer;
     color: var(--muted);
     background: rgba(44,18,64,0.08);
     border: none;
     border-radius: 999px;
-    padding: 15px 28px;
+    padding: 11px 22px;
     transition: background .2s ease, color .2s ease, transform .2s ease;
   }
   .btn-secondary:hover { background: rgba(44,18,64,0.14); color: var(--ink); transform: translateY(-1px); }
@@ -414,7 +414,7 @@
       <button class="cat" type="button" aria-pressed="true">Góndola</button>
       <button class="cat" type="button" aria-pressed="false">Cartelería</button>
       <button class="cat" type="button" aria-pressed="false">Exhibiciones</button>
-      <button class="cat" type="button" aria-pressed="false">Exhibiciones Adicionales</button>
+      <button class="cat" type="button" aria-pressed="false">Espacios Adicionales</button>
     </div>
 
     <!-- Small filter buttons (dropdowns built by JS) -->
@@ -464,6 +464,7 @@
       'Fecha':        { type: 'daterange' },
       'Cadena':       ['Cencosud', 'Tottus', 'SMU', 'Walmart'],
       'Formato':      ['Jumbo', 'Hiper Lider', 'Lider Express', 'Santa Isabel', 'Tottus', 'Unimarc'],
+      'Región':       ['Metropolitana', 'Valparaíso', 'Biobío', 'Maule', 'Antofagasta'],
       'Código Local': ['L-001', 'L-002', 'L-003', 'L-004', 'L-005'],
       'Nombre Local': ['Jumbo Costanera', 'Jumbo Kennedy', 'Jumbo La Florida', 'Hiper Lider Buenaventura', 'Hiper Lider Puente Nuevo'],
       'Categoría':    ['Aceites', 'Limpieza', 'Mundo Bebe', 'Mundo Bio', 'Preservativos'],
@@ -473,10 +474,10 @@
 
     // Subfiltros disponibles según el tipo de levantamiento
     var CATEGORY_FILTERS = {
-      'Góndola':                  ['Fecha', 'Cadena', 'Formato', 'Código Local', 'Nombre Local', 'Categoría'],
-      'Cartelería':               ['Fecha', 'Cadena', 'Formato', 'Código Local', 'Nombre Local', 'Nombre Ciclo'],
-      'Exhibiciones':             ['Fecha', 'Cadena', 'Formato', 'Código Local', 'Nombre Local', 'Mueble'],
-      'Exhibiciones Adicionales': ['Fecha', 'Cadena', 'Formato', 'Código Local', 'Nombre Local', 'Mueble']
+      'Góndola':              ['Fecha', 'Cadena', 'Formato', 'Región', 'Código Local', 'Nombre Local', 'Categoría'],
+      'Cartelería':           ['Fecha', 'Cadena', 'Formato', 'Región', 'Código Local', 'Nombre Local', 'Nombre Ciclo'],
+      'Exhibiciones':         ['Fecha', 'Cadena', 'Formato', 'Región', 'Código Local', 'Nombre Local', 'Mueble'],
+      'Espacios Adicionales': ['Fecha', 'Cadena', 'Formato', 'Región', 'Código Local', 'Nombre Local', 'Mueble']
     };
 
     var filtersEl = document.getElementById('filters');
@@ -587,7 +588,18 @@
           var match = it.textContent.toLowerCase().indexOf(q) !== -1;
           it.style.display = match ? 'flex' : 'none';
           if (match) any = true;
+          var cb = it.querySelector('input[type="checkbox"]');
+          if (cb) {
+            if (q && match && !cb.checked) {
+              cb.checked = true;
+              cb.setAttribute('data-auto', '1');
+            } else if (cb.getAttribute('data-auto') === '1' && (!q || !match)) {
+              cb.checked = false;
+              cb.removeAttribute('data-auto');
+            }
+          }
         });
+        dd.dispatchEvent(new Event('change'));
         var empty = dd.querySelector('.dd-empty');
         if (!any && !empty) {
           empty = document.createElement('div');

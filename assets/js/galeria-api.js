@@ -1,11 +1,52 @@
 (function () {
   if (!window.RetailAPI || !window.RetailAPI.requireAuth()) return;
 
+  // ---- MODO VISTA PREVIA (solo entorno de diseño, no afecta prod/Netlify) ----
+  var IS_PREVIEW = /claudeusercontent\.com$/.test(window.location.hostname);
+  var PREVIEW_FILTERS = {
+    cadenas: ['Walmart', 'Cencosud', 'Tottus', 'SMU'],
+    formatos: ['Hipermercado', 'Supermercado', 'Express'],
+    codigos_local: ['L-1042', 'L-2088', 'L-3117'],
+    regiones: ['Metropolitana', 'Valparaíso', 'Biobío'],
+    nombres_local: ['Lider Maipú', 'Jumbo Kennedy', 'Tottus Puente Alto'],
+    clientes: ['Cliente Demo A', 'Cliente Demo B'],
+    rutas: ['Ruta Norte', 'Ruta Centro', 'Ruta Sur'],
+    categorias: ['Juguetes', 'Bebidas', 'Abarrotes']
+  };
+  function previewPhotoUrl(i) {
+    var tones = [['#EFE3C4', '#E7D8B2'], ['#EAD9C0', '#E0CBA9'], ['#E6E0C8', '#DBD2B0']];
+    var t = tones[i % tones.length];
+    var svg = "<svg xmlns='http://www.w3.org/2000/svg' width='400' height='520'>" +
+      "<defs><pattern id='s' width='14' height='14' patternTransform='rotate(45)' patternUnits='userSpaceOnUse'>" +
+      "<rect width='14' height='14' fill='" + t[0] + "'/><rect width='7' height='14' fill='" + t[1] + "'/></pattern></defs>" +
+      "<rect width='100%' height='100%' fill='url(%23s)'/>" +
+      "<text x='50%' y='50%' text-anchor='middle' font-family='monospace' font-size='22' fill='#6B6557'>foto " + (i + 1) + "</text>" +
+      "</svg>";
+    return 'data:image/svg+xml,' + svg.replace(/#/g, '%23');
+  }
+  function previewPhotos() {
+    var list = [];
+    for (var i = 0; i < 12; i++) {
+      list.push({
+        id_foto: 'demo-' + (i + 1),
+        url: previewPhotoUrl(i),
+        ruta_archivo: 'demo/foto-' + (i + 1) + '.jpg',
+        cadena: PREVIEW_FILTERS.cadenas[i % 4],
+        formato: PREVIEW_FILTERS.formatos[i % 3],
+        codigo_local: PREVIEW_FILTERS.codigos_local[i % 3],
+        nombre_local: PREVIEW_FILTERS.nombres_local[i % 3],
+        creado_en: '2026-06-' + String(10 + i) + 'T' + ('0' + (9 + (i % 8))).slice(-2) + ':' + ('0' + ((i * 7) % 60)).slice(-2) + ':00',
+        fecha: '2026-06-' + String(10 + i)
+      });
+    }
+    return list;
+  }
+  // ---------------------------------------------------------------------------
+
   var TYPE_BY_LABEL = {
     'Góndola': 'gondola',
     'Cartelería': 'carteleria',
     'Exhibiciones': 'exhibicion',
-    'Exhibiciones Adicionales': 'exhibicion_adicional',
     'Espacios Adicionales': 'exhibicion_adicional'
   };
   var PARAM_BY_FILTER = {
@@ -49,8 +90,7 @@
   dlLabel = document.getElementById('dlLabel');
 
   var style = document.createElement('style');
-  style.textContent = '.photo img{width:100%;height:100%;object-fit:cover;display:block}.photo-meta{position:absolute;left:12px;right:72px;bottom:12px;min-height:48px;display:flex;align-items:center;padding:10px 13px;border-radius:9px;background:linear-gradient(90deg,rgba(0,0,0,.82),rgba(0,0,0,.66));color:#fff;text-align:left;box-shadow:0 8px 18px rgba(0,0,0,.24);backdrop-filter:blur(2px)}.photo-meta-main{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font:900 13px/1.2 Inter,sans-serif;letter-spacing:.01em}.photo-meta-date{font-weight:800;color:#fff1c8}.photo-expand{position:absolute;right:12px;bottom:12px;z-index:3;width:50px;height:50px;border-radius:14px;border:0;background:rgba(26,25,22,.9);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 22px rgba(0,0,0,.3);transition:transform .18s ease,background .18s ease}.photo-expand:hover{background:#33312b;transform:translateY(-1px)}.photo-expand svg{width:27px;height:27px}.gallery-empty{grid-column:1/-1;padding:48px 18px;text-align:center;color:rgba(28,26,20,.58);font-weight:700}.gallery-loading{grid-column:1/-1;padding:48px 18px;text-align:center;color:rgba(28,26,20,.62);font-weight:700}.gallery-pager{display:flex;align-items:center;justify-content:center;gap:16px;margin:34px 0 6px;flex-wrap:wrap}.gallery-pager-info{font:700 14px Inter,sans-serif;color:rgba(28,26,20,.64)}.gallery-load-more{border:0;border-radius:999px;background:#11100b;color:#fff8e7;font:800 15px Inter,sans-serif;padding:14px 28px;cursor:pointer;box-shadow:0 14px 30px rgba(28,26,20,.18)}.gallery-load-more:hover{transform:translateY(-1px)}.gallery-load-more:disabled{opacity:.45;cursor:not-allowed;transform:none}.btn-clear-filters{border:0;border-radius:999px;padding:13px 22px;font:800 14px Inter,sans-serif;background:rgba(28,26,20,.08);color:rgba(28,26,20,.54);cursor:pointer}.btn-clear-filters.active{background:#e0561c;color:#fff8e7;box-shadow:0 12px 26px rgba(224,86,28,.26)}.photo-lightbox{position:fixed;inset:0;z-index:9999;background:rgba(16,14,10,.88);display:none;align-items:center;justify-content:center;padding:28px}.photo-lightbox.open{display:flex}.photo-lightbox-dialog{position:relative;width:min(1180px,96vw);max-height:94vh;display:grid;grid-template-rows:auto minmax(0,1fr);gap:12px}.photo-lightbox-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#fff8e7;font:700 13px Inter,sans-serif}.photo-lightbox-meta{padding:10px 12px;border-radius:8px;background:rgba(0,0,0,.58);overflow-wrap:anywhere}.photo-lightbox-close{border:0;border-radius:50%;width:42px;height:42px;background:#fff8e7;color:#11100b;font:900 22px Inter,sans-serif;cursor:pointer}.photo-lightbox img{max-width:100%;max-height:calc(94vh - 76px);object-fit:contain;justify-self:center;align-self:center;border-radius:4px;box-shadow:0 22px 60px rgba(0,0,0,.38)}';
-  style.textContent += '.photo{display:flex;flex-direction:column;background:#fffdf8}.photo img{height:auto;aspect-ratio:1/1;object-fit:cover;border-bottom:1px solid rgba(28,26,20,.28)}.photo-meta{position:static;display:block;min-height:74px;padding:9px 10px 10px;background:#fffdf8;color:#1c1a14;text-align:left;box-shadow:none;backdrop-filter:none;border-radius:0}.photo-meta-main{display:block;font:600 12px/1.45 Manrope,sans-serif;letter-spacing:0}.photo-meta-line{display:block}.photo-meta-local{font-weight:700}.photo-meta-date{font-weight:500;color:rgba(28,26,20,.68)}.photo-expand{left:10px;right:auto;top:10px;bottom:auto;width:36px;height:36px;border-radius:8px}.photo-expand svg{width:20px;height:20px}';
+  style.textContent = '.photo img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}.photo-meta{display:flex;padding:8px 10px;background:#FFFDF6;border-top:1.5px solid rgba(28,26,20,.14);text-align:left}.photo-meta-main{display:flex;flex-direction:column;gap:2px;font:700 12px/1.4 Manrope,sans-serif;color:#1C1A14;letter-spacing:.01em;min-width:0;width:100%}.photo-meta-main span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}.photo-meta-date{font-weight:600;color:#6B6557}.photo-expand{position:absolute;left:10px;top:10px;z-index:3;width:36px;height:36px;border-radius:10px;border:0;background:rgba(26,25,22,.85);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 18px rgba(0,0,0,.25);transition:transform .18s ease,background .18s ease}.photo-expand:hover{background:#33312b;transform:translateY(-1px)}.photo-expand svg{width:19px;height:19px}.gallery-empty{grid-column:1/-1;padding:48px 18px;text-align:center;color:rgba(28,26,20,.58);font-weight:700}.gallery-loading{grid-column:1/-1;padding:48px 18px;text-align:center;color:rgba(28,26,20,.62);font-weight:700}.gallery-pager{display:flex;align-items:center;justify-content:center;gap:16px;margin:34px 0 6px;flex-wrap:wrap}.gallery-pager-info{font:700 14px Inter,sans-serif;color:rgba(28,26,20,.64)}.gallery-load-more{border:0;border-radius:999px;background:#11100b;color:#fff8e7;font:800 15px Inter,sans-serif;padding:14px 28px;cursor:pointer;box-shadow:0 14px 30px rgba(28,26,20,.18)}.gallery-load-more:hover{transform:translateY(-1px)}.gallery-load-more:disabled{opacity:.45;cursor:not-allowed;transform:none}.btn-clear-filters{border:0;border-radius:999px;padding:13px 22px;font:800 14px Inter,sans-serif;background:rgba(28,26,20,.08);color:rgba(28,26,20,.54);cursor:pointer}.btn-clear-filters.active{background:#e0561c;color:#fff8e7;box-shadow:0 12px 26px rgba(224,86,28,.26)}.photo-lightbox{position:fixed;inset:0;z-index:9999;background:rgba(16,14,10,.88);display:none;align-items:center;justify-content:center;padding:28px}.photo-lightbox.open{display:flex}.photo-lightbox-dialog{position:relative;width:min(1180px,96vw);max-height:94vh;display:grid;grid-template-rows:auto minmax(0,1fr);gap:12px}.photo-lightbox-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#fff8e7;font:700 13px Inter,sans-serif}.photo-lightbox-meta{padding:10px 12px;border-radius:8px;background:rgba(0,0,0,.58);overflow-wrap:anywhere}.photo-lightbox-close{border:0;border-radius:50%;width:42px;height:42px;background:#fff8e7;color:#11100b;font:900 22px Inter,sans-serif;cursor:pointer}.photo-lightbox img{max-width:100%;max-height:calc(94vh - 76px);object-fit:contain;justify-self:center;align-self:center;border-radius:4px;box-shadow:0 22px 60px rgba(0,0,0,.38)}';
   document.head.appendChild(style);
 
   var clearFiltersBtn = document.createElement('button');
@@ -186,10 +226,6 @@
 
   function formatPhotoDateTime(value) {
     if (!value) return '';
-    var direct = String(value).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
-    if (direct && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(String(value))) {
-      return direct[3] + '-' + direct[2] + '-' + direct[1] + ' ' + direct[4] + ':' + direct[5];
-    }
     var date = new Date(value);
     if (Number.isNaN(date.getTime())) return formatPhotoDate(value);
     var parts = new Intl.DateTimeFormat('es-CL', {
@@ -204,7 +240,7 @@
       acc[part.type] = part.value;
       return acc;
     }, {});
-    return parts.day + '-' + parts.month + '-' + parts.year + ' ' + parts.hour + ':' + parts.minute;
+    return parts.day + '-' + parts.month + '-' + parts.year + ' - ' + parts.hour + ':' + parts.minute;
   }
 
   function fileSafeSegment(value, fallback) {
@@ -247,8 +283,8 @@
       var id = String(photo.id_foto || photo.id);
       var rutaArchivo = photo.ruta_archivo || '';
       var formattedDate = formatPhotoDateTime(photo.creado_en) || formatPhotoDate(photo.fecha);
-      var formatAndCode = [photo.formato, photo.codigo_local].filter(Boolean).join(' · ');
-      var localName = photo.nombre_local || photo.codigo_local || 'Local sin nombre';
+      var metaLine1 = [photo.formato, photo.codigo_local].filter(Boolean).join(' · ');
+      var metaLine2 = photo.nombre_local || '';
       photos.push(photo);
       var card = document.createElement('div');
       card.className = 'photo';
@@ -259,9 +295,9 @@
         '<img src="' + escapeHtml(photo.url) + '" alt="Fotografía ' + escapeHtml(id) + '" loading="lazy">' +
         '<div class="photo-meta">' +
           '<span class="photo-meta-main">' +
-            '<span class="photo-meta-line">' + escapeHtml(formatAndCode || photo.codigo_local || 'Sin formato') + '</span>' +
-            '<span class="photo-meta-line photo-meta-local">' + escapeHtml(localName) + '</span>' +
-            '<span class="photo-meta-line photo-meta-date">' + escapeHtml(formattedDate || 'Sin fecha') + '</span>' +
+            (metaLine1 ? '<span>' + escapeHtml(metaLine1) + '</span>' : '') +
+            (metaLine2 ? '<span>' + escapeHtml(metaLine2) + '</span>' : '') +
+            (formattedDate ? '<span class="photo-meta-date">' + escapeHtml(formattedDate) + '</span>' : '') +
           '</span>' +
         '</div>' +
         '<button class="photo-expand" type="button" aria-label="Ampliar foto">' +
@@ -299,7 +335,14 @@
         totalPhotos = Number(payload.total || 0);
         renderPhotos(payload.fotos || payload.data || [], !!options.append);
       })
-      .catch(function () { gallery.innerHTML = '<div class="gallery-empty">No se pudieron cargar las fotografías.</div>'; })
+      .catch(function () {
+        if (IS_PREVIEW) {
+          totalPhotos = 12;
+          renderPhotos(previewPhotos(), !!options.append);
+        } else {
+          gallery.innerHTML = '<div class="gallery-empty">No se pudieron cargar las fotografías.</div>';
+        }
+      })
       .finally(function () {
         isLoading = false;
         updatePager();
@@ -346,7 +389,8 @@
       }
     });
     dd.addEventListener('click', function (event) { event.stopPropagation(); });
-    dd.addEventListener('change', function () {
+    dd.addEventListener('change', function (event) {
+      if (event.target && event.target.matches && event.target.matches('input[type="checkbox"]')) event.target.removeAttribute('data-auto');
       var count = dd.querySelectorAll('input[type="checkbox"]:checked').length;
       btn.classList.toggle('has-selection', count > 0);
       updateClearFiltersButton();
@@ -354,10 +398,21 @@
     var search = dd.querySelector('.dd-search');
     if (search) {
       search.addEventListener('input', function () {
-        var q = search.value.toLowerCase();
+        var q = search.value.toLowerCase().trim();
         dd.querySelectorAll('.dd-item').forEach(function (item) {
-          item.style.display = item.textContent.toLowerCase().indexOf(q) === -1 ? 'none' : 'flex';
+          var match = item.textContent.toLowerCase().indexOf(q) !== -1;
+          item.style.display = match ? 'flex' : 'none';
+          var cb = item.querySelector('input[type="checkbox"]');
+          if (!cb) return;
+          if (q && match && !cb.checked) {
+            cb.checked = true;
+            cb.setAttribute('data-auto', '1');
+          } else if (cb.getAttribute('data-auto') === '1' && (!q || !match)) {
+            cb.checked = false;
+            cb.removeAttribute('data-auto');
+          }
         });
+        dd.dispatchEvent(new Event('change'));
       });
     }
     var clear = dd.querySelector('.dd-clear');
@@ -385,10 +440,56 @@
   function renderFilters() {
     filtersEl.querySelectorAll('.filter-wrap').forEach(function (wrap) { wrap.remove(); });
     var names = (window.CATEGORY_FILTERS && window.CATEGORY_FILTERS[currentLabel()]) ||
-      ['Fecha', 'Cadena', 'Formato', 'Código Local', 'Nombre Local', 'Categoría'];
+      ['Fecha', 'Cadena', 'Formato', 'Región', 'Código Local', 'Nombre Local', 'Categoría'];
     if (isPrivilegedUser()) names = names.concat(['Cliente', 'Ruta']);
     names.forEach(buildFilter);
+    applyUrlFilters();
     updateClearFiltersButton();
+  }
+
+  /* Preselección de filtros vía URL (enlace desde Dashboards) */
+  var URL_FILTER_BY_PARAM = {
+    cadena: 'Cadena',
+    formato: 'Formato',
+    region: 'Región',
+    codigo_local: 'Código Local',
+    nombre_local: 'Nombre Local'
+  };
+  function applyUrlFilters() {
+    var qs;
+    try { qs = new URLSearchParams(window.location.search); } catch (_) { return; }
+    var noEncontrados = [];
+    Object.keys(URL_FILTER_BY_PARAM).forEach(function (param) {
+      var raw = qs.get(param);
+      if (!raw) return;
+      var wanted = raw.split('||').map(function (v) { return v.trim().toLowerCase(); }).filter(Boolean);
+      if (!wanted.length) return;
+      var wrap = filtersEl.querySelector('[data-filter="' + URL_FILTER_BY_PARAM[param] + '"]');
+      if (!wrap) return;
+      var hit = 0;
+      wrap.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+        var v = String(cb.value).toLowerCase();
+        var match = wanted.some(function (w) { return v === w || v.indexOf(w) !== -1 || w.indexOf(v) !== -1; });
+        if (match && !cb.checked) { cb.checked = true; hit++; }
+      });
+      if (hit) {
+        var dd = wrap.querySelector('.dropdown') || wrap;
+        dd.dispatchEvent(new Event('change'));
+      } else {
+        noEncontrados.push(URL_FILTER_BY_PARAM[param] + ' \u00b7 ' + raw.split('||').join(', '));
+      }
+    });
+    var prev = document.getElementById('galUrlWarn');
+    if (prev) prev.remove();
+    if (noEncontrados.length) {
+      var warn = document.createElement('div');
+      warn.id = 'galUrlWarn';
+      warn.style.cssText = 'margin:0 0 18px;padding:12px 16px;border:1.5px dashed rgba(194,58,43,.5);border-radius:12px;background:rgba(194,58,43,.07);color:#8f2f24;font:600 .9rem Manrope,sans-serif;text-align:center;';
+      warn.textContent = 'Ojo: estos filtros del enlace no existen en la galer\u00eda y no se aplicaron \u2192 ' + noEncontrados.join(' \u2014 ');
+      var toolbar = document.querySelector('.toolbar');
+      var ref = toolbar || gallery;
+      ref.parentNode.insertBefore(warn, ref);
+    }
   }
 
   function openLightbox(photo) {
@@ -399,7 +500,7 @@
     lightboxMeta.textContent = [
       'ID foto: ' + id,
       'Ruta: ' + (photo.ruta_archivo || ''),
-      [photo.formato, photo.nombre_local || photo.codigo_local, formatPhotoDateTime(photo.creado_en) || formatPhotoDate(photo.fecha)].filter(Boolean).join(' · ')
+      [photo.clientes, photo.cadena, photo.codigo_local, formatPhotoDateTime(photo.creado_en) || formatPhotoDate(photo.fecha)].filter(Boolean).join(' · ')
     ].filter(Boolean).join(' | ');
     lightbox.classList.add('open');
   }
@@ -613,6 +714,12 @@
       return loadPhotos();
     })
     .catch(function () {
-      gallery.innerHTML = '<div class="gallery-empty">No se pudieron cargar los filtros.</div>';
+      if (IS_PREVIEW) {
+        filterOptions = PREVIEW_FILTERS;
+        renderFilters();
+        loadPhotos();
+      } else {
+        gallery.innerHTML = '<div class="gallery-empty">No se pudieron cargar los filtros.</div>';
+      }
     });
 })();

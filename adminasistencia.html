@@ -341,14 +341,6 @@
   <script src="assets/js/api.js"></script>
   <script src="assets/js/admin-guard.js"></script>
   <script src="asistencia-data.js"></script>
-  <style>
-    /* Ajustes manuales desactivados hasta conectarlos al backend con su
-       auditoría propia. Para reactivar: borrar este bloque. */
-    #histBtn { display: none !important; }
-    .edit-pencil { display: none !important; }
-    table.matrix thead th:nth-child(10),
-    table.matrix tbody tr:not(.empty-row) td:nth-child(10) { display: none; }
-  </style>
   <script>
   function __initAsistencia(){
     var D = window.ASISTENCIA;
@@ -356,14 +348,11 @@
     // ROWS: [dateIdx, localIdx, clientIdx, plan, real]
     // LOCALES: [cadena, codigoLocal, nombre, ruta]
 
-    // Ajustes manuales desactivados: se ignora cualquier ajuste local antiguo
-    // para no distorsionar los datos reales (los índices ya no calzan).
-    function ovKey(r){ return r[0]+':'+r[1]+':'+r[2]; }
-    var overrides={};
-    var changeLog=[];
-    function eff(r){ var o=overrides[ovKey(r)]; return o?o:{plan:r[3],real:r[4]}; }
-    function persistOv(){ try{ localStorage.setItem('re_admin_asistencia_v1', JSON.stringify(overrides)); }catch(e){} }
-    function persistLog(){ try{ localStorage.setItem('re_admin_asistencia_log_v1', JSON.stringify(changeLog)); }catch(e){} }
+    // Los valores ya vienen con los ajustes aplicados por el backend
+    // (vista asistencia = base del cron + capa de asistencia_ajuste).
+    function eff(r){ return { plan: r[3], real: r[4] }; }
+    function esAjustada(r){ return !!r[5]; }
+    var changeLog=[]; // historial de ajustes, cargado del backend
 
     function titleCase(s){ return String(s).replace(/\w\S*/g, function(t){ return t.charAt(0).toUpperCase()+t.substr(1); }); }
     function fmtCadena(v){ return v==='smu'?'SMU':titleCase(v); }
@@ -398,7 +387,7 @@
       btn.addEventListener('click', function(e){ e.stopPropagation(); var open=wrap.classList.contains('open'); closeAll(); if(!open){ wrap.classList.add('open'); btn.setAttribute('aria-expanded','true'); dd.querySelector('.dd-search').focus(); } });
       var search=dd.querySelector('.dd-search');
       search.addEventListener('click', function(e){ e.stopPropagation(); });
-      search.addEventListener('input', function(){ var q=search.value.toLowerCase().trim(); var any=false; list.querySelectorAll('.dd-item').forEach(function(it){ var mt=it.textContent.toLowerCase().indexOf(q)!==-1; it.style.display=mt?'flex':'none'; if(mt)any=true; }); var e=dd.querySelector('.dd-empty'); if(!any&&!e){ e=document.createElement('div'); e.className='dd-empty'; e.textContent='Sin resultados'; list.appendChild(e);} else if(any&&e){ e.remove(); } });
+      search.addEventListener('input', function(){ var q=search.value.toLowerCase().trim(); var any=false; list.querySelectorAll('.dd-item').forEach(function(it){ var mt=it.textContent.toLowerCase().indexOf(q)!==-1; it.style.display=mt?'flex':'none'; if(mt)any=true; var cb=it.querySelector('input[type="checkbox"]'); if(cb){ if(q&&mt&&!cb.checked){ cb.checked=true; cb.setAttribute('data-auto','1'); } else if(cb.getAttribute('data-auto')==='1'&&(!q||!mt)){ cb.checked=false; cb.removeAttribute('data-auto'); } } }); dd.dispatchEvent(new Event('change')); var e=dd.querySelector('.dd-empty'); if(!any&&!e){ e=document.createElement('div'); e.className='dd-empty'; e.textContent='Sin resultados'; list.appendChild(e);} else if(any&&e){ e.remove(); } });
       dd.addEventListener('click', function(e){ e.stopPropagation(); });
       dd.addEventListener('change', function(){
         sel[key]=[].slice.call(dd.querySelectorAll('input:checked')).map(function(c){ return c.value; });
@@ -517,7 +506,7 @@
       var startI=page*PAGE_SIZE, endI=Math.min(startI+PAGE_SIZE, filtered.length);
       var html='';
       for(var i=startI;i<endI;i++){
-        var r=filtered[i]; var L=LOCALES[r[1]]; var e=eff(r); var edited=!!overrides[ovKey(r)];
+        var r=filtered[i]; var L=LOCALES[r[1]]; var e=eff(r); var edited=esAjustada(r);
         html+='<tr'+(edited?' class="row-edited"':'')+'>';
         html+='<td>'+fmtFecha(DATES[r[0]])+(edited?' <span class="edited-dot" title="Ajustado manualmente"></span>':'')+'</td>';
         html+='<td>'+fmtCadena(L[0])+'</td>';
@@ -606,7 +595,7 @@
       document.getElementById('e-fecha').textContent=fmtFecha(DATES[di]);
       document.getElementById('e-nombre').textContent=titleCase(L[2]);
       document.getElementById('e-codigo').textContent=fmtCodigo(L[1]);
-      curVisit={ di:di, li:li, clients: visitRows.map(function(x){ var e=eff(x); return { ci:x[2], plan:e.plan, real:e.real, basePlan:x[3], baseReal:x[4] }; }).sort(function(a,b){ return CLIENT_LABELS[a.ci].localeCompare(CLIENT_LABELS[b.ci],'es'); }) };
+      curVisit={ di:di, li:li, clients: visitRows.map(function(x){ var e=eff(x); return { ci:x[2], rut:x[6], plan:e.plan, real:e.real, basePlan:x[3], baseReal:x[4] }; }).sort(function(a,b){ return CLIENT_LABELS[a.ci].localeCompare(CLIENT_LABELS[b.ci],'es'); }) };
       renderEditor();
       editOverlay.classList.add('open');
     }
@@ -663,32 +652,43 @@
     function saveEditor(){
       if(!curVisit) return;
       var L=LOCALES[curVisit.li]; var iso=DATES[curVisit.di];
-      var changes=[];
+      var cambios=[];
       curVisit.clients.forEach(function(c){
         if(c.plan!==c.basePlan || c.real!==c.baseReal){
-          var key=curVisit.di+':'+curVisit.li+':'+c.ci;
-          if(c.plan===c.basePlan && c.real===c.baseReal){ delete overrides[key]; }
-          else { overrides[key]={plan:c.plan, real:c.real}; }
-          changes.push({ cliente:CLIENT_LABELS[c.ci], bp:c.basePlan, br:c.baseReal, ap:c.plan, ar:c.real });
+          cambios.push({ fecha: iso, codigo_local: L[1], rut: c.rut, cliente: CLIENTS[c.ci],
+            planificado: c.plan, asistido: c.real, plan_anterior: c.basePlan, real_anterior: c.baseReal,
+            motivo: 'Ajuste manual desde panel admin' });
         }
       });
-      if(changes.length===0){ toast('No hubo cambios que guardar'); closeEditor(); return; }
-      persistOv();
-      changeLog.unshift({ ts:Date.now(), fecha:fmtFecha(iso), cadena:fmtCadena(L[0]), codigo:fmtCodigo(L[1]), nombre:titleCase(L[2]), ruta:fmtRuta(L[3]), changes:changes });
-      persistLog();
-      updateHistBtn(); applyAll(); closeEditor(); toast('Asistencia actualizada');
+      if(cambios.length===0){ toast('No hubo cambios que guardar'); closeEditor(); return; }
+      var btn=document.getElementById('e-save'); btn.disabled=true;
+      window.RetailAPI.requestJson('/web/admin/asignaciones/asistencia/ajustes', { method:'POST', body: JSON.stringify({ ajustes: cambios }) })
+        .then(function(){ closeEditor(); toast('Asistencia actualizada'); setTimeout(function(){ window.location.reload(); }, 900); })
+        .catch(function(err){ var msg='No se pudo guardar el ajuste'; try{ var j=JSON.parse(err.message); if(j.message) msg=Array.isArray(j.message)?j.message.join(', '):j.message; }catch(_){} toast(msg); })
+        .finally(function(){ btn.disabled=false; });
     }
 
     /* ---- Historial ---- */
     var histBtn=document.getElementById('histBtn'), histCount=document.getElementById('histCount'), hBody=document.getElementById('h-body');
     function updateHistBtn(){ if(changeLog.length){ histCount.style.display='inline-block'; histCount.textContent=changeLog.length; } else histCount.style.display='none'; }
+    function cargarHistorial(){
+      return window.RetailAPI.requestJson('/web/admin/asignaciones/asistencia/ajustes').then(function(r){
+        changeLog=(r.ajustes||[]).map(function(a){
+          return { ts:new Date(a.creado_en).getTime(), fecha:fmtFecha(String(a.fecha).slice(0,10)),
+            cadena:fmtCadena(a.cadena||'—'), codigo:fmtCodigo(a.codigo_local), nombre:titleCase(a.nombre_local||''),
+            ruta:fmtRuta(a.ruta||'—'), autor:a.ajustado_por||'—',
+            changes:[{ cliente:titleCase(a.cliente), bp:(a.plan_anterior==null?'—':a.plan_anterior), br:(a.real_anterior==null?'—':a.real_anterior), ap:a.planificado, ar:a.asistido }] };
+        });
+        updateHistBtn();
+      }).catch(function(){});
+    }
     function fmtTime(ts){ try{ return new Date(ts).toLocaleString('es-CL',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){ return new Date(ts).toLocaleString(); } }
     function bitTxt(p,r){ return 'P:'+p+' R:'+r; }
     function renderHistory(){
       if(!changeLog.length){ hBody.innerHTML='<p class="log-empty">Aún no se han registrado ajustes.</p>'; return; }
       var html='<div class="log-list">';
       changeLog.forEach(function(e){
-        html+='<div class="log-entry"><div class="log-top"><span class="l-date">'+e.fecha+'</span><span class="l-code">'+e.codigo+' · '+e.nombre+'</span><span class="l-ruta">'+e.ruta+'</span><span class="l-time">'+fmtTime(e.ts)+'</span></div>';
+        html+='<div class="log-entry"><div class="log-top"><span class="l-date">'+e.fecha+'</span><span class="l-code">'+e.codigo+' · '+e.nombre+'</span><span class="l-ruta">'+e.ruta+'</span><span class="l-time">'+(e.autor!=='—'?e.autor+' · ':'')+fmtTime(e.ts)+'</span></div>';
         e.changes.forEach(function(c){
           html+='<div class="diff-row"><span class="diff-cli">'+c.cliente+'</span><span class="diff-before">'+bitTxt(c.bp,c.br)+'</span><span class="diff-arrow">→</span><span class="diff-after">'+bitTxt(c.ap,c.ar)+'</span></div>';
         });
@@ -696,7 +696,7 @@
       });
       html+='</div>'; hBody.innerHTML=html;
     }
-    function openHist(){ renderHistory(); histOverlay.classList.add('open'); }
+    function openHist(){ cargarHistorial().then(function(){ renderHistory(); histOverlay.classList.add('open'); }); }
     function closeHist(){ histOverlay.classList.remove('open'); }
 
     function exportHist(){
@@ -710,8 +710,8 @@
       widths.forEach(function(w){ xml+='<Column ss:Width="'+w+'"/>'; });
       xml+='<Row ss:Height="22">'; headers.forEach(function(h){ xml+='<Cell ss:StyleID="hdr"><Data ss:Type="String">'+xmlEsc(h)+'</Data></Cell>'; }); xml+='</Row>';
       changeLog.forEach(function(e){ var t=fmtTime(e.ts); e.changes.forEach(function(c){
-        var vals=[t, e.fecha, e.cadena, e.codigo, e.nombre, e.ruta, c.cliente, c.bp, c.br, c.ap, c.ar, 'Administrador'];
-        xml+='<Row>'; vals.forEach(function(v,ci){ var t2=(ci>=7&&ci<=10)?'Number':'String'; xml+='<Cell ss:StyleID="c"><Data ss:Type="'+t2+'">'+xmlEsc(v)+'</Data></Cell>'; }); xml+='</Row>';
+        var vals=[t, e.fecha, e.cadena, e.codigo, e.nombre, e.ruta, c.cliente, c.bp, c.br, c.ap, c.ar, e.autor||'—'];
+        xml+='<Row>'; vals.forEach(function(v,ci){ var t2=(ci>=7&&ci<=10)&&v!=='—'?'Number':'String'; xml+='<Cell ss:StyleID="c"><Data ss:Type="'+t2+'">'+xmlEsc(v)+'</Data></Cell>'; }); xml+='</Row>';
       }); });
       xml+='</Table></Worksheet></Workbook>';
       var blob=new Blob([xml], {type:'application/vnd.ms-excel'}); var url=URL.createObjectURL(blob);
@@ -736,6 +736,7 @@
     histOverlay.addEventListener('click', function(e){ if(e.target===histOverlay) closeHist(); });
     document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeEditor(); closeHist(); } });
     updateHistBtn();
+    cargarHistorial();
 
     applyAll();
   }

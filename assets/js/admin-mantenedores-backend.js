@@ -9,6 +9,7 @@
   var storeKey = C.storeKey;
   var params = new URLSearchParams(window.location.search);
   var options = null;
+  var backendRows = null;
 
   function toast(message) {
     if (window._mantToast) return window._mantToast(message);
@@ -62,15 +63,34 @@
   function mapLocalProduct(row) {
     return { id: row.id, cliente: row.cliente || '', llave: row.id_local || '',
       nomlocal: row.nombre_local || '', codprod: row.codigo_producto || '',
-      nomprod: row.producto || '', gestiona: row.lo_gestionamos ? 'Sí' : 'No' };
+      nomprod: row.producto || '', gestiona: row.lo_gestionamos ? 'Sí' : 'No',
+      control: row.bloqueo_manual ? 'Manual' : 'Automático',
+      _idProducto: row.id_producto, _bloqueoManual: !!row.bloqueo_manual };
   }
 
   function loadRealData() {
-    var endpoint = mode === 'locales' ? '/web/admin/mantenedores/locales?limit=500&page=1'
-      : mode === 'productos' ? '/web/admin/mantenedores/productos?limit=500&page=1'
-      : '/web/admin/mantenedores/local-producto?limit=500&page=1';
+    var baseEndpoint = mode === 'locales' ? '/web/admin/mantenedores/locales'
+      : mode === 'productos' ? '/web/admin/mantenedores/productos'
+      : '/web/admin/mantenedores/local-producto';
+    var resultKey = mode === 'locales' ? 'locales' : mode === 'productos' ? 'productos' : 'relaciones';
+    var pageSize = mode === 'localproducto' ? 5000 : 500;
+    function loadAllPages() {
+      return request(baseEndpoint + '?limit=' + pageSize + '&page=1').then(function (first) {
+        var pages = Math.ceil(Number(first.total || 0) / pageSize);
+        var requests = [];
+        for (var page = 2; page <= pages; page += 1) {
+          requests.push(request(baseEndpoint + '?limit=' + pageSize + '&page=' + page));
+        }
+        return Promise.all(requests).then(function (rest) {
+          var all = (first[resultKey] || []).slice();
+          rest.forEach(function (response) { all = all.concat(response[resultKey] || []); });
+          first[resultKey] = all;
+          return first;
+        });
+      });
+    }
     return Promise.all([
-      request(endpoint),
+      loadAllPages(),
       request('/web/admin/mantenedores/opciones')
     ]).then(function (result) {
       options = result[1] || {};
@@ -78,13 +98,25 @@
       var rows = mode === 'locales' ? (result[0].locales || []).map(mapLocal)
         : mode === 'productos' ? (result[0].productos || []).map(mapProduct)
         : (result[0].relaciones || []).map(mapLocalProduct);
-      localStorage.setItem(storeKey, JSON.stringify(rows));
-      params.set('_backend', '1');
-      window.location.replace(window.location.pathname + '?' + params.toString());
+      backendRows = rows;
+      if (mode === 'localproducto') {
+        window.MANT_BACKEND_ROWS = rows;
+        window.dispatchEvent(new CustomEvent('mant:backend-data', { detail: rows }));
+        return rows;
+      }
+      var serialized = JSON.stringify(rows);
+      var changed = localStorage.getItem(storeKey) !== serialized;
+      localStorage.setItem(storeKey, serialized);
+      if (changed) {
+        params.set('_backend', String(Date.now()));
+        window.location.replace(window.location.pathname + '?' + params.toString());
+      }
+      return rows;
     });
   }
 
   function readRows() {
+    if (backendRows) return backendRows;
     try { return JSON.parse(localStorage.getItem(storeKey) || '[]'); }
     catch (_) { return []; }
   }
@@ -150,16 +182,28 @@
     });
   }
 
+  function saveLocalProduct(existing) {
+    if (!existing) return Promise.reject(new Error('La relación debe crearse desde Rutas'));
+    return request('/web/admin/mantenedores/local-producto/' + existing.id, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        id: existing.id,
+        id_local: existing.llave,
+        id_producto: existing._idProducto,
+        lo_gestionamos: value('gestiona') === 'Sí'
+      })
+    });
+  }
+
   document.addEventListener('click', function (event) {
     var save = event.target.closest('#e-save');
     if (save) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      if (mode === 'localproducto') return toast('Local–Producto es de solo lectura');
       var id = value(C.idField);
       var existing = readRows().filter(function (row) { return String(row[C.idField]) === String(id); })[0] || null;
       save.disabled = true;
-      (mode === 'locales' ? saveLocal(existing) : saveProduct(existing))
+      (mode === 'locales' ? saveLocal(existing) : mode === 'productos' ? saveProduct(existing) : saveLocalProduct(existing))
         .then(function () {
           toast('Registro guardado en el backend');
           params.delete('_backend');
@@ -173,7 +217,7 @@
     if (remove) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      if (mode === 'localproducto') return toast('Local–Producto se modifica desde Rutas o aprobando propuestas');
+      if (mode === 'localproducto') return toast('Para dejar de gestionarlo, edita la fila y selecciona No');
       var deleteId = remove.getAttribute('data-del') || value(C.idField);
       var deleteRow = readRows().filter(function (row) {
         return String(row[C.idField]) === String(deleteId);
@@ -197,9 +241,33 @@
     var add = document.getElementById('add'); if (add) add.style.display = 'none';
     var bulk = document.getElementById('bulk'); if (bulk) bulk.style.display = 'none';
     var style = document.createElement('style');
-    style.textContent = 'body .row-actions{display:none!important} body th:last-child{display:none!important} body td:last-child{display:none!important}';
+    style.textContent = 'body .icon-del{display:none!important}';
     document.head.appendChild(style);
+
+    var saveButton = document.getElementById('e-save');
+    if (saveButton && saveButton.parentNode) {
+      var automaticButton = document.createElement('button');
+      automaticButton.type = 'button';
+      automaticButton.className = 'mbtn';
+      automaticButton.textContent = 'Volver a automático';
+      automaticButton.onclick = function () {
+        var currentId = value(C.idField);
+        var row = readRows().filter(function (item) { return String(item.id) === String(currentId); })[0];
+        if (!row) return toast('No se encontró la relación');
+        automaticButton.disabled = true;
+        request('/web/admin/mantenedores/local-producto/' + row.id + '/automatico', {
+          method: 'PATCH', body: JSON.stringify({})
+        }).then(function () {
+          toast('La relación volvió a control automático');
+          params.delete('_backend');
+          setTimeout(function () { window.location.replace(window.location.pathname); }, 350);
+        }).catch(function () { automaticButton.disabled = false; });
+      };
+      saveButton.parentNode.insertBefore(automaticButton, saveButton);
+    }
   }
 
-  if (!params.has('_backend')) loadRealData();
+  // La API es siempre la fuente visible. localStorage solo permite que el
+  // motor legado pinte la tabla mientras llega la respuesta actualizada.
+  loadRealData();
 })();

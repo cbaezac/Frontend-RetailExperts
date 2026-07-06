@@ -3,8 +3,9 @@
    - dates: ['YYYY-MM-DD', ...] ascendente
    - clients / clientLabels: nombres de cliente y su etiqueta visible
    - locales: [cadena, codigoLocal, nombre, ruta]
-   - rows: [dateIdx, localIdx, clientIdx, plan, real] (agregado por visita:
-     si hay varios reponedores en un local, plan/real = máximo entre ellos)
+   - rows: [dateIdx, localIdx, clientIdx, plan, real, ajustada, rut]
+     (agregado por visita: si hay varios reponedores en un local,
+      plan/real = máximo entre ellos; rut = el del reponedor de la fila)
    Al terminar marca ASISTENCIA.ready = true y dispara 'asistencia:ready'.
    Requiere sesión web con acceso admin; si no la hay, queda vacío (los
    descargadores de clientes se conectarán con su propio endpoint con scoping). */
@@ -53,15 +54,16 @@ window.ASISTENCIA = { dates: [], clients: [], clientLabels: [], locales: [], row
         locales.push([f.cadena || '', f.codigo_local, f.nombre_local || f.codigo_local, f.ruta || '']);
       }
       var key = dateIdx[String(f.fecha).slice(0, 10)] + ':' + locIdx[lKey] + ':' + cliIdx[f.cliente];
-      var cur = agg[key] || { plan: 0, real: 0 };
+      var cur = agg[key] || { plan: 0, real: 0, aj: 0, rut: f.rut };
       cur.plan = Math.max(cur.plan, Number(f.planificado) || 0);
       cur.real = Math.max(cur.real, Number(f.asistido) || 0);
+      if (f.ajustada) cur.aj = 1;
       agg[key] = cur;
     });
 
     var rows = Object.keys(agg).map(function (key) {
       var p = key.split(':');
-      return [Number(p[0]), Number(p[1]), Number(p[2]), agg[key].plan, agg[key].real];
+      return [Number(p[0]), Number(p[1]), Number(p[2]), agg[key].plan, agg[key].real, agg[key].aj, agg[key].rut];
     });
 
     window.ASISTENCIA.dates = dates;

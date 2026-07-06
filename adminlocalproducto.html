@@ -260,7 +260,7 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
     var prodOpts = D.productos.map(function(p){ return p.codigo; });
     var llaveOpts = D.locales.map(function(l){ return l.llave; });
     window.MANT_CONFIG = {
-      key:'localproducto', idField:'id',
+      key:'localproducto', idField:'id', liveBackend:true,
       title:'Local-Producto', eyebrow:'Base maestra',
       sub:'Define qué combinaciones local–producto se gestionan en terreno.',
       storeKey:'re_mant_localprod_v2', logKey:'re_mant_localprod_log_v1',
@@ -272,7 +272,8 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
         {key:'nomlocal',label:'Nombre Local',kind:'muted'},
         {key:'codprod',label:'Código Producto'},
         {key:'nomprod',label:'Nombre Producto',kind:'muted'},
-        {key:'gestiona',label:'¿Se gestiona?',kind:'estado'}
+        {key:'gestiona',label:'¿Se gestiona?',kind:'estado'},
+        {key:'control',label:'Control',kind:'pill'}
       ],
       filters:[{key:'cliente',label:'Cliente'},{key:'llave',label:'Código Local Llave'},{key:'nomlocal',label:'Nombre Local'},{key:'codprod',label:'Código Producto'},{key:'nomprod',label:'Nombre Producto'},{key:'gestiona',label:'¿Se gestiona?'}],
       fields:[
@@ -291,8 +292,8 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
     };
   })();
   </script>
-  <script src="assets/js/admin-mantenedores-backend.js?v=20260630-6"></script>
-  <script src="assets/js/admin-propuestas-api.js?v=20260630-1"></script>
+  <script src="assets/js/admin-mantenedores-backend.js?v=20260706-1"></script>
+  <script src="assets/js/admin-propuestas-api.js?v=20260706-1"></script>
   <script>
 /* Motor genérico de Mantenedores · Retail Experts
    Cada página define window.MANT_CONFIG y luego carga este archivo.
@@ -312,14 +313,15 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
   var STORE=C.storeKey, LOG=C.logKey;
 
   (function init(){
-    var saved=null; try{ saved=JSON.parse(localStorage.getItem(STORE)||'null'); }catch(e){}
-    data = (saved && saved.length) ? saved : C.data.map(function(r){ return Object.assign({}, r); });
+    var saved=null; if(!C.liveBackend){ try{ saved=JSON.parse(localStorage.getItem(STORE)||'null'); }catch(e){} }
+    data = C.liveBackend ? [] : ((saved && saved.length) ? saved : C.data.map(function(r){ return Object.assign({}, r); }));
     try{ changeLog=JSON.parse(localStorage.getItem(LOG)||'[]'); }catch(e){ changeLog=[]; }
   })();
   function persist(){ try{ localStorage.setItem(STORE, JSON.stringify(data)); }catch(e){} }
   function persistLog(){ try{ localStorage.setItem(LOG, JSON.stringify(changeLog)); }catch(e){} }
 
   var sel={ q:'', filters:{} };
+  var currentPage=1, pageSize=250;
   C.filters.forEach(function(f){ sel.filters[f.key]=[]; });
 
   function uniq(key){ var s={}; data.forEach(function(r){ if(r[key]!=null && r[key]!=='') s[r[key]]=true; }); return Object.keys(s).sort(function(a,b){return String(a).localeCompare(String(b),'es',{numeric:true});}); }
@@ -335,7 +337,7 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
 
   /* ---- Toolbar: search + filters ---- */
   document.getElementById('search').placeholder = 'Buscar…';
-  document.getElementById('search').addEventListener('input', function(){ sel.q=this.value.trim().toLowerCase(); render(); });
+  document.getElementById('search').addEventListener('input', function(){ sel.q=this.value.trim().toLowerCase(); currentPage=1; render(); });
 
   var filtersHost=document.getElementById('filters');
   C.filters.forEach(function(f){
@@ -353,7 +355,7 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
     dd.addEventListener('click', function(e){ e.stopPropagation(); });
     var sb=dd.querySelector('.dd-search');
     if(sb){ sb.addEventListener('input', function(){ var q=sb.value.toLowerCase().trim(); var any=false; list.querySelectorAll('.dd-item').forEach(function(it){ var m=it.textContent.toLowerCase().indexOf(q)!==-1; it.style.display=m?'flex':'none'; if(m)any=true; }); var e=dd.querySelector('.dd-empty'); if(!any&&!e){ e=document.createElement('div'); e.className='dd-empty'; e.textContent='Sin resultados'; list.appendChild(e);} else if(any&&e){e.remove();} }); }
-    dd.addEventListener('change', function(){ sel.filters[f.key]=[].slice.call(dd.querySelectorAll('input:checked')).map(function(c){return c.value;}); var n=sel.filters[f.key].length; if(n){ btn.classList.add('has-selection'); var c=btn.querySelector('.count'); if(!c){c=document.createElement('span'); c.className='count'; btn.appendChild(c);} c.textContent=n; } else { btn.classList.remove('has-selection'); var c2=btn.querySelector('.count'); if(c2)c2.remove(); } render(); });
+    dd.addEventListener('change', function(){ sel.filters[f.key]=[].slice.call(dd.querySelectorAll('input:checked')).map(function(c){return c.value;}); var n=sel.filters[f.key].length; if(n){ btn.classList.add('has-selection'); var c=btn.querySelector('.count'); if(!c){c=document.createElement('span'); c.className='count'; btn.appendChild(c);} c.textContent=n; } else { btn.classList.remove('has-selection'); var c2=btn.querySelector('.count'); if(c2)c2.remove(); } currentPage=1; render(); });
   });
   function closeAll(){ document.querySelectorAll('.filter-wrap.open').forEach(function(w){ w.classList.remove('open'); var b=w.querySelector('.filter'); if(b)b.setAttribute('aria-expanded','false'); }); }
   document.addEventListener('click', closeAll);
@@ -379,9 +381,12 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
   }
   function render(){
     var list=data.filter(matchRow);
+    var totalPages=Math.max(1,Math.ceil(list.length/pageSize));
+    if(currentPage>totalPages) currentPage=totalPages;
+    var visible=list.slice((currentPage-1)*pageSize,currentPage*pageSize);
     if(list.length===0){ tbody.innerHTML='<tr class="empty-row"><td colspan="'+(C.columns.length+1)+'">No hay registros que coincidan.</td></tr>'; }
     else {
-      tbody.innerHTML=list.map(function(r){
+      tbody.innerHTML=visible.map(function(r){
         return '<tr>'+C.columns.map(function(col){return cellHtml(col,r);}).join('')
           +'<td><div class="row-actions">'
           +'<button class="icon-btn icon-edit" type="button" data-edit="'+esc(r[C.idField])+'" title="Editar"><svg viewBox="0 0 24 24" fill="none"><path d="M4 20h4L18.5 9.5a2 2 0 0 0 0-3l-1-1a2 2 0 0 0-3 0L4 16v4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m13.5 7.5 3 3" stroke="currentColor" stroke-width="1.8"/></svg></button>'
@@ -389,7 +394,12 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
           +'</div></td></tr>';
       }).join('');
     }
-    document.getElementById('resultCount').innerHTML='<b>'+list.length+'</b> de '+data.length+' registros';
+    var count=document.getElementById('resultCount');
+    count.innerHTML='<b>'+list.length+'</b> de '+data.length+' registros · página '+currentPage+' de '+totalPages
+      +(totalPages>1?' &nbsp; <button type="button" id="page-prev"'+(currentPage===1?' disabled':'')+'>Anterior</button> <button type="button" id="page-next"'+(currentPage===totalPages?' disabled':'')+'>Siguiente</button>':'');
+    var prev=document.getElementById('page-prev'), next=document.getElementById('page-next');
+    if(prev) prev.onclick=function(){if(currentPage>1){currentPage-=1;render();window.scrollTo(0,0);}};
+    if(next) next.onclick=function(){if(currentPage<totalPages){currentPage+=1;render();window.scrollTo(0,0);}};
   }
 
   /* ---- Modal ---- */
@@ -519,6 +529,15 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
   });
 
   document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeEdit(); histOverlay.classList.remove('open'); } });
+
+  function installBackendRows(rows){
+    if(!Array.isArray(rows)) return;
+    data=rows;
+    currentPage=1;
+    render();
+  }
+  window.addEventListener('mant:backend-data', function(e){ installBackendRows(e.detail); });
+  if(window.MANT_BACKEND_ROWS) installBackendRows(window.MANT_BACKEND_ROWS);
 
   function toast(msg){ var el=document.getElementById('toast'); el.innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>'+esc(msg)+'</span>'; el.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(function(){ el.classList.remove('show'); },2600); }
   window._mantToast=toast;
