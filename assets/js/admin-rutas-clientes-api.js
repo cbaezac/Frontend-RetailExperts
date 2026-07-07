@@ -115,8 +115,16 @@
         render();
       });
       dropdown.querySelector('.dd-search').addEventListener('input', function (event) {
-        var query = event.target.value.toLowerCase();
-        dropdown.querySelectorAll('.dd-item').forEach(function (item) { item.style.display = item.textContent.toLowerCase().indexOf(query) >= 0 ? 'flex' : 'none'; });
+        var query = event.target.value.toLowerCase().trim();
+        dropdown.querySelectorAll('.dd-item').forEach(function (item) {
+          var match = item.textContent.toLowerCase().indexOf(query) >= 0;
+          item.style.display = match ? 'flex' : 'none';
+          var cb = item.querySelector('input[type="checkbox"]');
+          if (!cb) return;
+          if (query && match && !cb.checked) { cb.checked = true; cb.setAttribute('data-auto', '1'); }
+          else if (cb.getAttribute('data-auto') === '1' && (!query || !match)) { cb.checked = false; cb.removeAttribute('data-auto'); }
+        });
+        dropdown.dispatchEvent(new Event('change'));
       });
       wrap.appendChild(button); wrap.appendChild(dropdown); filters.appendChild(wrap);
     });

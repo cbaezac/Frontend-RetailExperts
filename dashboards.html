@@ -392,8 +392,9 @@
     function setDataBadge(ok){
       var el=document.getElementById('dataBadge'); if(!el) return;
       el.innerHTML = ok
-        ? '<span class="dot"></span> Datos demostrativos'
-        : '<span class="dot"></span> Error cargando demo';
+        ? (VENTA_REAL ? '<span class="dot"></span> Venta real (mes en curso) · resto demostrativo'
+                      : '<span class="dot"></span> Datos demostrativos')
+        : '<span class="dot"></span> Error cargando datos';
     }
 
     /* ---------- Scoping por cliente (usuarios internos deben elegir uno) ---------- */
@@ -425,8 +426,10 @@
         + '</div>';
       document.body.appendChild(ov);
       var select=ov.querySelector('#clienteGateSelect'), go=ov.querySelector('#clienteGateGo');
-      var clientes=[{id:1,nombre:'Cliente demostrativo'}];
-      select.innerHTML='<option value="">Selecciona…</option>'+clientes.map(function(c){ return '<option value="'+c.id+'">'+c.nombre+'</option>'; }).join('');
+      window.RetailAPI.requestJson('/web/clientes').then(function(r){
+        var clientes=(r&&r.clientes)||[];
+        select.innerHTML='<option value="">Selecciona…</option>'+clientes.map(function(c){ return '<option value="'+c.id+'">'+c.nombre+'</option>'; }).join('');
+      }).catch(function(){ select.innerHTML='<option value="">No se pudieron cargar los clientes</option>'; });
       select.addEventListener('change', function(){ go.disabled=!select.value; go.style.opacity=select.value?'1':'.5'; });
       go.addEventListener('click', function(){
         if(!select.value) return;
@@ -720,8 +723,41 @@
     function grandWeekly(key){ var vals=dimValues(), W=D.weeks.length, out=[]; for(var w=0;w<W;w++){ if(key==='precio'){var p=0,u=0;vals.forEach(function(v){p+=v.pesos[w];u+=v.unidades[w];});out.push(u?p/u:0);} else {var s=0;vals.forEach(function(v){s+=metricWeekly(v,key)[w];});out.push(s);} } return out; }
     function comKpis(){ var vals=dimValues(); var tP=0,tC=0,tU=0,tMeta=0,lyP=0,lyC=0,lyU=0; vals.forEach(function(v){ var p=sumArr(v.pesos),c=sumArr(v.costo),u=sumArr(v.unidades); tP+=p;tC+=c;tU+=u;tMeta+=v.meta||0; lyP+=v.ly; lyC+=p&&c?v.ly*(c/p):0; lyU+=p&&u?v.ly/(p/u):0; }); var price=tU?tP/tU:0, lyPrice=lyU?lyP/lyU:0; function d(n,o){return o?(n/o-1)*100:0;} return { pesos:{v:tP,d:d(tP,lyP)}, costo:{v:tC,d:d(tC,lyC)}, unidades:{v:tU,d:d(tU,lyU)}, precio:{v:price,d:d(price,lyPrice)}, meta:{v:tMeta,avance:tMeta?tP/tMeta*100:0,d:d(tP,lyP)} }; }
 
+    var COM_DEMO_APERTURAS = COM.aperturas;
+    var COM_REAL = false;
+    var DRILL_PARAM = {cadena:'cadena', formato:'formato', region:'region', codlocal:'codigo_local', nomlocal:'nombre_local', categoria:'categoria', marca:'marca', codprod:'codigo_producto', descriptor:'nombre_producto', producto:'nombre_producto'};
+    var API_AP = {producto:'descriptor'};
+    COM.aperturas = {};   // en modo real cada apertura se carga del backend
+    function fetchComercial(apertura, extra){
+      var params = withCliente(Object.assign({apertura: API_AP[apertura]||apertura}, extra||{}));
+      return window.RetailAPI.requestJson('/web/dashboard/comercial'+window.RetailAPI.buildQuery(params));
+    }
     function loadComercial(apertura){
-      return Promise.resolve(COM.aperturas[apertura]);
+      return fetchComercial(apertura).then(function(r){
+        if(r.weeks && r.weeks.length) D.weeks = r.weeks;
+        COM.aperturas[apertura] = { values: r.values||[] };
+        COM_REAL = true;
+      }).catch(function(){
+        COM.aperturas[apertura] = COM_DEMO_APERTURAS[apertura] || {values:[]};
+      });
+    }
+    /* Drill real: los hijos de cada nivel se consultan al backend con los
+       filtros acumulados del camino (padre apertura=valor, etc.) */
+    var drillCache = {};
+    function drillPathFilters(baseAp, path){
+      var f={}; var prevAp=baseAp;
+      path.forEach(function(pp){ var param=DRILL_PARAM[prevAp]; if(param) f[param]=pp.label; prevAp=pp.ap; });
+      return f;
+    }
+    function drillValuesReal(baseAp, path, onReady){
+      var key = baseAp+'|'+path.map(function(pp){return pp.ap+'='+pp.label;}).join('|');
+      if(drillCache[key]) return drillCache[key];
+      if(drillCache[key+':p']) return null;
+      drillCache[key+':p']=1;
+      fetchComercial(path[path.length-1].ap, drillPathFilters(baseAp, path)).then(function(r){
+        drillCache[key]=r.values||[]; delete drillCache[key+':p']; onReady();
+      }).catch(function(){ drillCache[key]=[]; delete drillCache[key+':p']; onReady(); });
+      return null;
     }
 
     var comPeriodLabel='01 jun – 25 jun 2026';
@@ -848,8 +884,14 @@
         subTitle='Base bruta por '+drillName(comCurAp).toLowerCase();
       } else {
         var lastC=comDrill[level-1];
+        if(COM_REAL){
+          var rvC=drillValuesReal(comApertura, comDrill, comRerender);
+          if(rvC===null){ setTimeout(function(){ rewireComMat(); },0); return '<div class="panel-card full" id="comMatrix"><div class="pc-head"><div><div class="pc-title">Matriz de datos · Comercial</div><div class="pc-sub">Cargando apertura…</div></div></div></div>'; }
+          rows=rvC.map(function(v){ var val=metricTotal(v,m.k); return {key:v.label, label:v.label, cod:(comCurAp==='codlocal'?v.label:null), val:val, meta:0, drill:!comTerminal}; });
+        } else {
         var seedC=comDrill.map(function(p){return p.label;}).join('>');
         rows=drillChildren(lastC.ap, seedC).map(function(o){ var j=0.9+(o.h%20)/100; return {key:o.cod||o.label, label:o.label, cod:o.cod, val:lastC.row.val*o.frac*j, meta:lastC.row.meta*o.frac, drill:!comTerminal}; });
+        }
         firstCol={key:'label',label:drillName(comCurAp),type:'text',thLeft:true,get:function(r){return r.label;},cell:function(r){return '<td>'+r.label+(r.drill?drillCueHtml(r.key):'')+'</td>';}};
         subTitle=lastC.label+' · apertura por '+drillName(comCurAp).toLowerCase();
         backBtn=drillBackHtml('comBack', level>1?comDrill[level-2].ap:comApertura);
@@ -1156,7 +1198,9 @@
     }
 
     /* ---------- Resumen de Negocio ---------- */
-    var RES = D.resumen;
+    var RES = null;                 // venta real (MTD) cargada del backend
+    var RES_DEMO = D.resumen;       // respaldo demostrativo si falla la carga
+    var VENTA_REAL = false;
     var resMetric = 'vp';
     var RES_MET = { vp:{label:'Venta pesos', fmtFull:clp, ly:'vpLy', meta:'mVp'}, vc:{label:'Venta costo', fmtFull:clp, ly:'vcLy', meta:'mVc'}, vu:{label:'Venta unidades', fmtFull:num, ly:'vuLy', meta:'mVu'} };
     function secTitle(txt, icon, bg, color, first){ return '<div class="sec-title'+(first?' first':'')+'"><span class="sec-ico" style="background:'+bg+';color:'+color+'">'+icon+'</span>'+txt+'</div>'; }
@@ -1172,15 +1216,29 @@
 
     var MESES_LBL=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     function fmtMesLabel(iso){ var p=iso.split('-'); return MESES_LBL[Number(p[1])-1]+' '+p[0].slice(2); }
+    function fmtCadDash(v){ v=String(v||''); return v.toLowerCase()==='smu'?'SMU':v.charAt(0).toUpperCase()+v.slice(1); }
     function mapLocalResumen(l){
-      return { cad:l.cadena, fmt:l.formato, cod:l.codigo, nom:l.nombre,
-        vp:l.venta_pesos, vc:l.venta_costo, vu:l.venta_unidades,
-        vpLy:l.venta_pesos_ly, vcLy:l.venta_costo_ly, vuLy:l.venta_unidades_ly,
+      return { cad:fmtCadDash(l.cadena), fmt:l.formato||'', cod:l.codigo, nom:l.nombre||l.codigo, region:l.region||'',
+        vp:Number(l.venta_pesos)||0, vc:Number(l.venta_costo)||0, vu:Number(l.venta_unidades)||0,
+        vpLy:Number(l.venta_pesos_ly)||0, vcLy:Number(l.venta_costo_ly)||0, vuLy:Number(l.venta_unidades_ly)||0,
         mVp:0, mVc:0, mVu:0, osa:0, ins:0, doh:0, qb:0 };
     }
     function loadResumen(){
-      setDataBadge(true);
-      return Promise.resolve(RES);
+      return window.RetailAPI.requestJson('/web/dashboard/resumen-mtd'+window.RetailAPI.buildQuery(withCliente({})))
+        .then(function(r){
+          RES = {
+            locales: (r.locales||[]).map(mapLocalResumen),
+            monthLabels: (r.dias||[]).map(function(d){ return d.dia; }),
+            mPesos: (r.dias||[]).map(function(d){ return d.pesos; }),
+            mUnidades: (r.dias||[]).map(function(d){ return d.unidades; }),
+            cadenaResumen: (r.cadenas||[]).map(function(c){ return { cadena:fmtCadDash(c.cadena), vp:Number(c.venta_pesos)||0, vu:Number(c.venta_unidades)||0 }; })
+          };
+          VENTA_REAL = true;
+          HAS_METAS = false;
+          HAS_OPS = false;
+          setDataBadge(true);
+        })
+        .catch(function(){ RES = RES_DEMO; VENTA_REAL = false; setDataBadge(true); });
     }
     function panelResumen(){
       if(!RES){
@@ -1209,7 +1267,7 @@
         + kpiCard({label:'Quiebres', value: HAS_OPS?pct(t.qb):'Sin datos', valueColor: HAS_OPS?COLVAR[clsQb(t.qb)]:'var(--muted)', icon:IC.lost, tone:'accent'})
         + '</div>';
       // Barras venta pesos + línea venta unidades (12 meses móviles)
-      html+='<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Evolución de venta</div><div class="pc-sub">Venta en pesos (barra) y venta en unidades (línea) · últimos 12 meses móviles</div></div></div><div class="chart-box h-line"><canvas id="res-line"></canvas></div></div>';
+      html+='<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Evolución de venta</div><div class="pc-sub">Venta en pesos (barra) y venta en unidades (línea) · '+(VENTA_REAL?'mes en curso, día a día (month to date)':'últimos 12 meses móviles')+'</div></div></div><div class="chart-box h-line"><canvas id="res-line"></canvas></div></div>';
       // Venta por cadena: dos tortas (pesos y unidades)
       html+='<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Venta por cadena</div><div class="pc-sub">Distribución por cadena en pesos y en unidades</div></div></div>'
         + '<div class="donut-pair">'
@@ -1290,7 +1348,7 @@
       [['vp',clpShort,'res-donut-vp'],['vu',numShort,'res-donut-vu']].forEach(function(cfg){
         var key=cfg[0], fmt=cfg[1];
         var rows=cr.map(function(o){ return {cadena:o.cadena, val:o[key]}; }).sort(function(a,b){return b.val-a.val;});
-        pieChart(document.getElementById(cfg[2]), rows.map(function(o){return o.cadena;}), rows.map(function(o){return o.val;}), rows.map(function(o){return CADENA_COLORS[o.cadena];}), fmt);
+        pieChart(document.getElementById(cfg[2]), rows.map(function(o){return o.cadena;}), rows.map(function(o){return o.val;}), rows.map(function(o,i){return CADENA_COLORS[o.cadena]||['#B98BD0','#F2A65A','#7FB5B5','#C9A66B'][i%4];}), fmt);
       });
     }
 
@@ -1455,6 +1513,13 @@
     var cmpSort={key:'ana',dir:-1};
     function panelComparativo(){
       if(!cmpDrill._keep) cmpDrill=cmpDrill||[];
+      if(!COM.aperturas[cmpApertura]){
+        host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--muted)">Cargando datos comerciales…</div>';
+        loadComercial(cmpApertura).then(panelComparativo).catch(function(){
+          host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--red)">No se pudieron cargar los datos.</div>';
+        });
+        return;
+      }
       var apLabel=APERTURAS.filter(function(a){return a[0]===cmpApertura;})[0][1];
       var m=COM_MET[cmpMetric];
       var html='';
@@ -1496,8 +1561,14 @@
         cmpSub='Análisis sobre comparativo · por '+drillName(cmpCur).toLowerCase();
       } else {
         var lastM=cmpDrill[cmpLevel-1];
+        if(COM_REAL){
+          var rvM=drillValuesReal(cmpApertura, cmpDrill, function(){ panelComparativo(); });
+          if(rvM===null){ rows=[]; cmpSub='Cargando apertura…'; }
+          else rows=rvM.map(function(v){ var d=cmpVal(v); return {key:v.label, label:v.label, cod:(cmpCur==='codlocal'?v.label:null), ana:d.ana, cmp:d.cmp, drill:!cmpTerminal}; });
+        } else {
         var seedM=cmpDrill.map(function(p){return p.label;}).join('>');
         rows=drillChildren(lastM.ap, seedM).map(function(o){ var j=0.9+(o.h%20)/100, j2=0.9+((o.h>>3)%20)/100; return {key:o.cod||o.label, label:o.label, cod:o.cod, ana:lastM.row.ana*o.frac*j, cmp:lastM.row.cmp*o.frac*j2, drill:!cmpTerminal}; });
+        }
         firstCol={key:'label',label:drillName(cmpCur),type:'text',thLeft:true,get:function(r){return r.label;},cell:function(r){return '<td>'+r.label+(r.drill?drillCueHtml(r.key):'')+'</td>';}};
         cmpSub=lastM.label+' · apertura por '+drillName(cmpCur).toLowerCase();
         cmpBack=drillBackHtml('cmpBack', cmpLevel>1?cmpDrill[cmpLevel-2].ap:cmpApertura);
@@ -2098,9 +2169,14 @@
 
     function startDashboard(){
       setDataBadge(true);
-      requestAnimationFrame(function(){ buildMultiFilters(); showArea('resumen'); renderFavs(); });
+      setTimeout(function(){ buildMultiFilters(); showArea('resumen'); renderFavs(); }, 0);
     }
-    startDashboard();
+    if (IS_INTERNAL && !CLIENTE_ID) {
+      showClientGate(startDashboard);
+    } else {
+      if (IS_INTERNAL) renderClienteBadge(sessionStorage.getItem(CLIENTE_KEY + '_nombre'));
+      startDashboard();
+    }
   </script>
   <!-- Pop-up "modulo no contratado": activo via POPUP_PAGO_ACTIVO en el script.
        El backend decide por cliente con dashboards_contratado (login web). -->

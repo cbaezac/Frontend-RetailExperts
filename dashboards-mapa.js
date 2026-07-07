@@ -98,8 +98,9 @@
     };
   }
 
-  /* ---------- datos sintéticos a nivel de local, 3 métricas ---------- */
-  var MAPDATA = REGION_NAMES.map(function (nm, ri) {
+  /* ---------- datos: reales (venta_historica, MTD vs LY) con respaldo sintético ---------- */
+  var MAPDATA = null, NAT = null, MAPA_REAL = false;
+  function demoMapData() { return REGION_NAMES.map(function (nm, ri) {
     var chains = CAD.map(function (c, ci) {
       var s0 = seed(ri * 13 + ci + 1);
       var n = Math.max(2, Math.round(WEIGHT[ri] * CAD_FACTOR[c.k] * (0.7 + s0 * 0.6)));
@@ -146,19 +147,67 @@
       name: nm[0], roman: nm[1], chains: chains,
       agg: { pesos: aggregate(all, 'pesos'), costo: aggregate(all, 'costo'), unidades: aggregate(all, 'unidades') }
     };
-  });
+  }); }
 
-  var NAT = (function () {
-    var all = []; MAPDATA.forEach(function (r) { r.chains.forEach(function (ch) { all = all.concat(ch.locales); }); });
-    var chains = CAD.map(function (c) {
-      var loc = []; MAPDATA.forEach(function (r) { r.chains.forEach(function (ch) { if (ch.k === c.k) loc = loc.concat(ch.locales); }); });
-      return { k: c.k, dot: c.dot, agg: { pesos: aggregate(loc, 'pesos'), costo: aggregate(loc, 'costo'), unidades: aggregate(loc, 'unidades') } };
+  function buildNat() {
+    var all = [], chainMap = {}, order = [];
+    MAPDATA.forEach(function (r) { r.chains.forEach(function (ch) {
+      all = all.concat(ch.locales);
+      if (!chainMap[ch.k]) { chainMap[ch.k] = { k: ch.k, dot: ch.dot, locales: [] }; order.push(ch.k); }
+      chainMap[ch.k].locales = chainMap[ch.k].locales.concat(ch.locales);
+    }); });
+    var chains = order.sort().map(function (k) {
+      var c = chainMap[k];
+      return { k: c.k, dot: c.dot, agg: { pesos: aggregate(c.locales, 'pesos'), costo: aggregate(c.locales, 'costo'), unidades: aggregate(c.locales, 'unidades') } };
     });
     return {
       name: 'Chile · Total nacional', roman: '', chains: chains,
       agg: { pesos: aggregate(all, 'pesos'), costo: aggregate(all, 'costo'), unidades: aggregate(all, 'unidades') }
     };
-  })();
+  }
+
+  function fmtCadMapa(v){ v = String(v || ''); return v.toLowerCase() === 'smu' ? 'SMU' : v.charAt(0).toUpperCase() + v.slice(1); }
+  var MAPA_DOTS = { Cencosud: '#2E8B57', Walmart: '#3B76C2', SMU: '#C84B44', Tottus: '#C79216' };
+  var MAPA_DOT_FALLBACK = ['#8E5BA6', '#C77B3A', '#4E8F8B', '#A3564D'];
+  var REGION_CODE_INDEX = { 15:0, 1:1, 2:2, 3:3, 4:4, 5:5, 13:6, 6:7, 7:8, 16:9, 8:10, 9:11, 14:12, 10:13, 11:14, 12:15 };
+  function growth(v, ly) { return ly > 0 ? r1((v / ly - 1) * 100) : 0; }
+  function buildRealData(rows) {
+    var regs = REGION_NAMES.map(function (nm) { return { name: nm[0], roman: nm[1], byChain: {} }; });
+    rows.forEach(function (rw) {
+      var code = parseInt(String(rw.region || '').trim(), 10);
+      var idx = REGION_CODE_INDEX[code]; if (idx === undefined) return;
+      var cad = fmtCadMapa(rw.cadena || 'Otra');
+      if (!regs[idx].byChain[cad]) regs[idx].byChain[cad] = [];
+      regs[idx].byChain[cad].push({
+        cod: rw.codigo, nombre: rw.nombre || rw.codigo, comuna: rw.comuna || '',
+        cr: { pesos: growth(rw.venta_pesos, rw.venta_pesos_ly), costo: growth(rw.venta_costo, rw.venta_costo_ly), unidades: growth(rw.venta_unidades, rw.venta_unidades_ly) },
+        cu: { pesos: 0, costo: 0, unidades: 0 }, prod: null
+      });
+    });
+    var di = 0;
+    return regs.map(function (reg) {
+      var chains = Object.keys(reg.byChain).sort().map(function (cad) {
+        var loc = reg.byChain[cad];
+        return { k: cad, dot: MAPA_DOTS[cad] || MAPA_DOT_FALLBACK[(di++) % 4], locales: loc,
+          agg: { pesos: aggregate(loc, 'pesos'), costo: aggregate(loc, 'costo'), unidades: aggregate(loc, 'unidades') } };
+      });
+      var all = []; chains.forEach(function (ch) { all = all.concat(ch.locales); });
+      return { name: reg.name, roman: reg.roman, chains: chains,
+        agg: { pesos: aggregate(all, 'pesos'), costo: aggregate(all, 'costo'), unidades: aggregate(all, 'unidades') } };
+    });
+  }
+  var _datap = null;
+  function ensureData() {
+    if (_datap) return _datap;
+    var canReal = window.RetailAPI && typeof window.withCliente === 'function';
+    _datap = (canReal
+      ? window.RetailAPI.requestJson('/web/dashboard/mapa' + window.RetailAPI.buildQuery(window.withCliente({})))
+          .then(function (r) { MAPDATA = buildRealData(r.locales || []); MAPA_REAL = true; })
+          .catch(function () { MAPDATA = demoMapData(); MAPA_REAL = false; })
+      : Promise.resolve().then(function () { MAPDATA = demoMapData(); }))
+      .then(function () { NAT = buildNat(); });
+    return _datap;
+  }
 
   /* ---------- carga diferida ---------- */
   var _d3p = null, _geop = null;
@@ -217,7 +266,7 @@
           '<div><div class="pc-title">Mapa de Chile — Rendimiento General por Región</div>' +
           '<div class="pc-sub">Pasa el cursor sobre una región para ver un mayor detalle a nivel de cadena</div></div>' +
         '</div>' +
-        '<div class="mapa-note">Crecimiento / decrecimiento = venta del período en curso (mes actual) vs. <b>el mismo período del año anterior</b>.</div>' +
+        '<div class="mapa-note">Crecimiento / decrecimiento = venta del período en curso (mes actual, month to date) vs. <b>el mismo período del año anterior</b>.</div>' +
         '<div class="mapa-body">' +
           '<div class="mapa-mapwrap">' +
             '<div class="mapa-maphead">' +
@@ -259,7 +308,7 @@
       if (ch && pinned) { drill = ch.getAttribute('data-chain'); drillLoc = null; renderDetail(); det.scrollTop = 0; return; }
     });
 
-    Promise.all([loadD3(), loadGeo()]).then(function (arr) { drawMap(arr[0], arr[1]); })
+    ensureData().then(function () { renderDetail(); return Promise.all([loadD3(), loadGeo()]); }).then(function (arr) { drawMap(arr[0], arr[1]); })
       .catch(function (err) {
         var box = document.getElementById('mapaSvg');
         if (box) box.innerHTML = '<div class="mapa-loading">No se pudo cargar la geometría del mapa.<br><span style="font-size:.8em;opacity:.7">' + (err && err.message ? err.message : 'error de red') + '</span></div>';
@@ -383,6 +432,7 @@
 
   function renderDetail() {
     var el = document.getElementById('mapaDetail'); if (!el) return;
+    if (!NAT) { el.innerHTML = '<div class="mapa-loading" style="position:static;padding:30px;text-align:center;color:#6E6275">Cargando datos…</div>'; return; }
     if (pinned && drill && drillLoc != null) { el.innerHTML = productHTML(pinned, drill, drillLoc); return; }
     if (pinned && drill) { el.innerHTML = drillHTML(pinned, drill); return; }
     var r = pinned || hover;
@@ -438,6 +488,23 @@
     var ch = region.chains.filter(function (c) { return c.k === chainKey; })[0];
     if (!ch || !ch.locales[locIdx]) return drillHTML(region, chainKey);
     var l = ch.locales[locIdx];
+    if (l.prod === null) {
+      if (!l._loadingProd) {
+        l._loadingProd = true;
+        window.RetailAPI.requestJson('/web/dashboard/mapa/productos' + window.RetailAPI.buildQuery(window.withCliente({ codigo_local: l.cod })))
+          .then(function (r) {
+            l.prod = (r.productos || []).map(function (p) {
+              return { cat: p.categoria || '\u2014', name: p.nombre, cr: { pesos: growth(p.venta_pesos, p.venta_pesos_ly), costo: growth(p.venta_costo, p.venta_costo_ly), unidades: growth(p.venta_unidades, p.venta_unidades_ly) } };
+            });
+            renderDetail();
+          })
+          .catch(function () { l.prod = []; renderDetail(); });
+      }
+      return '<div class="mapa-dhead">' +
+        '<button type="button" class="mapa-back" data-act="backloc"><svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg> ' + ch.k + ' \u00b7 ' + region.name + '</button>' +
+        '<div class="mapa-drillname">' + l.nombre + '</div></div>' +
+        '<div class="mapa-loading" style="position:static;padding:26px;text-align:center;color:#6E6275">Cargando productos\u2026</div>';
+    }
     var prods = l.prod.slice().sort(function (x, y) { return y.cr[mode] - x.cr[mode]; });
     var rows = prods.map(function (p) {
       return '<div class="mapa-prow">' +
