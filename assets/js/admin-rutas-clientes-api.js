@@ -112,6 +112,7 @@
           if (!count) { count = document.createElement('span'); count.className = 'count'; button.appendChild(count); }
           count.textContent = state.filters[key].length;
         } else if (count) count.remove();
+        if (pager) pager.reset();
         render();
       });
       dropdown.querySelector('.dd-search').addEventListener('input', function (event) {
@@ -136,11 +137,13 @@
       (!state.filters.ruta.length || state.filters.ruta.indexOf(row.ruta) >= 0) &&
       (!state.filters.cliente.length || state.filters.cliente.some(function (id) { return clientIds(row).indexOf(Number(id)) >= 0; }));
   }
+  var pager = window.createREPager ? createREPager('#pager', { pageSize: 100, onChange: function () { render(); }, scrollTo: '.table-card' }) : null;
   function render() {
     var active = activeRows();
     var rows = active.filter(matches);
+    var visible = pager ? pager.slice(rows) : rows;
     var check = '<span class="visit-yes">✓</span>';
-    tbody.innerHTML = rows.length ? rows.map(function (row) {
+    tbody.innerHTML = visible.length ? visible.map(function (row) {
       var ids = clientIds(row);
       return '<tr><td class="sticky-col c0">' + esc(title(row.cadena)) + '</td>' +
         '<td class="sticky-col c1 codigo editable" data-local="' + esc(row.id) + '">' + esc(row.id) + '</td>' +

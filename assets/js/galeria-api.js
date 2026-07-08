@@ -113,12 +113,12 @@
   var lightboxImage = document.getElementById('photoLightboxImage');
   var lightboxMeta = document.getElementById('photoLightboxMeta');
 
-  var pager = document.createElement('div');
-  pager.className = 'gallery-pager';
-  pager.innerHTML = '<span class="gallery-pager-info" id="galleryPagerInfo"></span><button class="gallery-load-more" id="galleryLoadMore" type="button">Cargar más fotos</button>';
-  gallery.insertAdjacentElement('afterend', pager);
-  var pagerInfo = document.getElementById('galleryPagerInfo');
-  var loadMoreBtn = document.getElementById('galleryLoadMore');
+  var pagerHost = document.createElement('div');
+  pagerHost.id = 'galleryPager';
+  gallery.insertAdjacentElement('afterend', pagerHost);
+  var gPager = window.createREPager
+    ? createREPager(pagerHost, { pageSize: pageSize, onChange: function (p) { currentPage = p + 1; loadPhotos({ keepPage: true }); }, scrollTo: gallery })
+    : null;
 
   function currentLabel() {
     var cat = document.querySelector('.cat[aria-pressed="true"]');
@@ -255,14 +255,7 @@
   }
 
   function updatePager() {
-    var loaded = photos.length;
-    var hasMore = loaded < totalPhotos;
-    pagerInfo.textContent = totalPhotos
-      ? 'Mostrando ' + loaded + ' de ' + totalPhotos + ' fotografías'
-      : 'Sin fotografías para mostrar';
-    loadMoreBtn.style.display = hasMore ? 'inline-flex' : 'none';
-    loadMoreBtn.disabled = isLoading || !hasMore;
-    loadMoreBtn.textContent = isLoading ? 'Cargando...' : 'Cargar más fotos';
+    if (gPager) gPager.setTotal(totalPhotos);
   }
 
   function renderPhotos(items, append) {
@@ -324,21 +317,22 @@
     options = options || {};
     if (isLoading) return Promise.resolve();
     isLoading = true;
-    if (!options.append) {
+    if (!options.keepPage) {
       currentPage = 1;
       totalPhotos = 0;
-      gallery.innerHTML = '<div class="gallery-loading">Cargando fotografías...</div>';
+      if (gPager) gPager.reset();
     }
+    gallery.innerHTML = '<div class="gallery-loading">Cargando fotografías...</div>';
     updatePager();
     return window.RetailAPI.requestJson('/web/galeria/fotos' + window.RetailAPI.buildQuery(collectParams()))
       .then(function (payload) {
         totalPhotos = Number(payload.total || 0);
-        renderPhotos(payload.fotos || payload.data || [], !!options.append);
+        renderPhotos(payload.fotos || payload.data || [], false);
       })
       .catch(function () {
         if (IS_PREVIEW) {
           totalPhotos = 12;
-          renderPhotos(previewPhotos(), !!options.append);
+          renderPhotos(previewPhotos(), false);
         } else {
           gallery.innerHTML = '<div class="gallery-empty">No se pudieron cargar las fotografías.</div>';
         }
@@ -536,11 +530,6 @@
     filtersEl.querySelectorAll('.filter').forEach(function (btn) { btn.classList.remove('has-selection'); });
     updateClearFiltersButton();
     loadPhotos();
-  });
-  loadMoreBtn.addEventListener('click', function () {
-    if (photos.length >= totalPhotos) return;
-    currentPage += 1;
-    loadPhotos({ append: true });
   });
   selectAll.addEventListener('click', function () {
     var allSelected = photos.length && Object.keys(selected).length === photos.length;

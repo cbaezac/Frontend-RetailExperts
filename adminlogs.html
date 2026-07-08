@@ -122,10 +122,12 @@ table.logs tbody tr:last-child td{ border-bottom:0; }
         </table>
       </div>
     </div>
+    <div id="pager"></div>
   </main>
 
   <script src="assets/js/api.js"></script>
   <script src="assets/js/admin-guard.js"></script>
+  <script src="assets/js/re-pager.js"></script>
   <script>
     var LOGKEY='re_activity_log';
     function readLog(){ try{ var a=JSON.parse(localStorage.getItem(LOGKEY)||'[]'); return a.filter(function(e){ return e && e.day && e.modulo; }); }catch(e){ return []; } }
@@ -167,15 +169,17 @@ table.logs tbody tr:last-child td{ border-bottom:0; }
         +'<div class="kpi"><div class="k-label">Interacciones de hoy</div><div class="k-value">'+interToday+'</div></div>';
       var rows=filtered();
       var tb=document.getElementById('tbody');
-      if(rows.length===0){ tb.innerHTML='<tr><td colspan="5"><div class="empty"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.6"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><div>Aún no hay eventos registrados.</div></div></td></tr>'; return; }
+      if(rows.length===0){ pager.slice(rows); tb.innerHTML='<tr><td colspan="5"><div class="empty"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.6"/><path d="M8 9h8M8 13h8M8 17h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><div>Aún no hay eventos registrados.</div></div></td></tr>'; return; }
+      rows=pager.slice(rows);
       tb.innerHTML=rows.map(function(e){
         return '<tr><td>'+fmtDay(e.day)+'</td><td class="ev-user">'+(e.user||'—')+'</td><td><span class="badge '+modCls(e.modulo)+'"><span class="bd"></span>'+(e.modulo||'—')+'</span></td><td class="detail">'+(e.evento||'—')+'</td><td style="font-family:var(--font-display);font-weight:700">'+(e.count||1)+'</td></tr>';
       }).join('');
     }
 
-    document.getElementById('f-user').addEventListener('change', function(){ sel.user=this.value; render(); });
-    document.getElementById('f-mod').addEventListener('change', function(){ sel.mod=this.value; render(); });
-    document.getElementById('f-q').addEventListener('input', function(){ sel.q=this.value.trim(); render(); });
+    var pager=createREPager('#pager', { pageSize:50, onChange:function(){ render(); }, scrollTo:'.panel-card' });
+    document.getElementById('f-user').addEventListener('change', function(){ sel.user=this.value; pager.reset(); render(); });
+    document.getElementById('f-mod').addEventListener('change', function(){ sel.mod=this.value; pager.reset(); render(); });
+    document.getElementById('f-q').addEventListener('input', function(){ sel.q=this.value.trim(); pager.reset(); render(); });
 
     document.getElementById('exportBtn').addEventListener('click', function(){
       var rows=filtered();

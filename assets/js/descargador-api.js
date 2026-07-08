@@ -239,6 +239,11 @@
     return value == null ? '' : String(value);
   }
 
+  var previewPager = (window.createREPager && document.getElementById('pager'))
+    ? createREPager('#pager', { pageSize: 25, onChange: function () { renderPreviewPage(); }, scrollTo: '#previewPanel' })
+    : null;
+  var previewCache = { rows: [], columns: [] };
+
   function renderPreview(payload) {
     var rows = (payload && payload.rows) || [];
     var columns = (payload && payload.columns) || [];
@@ -256,14 +261,25 @@
         ? 'Mostrando ' + rows.length + ' de ' + total + ' registros'
         : 'Sin registros';
     }
+    previewCache.rows = rows;
+    previewCache.columns = columns;
+    if (previewPager) previewPager.reset();
+    renderPreviewPage();
+  }
+
+  function renderPreviewPage() {
+    var rows = previewCache.rows;
+    var columns = previewCache.columns;
     if (!rows.length || !columns.length) {
+      if (previewPager) previewPager.slice([]);
       previewTableWrap.innerHTML = '<div class="preview-empty">No hay levantamientos para estos filtros.</div>';
       return;
     }
+    var visible = previewPager ? previewPager.slice(rows) : rows;
     var html = '<table class="preview-table"><thead><tr>' +
       columns.map(function (column) { return '<th>' + escapeHtml(column.label) + '</th>'; }).join('') +
       '</tr></thead><tbody>';
-    html += rows.map(function (row) {
+    html += visible.map(function (row) {
       return '<tr>' + columns.map(function (column) {
         var value = column.key === 'disponible' || column.key === 'implementado' ? formatBoolean(row[column.key]) : row[column.key];
         return '<td title="' + escapeAttribute(value) + '">' + escapeHtml(value) + '</td>';
