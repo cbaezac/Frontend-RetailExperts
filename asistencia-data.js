@@ -3,7 +3,7 @@
    - dates: ['YYYY-MM-DD', ...] ascendente
    - clients / clientLabels: nombres de cliente y su etiqueta visible
    - locales: [cadena, codigoLocal, nombre, ruta]
-   - rows: [dateIdx, localIdx, clientIdx, plan, real, ajustada, rut]
+   - rows: [dateIdx, localIdx, clientIdx, plan, real, ajustada, rut, diasVisita]
      (agregado por visita: si hay varios reponedores en un local,
       plan/real = máximo entre ellos; rut = el del reponedor de la fila)
    Al terminar marca ASISTENCIA.ready = true y dispara 'asistencia:ready'.
@@ -21,7 +21,7 @@ window.ASISTENCIA = { dates: [], clients: [], clientLabels: [], locales: [], row
   if (!API || !API.getToken()) { done(); return; }
 
   var tbody = document.getElementById('tbody');
-  if (tbody) tbody.innerHTML = '<tr class="empty-row"><td colspan="10">Cargando asistencia…</td></tr>';
+  if (tbody) tbody.innerHTML = '<tr class="empty-row"><td colspan="13">Cargando asistencia…</td></tr>';
 
   var LIMIT = 1000, MAX_PAGES = 30;
   var filas = [];
@@ -54,16 +54,17 @@ window.ASISTENCIA = { dates: [], clients: [], clientLabels: [], locales: [], row
         locales.push([f.cadena || '', f.codigo_local, f.nombre_local || f.codigo_local, f.ruta || '']);
       }
       var key = dateIdx[String(f.fecha).slice(0, 10)] + ':' + locIdx[lKey] + ':' + cliIdx[f.cliente];
-      var cur = agg[key] || { plan: 0, real: 0, aj: 0, rut: f.rut };
+      var cur = agg[key] || { plan: 0, real: 0, aj: 0, rut: f.rut, dias: f.dias_visita };
       cur.plan = Math.max(cur.plan, Number(f.planificado) || 0);
       cur.real = Math.max(cur.real, Number(f.asistido) || 0);
       if (f.ajustada) cur.aj = 1;
+      if (f.dias_visita) cur.dias = f.dias_visita;
       agg[key] = cur;
     });
 
     var rows = Object.keys(agg).map(function (key) {
       var p = key.split(':');
-      return [Number(p[0]), Number(p[1]), Number(p[2]), agg[key].plan, agg[key].real, agg[key].aj, agg[key].rut];
+      return [Number(p[0]), Number(p[1]), Number(p[2]), agg[key].plan, agg[key].real, agg[key].aj, agg[key].rut, agg[key].dias || ''];
     });
 
     window.ASISTENCIA.dates = dates;

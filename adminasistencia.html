@@ -118,7 +118,7 @@
   /* Table */
   .table-card{ background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
   .table-scroll{ overflow-x:auto; }
-  table.matrix{ width:100%; border-collapse:collapse; font-size:0.9rem; min-width:1240px; }
+  table.matrix{ width:100%; border-collapse:collapse; font-size:0.9rem; min-width:1320px; }
   table.matrix thead th{ position:sticky; top:0; z-index:2; background:var(--frame); color:#FFF8E7; font-family:var(--font-display); font-weight:600; font-size:0.76rem; text-transform:uppercase; letter-spacing:.03em; text-align:left; padding:13px 14px; white-space:nowrap; }
   table.matrix thead th.center{ text-align:center; }
   table.matrix tbody td{ padding:11px 14px; border-bottom:1px solid var(--line-soft); white-space:nowrap; color:var(--ink); }
@@ -287,6 +287,7 @@
               <th>Código Local</th>
               <th>Nombre Local</th>
               <th>Ruta</th>
+              <th>Días Visita</th>
               <th>Cliente</th>
               <th class="center">Planificado</th>
               <th class="center">Realizado</th>
@@ -367,7 +368,7 @@
   function __initAsistencia(){
     var D = window.ASISTENCIA;
     var DATES = D.dates, CLIENTS = D.clients, CLIENT_LABELS = D.clientLabels, LOCALES = D.locales, ROWS = D.rows;
-    // ROWS: [dateIdx, localIdx, clientIdx, plan, real]
+    // ROWS: [dateIdx, localIdx, clientIdx, plan, real, ajustada, rut, diasVisita]
     // LOCALES: [cadena, codigoLocal, nombre, ruta]
 
     // Los valores ya vienen con los ajustes aplicados por el backend
@@ -384,6 +385,13 @@
     function fmtRuta(v){ return /^rm\s*\d+$/i.test(String(v).replace(/\s/g,'')) ? String(v).toUpperCase().replace(/\s/g,'') : titleCase(v); }
     function fmtCodigo(v){ return String(v).toUpperCase(); }
     function fmtFecha(iso){ var p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+    function fmtDiasVisita(v){
+      var map={1:'L',2:'M',3:'X',4:'J',5:'V',6:'S',7:'D'};
+      var nums=String(v||'').split(/[,\s;/-]+/).map(function(x){ return parseInt(x,10); }).filter(function(n){ return n>=1&&n<=7; });
+      var seen={};
+      nums=nums.filter(function(n){ if(seen[n]) return false; seen[n]=true; return true; }).sort(function(a,b){ return a-b; });
+      return nums.length ? nums.map(function(n){ return map[n]; }).join(',') : '—';
+    }
     function isoWeek(iso){
       var p=iso.split('-').map(Number);
       var d=new Date(Date.UTC(p[0], p[1]-1, p[2]));
@@ -559,7 +567,7 @@
       return '<span class="cov-na">—</span>';
     }
     function renderPage(){
-      if(filtered.length===0){ tbody.innerHTML='<tr class="empty-row"><td colspan="12">No hay registros para los filtros seleccionados.</td></tr>'; document.getElementById('resultCount').innerHTML='Sin resultados'; renderPager(); return; }
+      if(filtered.length===0){ tbody.innerHTML='<tr class="empty-row"><td colspan="13">No hay registros para los filtros seleccionados.</td></tr>'; document.getElementById('resultCount').innerHTML='Sin resultados'; renderPager(); return; }
       var totalPages=Math.ceil(filtered.length/PAGE_SIZE);
       if(page>=totalPages) page=totalPages-1;
       var startI=page*PAGE_SIZE, endI=Math.min(startI+PAGE_SIZE, filtered.length);
@@ -575,6 +583,7 @@
         html+='<td class="code">'+fmtCodigo(L[1])+'</td>';
         html+='<td>'+titleCase(L[2])+'</td>';
         html+='<td>'+fmtRuta(L[3])+'</td>';
+        html+='<td>'+fmtDiasVisita(r[7])+'</td>';
         html+='<td>'+CLIENT_LABELS[r[2]]+'</td>';
         if(bulkEditMode){
           html+='<td class="td-center">'+inlineToggle(r,'plan',e.plan)+'</td>';
@@ -620,8 +629,8 @@
     function covText(plan, real){ if(plan===1&&real===1)return '100%'; if(plan===1&&real===0)return '0%'; if(plan===0&&real===1)return '100%'; return ''; }
     document.getElementById('exportBtn').addEventListener('click', function(){
       if(filtered.length===0){ toast('No hay registros para exportar'); return; }
-      var headers=['Fecha','Semana','Mes','Cadena','Código Local','Nombre Local','Ruta','Cliente','Planificado','Realizado','% Cobertura'];
-      var widths=[80,65,105,90,90,200,80,120,90,90,100];
+      var headers=['Fecha','Semana','Mes','Cadena','Código Local','Nombre Local','Ruta','Días Visita','Cliente','Planificado','Realizado','% Cobertura'];
+      var widths=[80,65,105,90,90,200,80,85,120,90,90,100];
       var xml='<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n';
       xml+='<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
       xml+='<Styles><Style ss:ID="hdr"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#15130E" ss:Pattern="Solid"/></Style><Style ss:ID="c"><Alignment ss:Vertical="Center"/></Style></Styles>';
@@ -632,9 +641,9 @@
         var L=LOCALES[r[1]];
         var e=eff(r);
         var iso=DATES[r[0]];
-        var vals=[fmtFecha(iso), fmtSemana(weekKey(iso)), fmtMes(monthKey(iso)), fmtCadena(L[0]), fmtCodigo(L[1]), titleCase(L[2]), fmtRuta(L[3]), CLIENT_LABELS[r[2]], e.plan, e.real, covText(e.plan,e.real)];
+        var vals=[fmtFecha(iso), fmtSemana(weekKey(iso)), fmtMes(monthKey(iso)), fmtCadena(L[0]), fmtCodigo(L[1]), titleCase(L[2]), fmtRuta(L[3]), fmtDiasVisita(r[7]), CLIENT_LABELS[r[2]], e.plan, e.real, covText(e.plan,e.real)];
         xml+='<Row>';
-        vals.forEach(function(v,ci){ var t=(ci===1||ci===8||ci===9)?'Number':'String'; xml+='<Cell ss:StyleID="c"><Data ss:Type="'+t+'">'+xmlEsc(v)+'</Data></Cell>'; });
+        vals.forEach(function(v,ci){ var t=(ci===1||ci===9||ci===10)?'Number':'String'; xml+='<Cell ss:StyleID="c"><Data ss:Type="'+t+'">'+xmlEsc(v)+'</Data></Cell>'; });
         xml+='</Row>';
       });
       xml+='</Table></Worksheet></Workbook>';
