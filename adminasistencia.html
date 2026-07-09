@@ -106,6 +106,14 @@
   .btn-export{ color:#fff; background:var(--green); border-color:var(--green); box-shadow:0 10px 24px rgba(31,138,76,.26); }
   .btn-export:hover{ transform:translateY(-1px); }
   .btn-export svg{ width:16px; height:16px; }
+  .btn-edit{ color:var(--purple); background:var(--card); border-color:rgba(90,13,116,.25); }
+  .btn-edit:hover,.btn-edit.active{ background:var(--purple); color:#fff; border-color:var(--purple); }
+  .btn-save-changes{ color:#fff; background:var(--accent); border-color:var(--accent); box-shadow:0 10px 24px rgba(224,86,28,.22); }
+  .btn-save-changes:hover{ transform:translateY(-1px); }
+  .btn-cancel-edit{ color:var(--muted); background:var(--card); border-color:var(--line); }
+  .btn-cancel-edit:hover{ color:var(--ink); border-color:var(--ink); }
+  .btn[hidden]{ display:none; }
+  .pending-count{ min-width:22px; height:22px; display:inline-grid; place-items:center; padding:0 7px; border-radius:999px; background:rgba(255,255,255,.24); color:inherit; font-size:.76rem; font-weight:800; }
 
   /* Table */
   .table-card{ background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
@@ -154,7 +162,10 @@
   .edit-pencil{ width:32px; height:32px; display:inline-grid; place-items:center; border-radius:9px; border:1.5px solid var(--line); background:#fff; color:var(--purple); cursor:pointer; transition:all .15s; }
   .edit-pencil:hover{ background:var(--purple); color:#fff; border-color:var(--purple); }
   .row-edited{ background:rgba(201,138,18,0.05); }
+  .row-pending{ background:rgba(224,86,28,0.08); }
+  .row-pending:hover{ background:rgba(224,86,28,0.12) !important; }
   .edited-dot{ display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--amber); margin-left:5px; vertical-align:middle; }
+  .pending-dot{ display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--accent); margin-left:5px; vertical-align:middle; }
 
   /* ---- Modal ---- */
   .modal-overlay{ position:fixed; inset:0; z-index:100; background:rgba(21,19,14,0.55); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:24px; opacity:0; visibility:hidden; transition:opacity .2s,visibility .2s; }
@@ -244,6 +255,15 @@
     <div class="toolbar">
       <span class="result-count" id="resultCount">—</span>
       <div style="display:flex; gap:10px; align-items:center;">
+        <button class="btn btn-edit" id="bulkEditBtn" type="button">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M4 20h4L18.5 9.5a2 2 0 0 0 0-3l-1-1a2 2 0 0 0-3 0L4 16v4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m13.5 7.5 3 3" stroke="currentColor" stroke-width="1.8"/></svg>
+          Editar
+        </button>
+        <button class="btn btn-save-changes" id="savePendingBtn" type="button" hidden>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Guardar cambios <span class="pending-count" id="pendingCount">0</span>
+        </button>
+        <button class="btn btn-cancel-edit" id="cancelPendingBtn" type="button" hidden>Cancelar</button>
         <button class="btn btn-hist" id="histBtn" type="button">
           <svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Historial de ajustes <span class="hist-count" id="histCount" style="display:none">0</span>
@@ -350,7 +370,10 @@
 
     // Los valores ya vienen con los ajustes aplicados por el backend
     // (vista asistencia = base del cron + capa de asistencia_ajuste).
-    function eff(r){ return { plan: r[3], real: r[4] }; }
+    var pendingOverrides={};
+    var bulkEditMode=false;
+    function ovKey(r){ return r[0]+':'+r[1]+':'+r[2]; }
+    function eff(r){ var p=pendingOverrides[ovKey(r)]; return p?p:{ plan: r[3], real: r[4] }; }
     function esAjustada(r){ return !!r[5]; }
     var changeLog=[]; // historial de ajustes, cargado del backend
 
@@ -483,6 +506,12 @@
       clearBtn.classList.toggle('hidden', !anyFilter);
       updateKpis(); renderPage();
     }
+    function refreshCurrentView(){
+      filtered=ROWS.filter(rowMatches);
+      var totalPages=Math.max(1, Math.ceil(filtered.length/PAGE_SIZE));
+      if(page>=totalPages) page=totalPages-1;
+      updateKpis(); renderPage();
+    }
 
     function updateKpis(){
       var plan=0, planReal=0, rec=0, realAny=0;
@@ -506,23 +535,34 @@
       var startI=page*PAGE_SIZE, endI=Math.min(startI+PAGE_SIZE, filtered.length);
       var html='';
       for(var i=startI;i<endI;i++){
-        var r=filtered[i]; var L=LOCALES[r[1]]; var e=eff(r); var edited=esAjustada(r);
-        html+='<tr'+(edited?' class="row-edited"':'')+'>';
-        html+='<td>'+fmtFecha(DATES[r[0]])+(edited?' <span class="edited-dot" title="Ajustado manualmente"></span>':'')+'</td>';
+        var r=filtered[i]; var L=LOCALES[r[1]]; var e=eff(r); var edited=esAjustada(r); var pending=!!pendingOverrides[ovKey(r)];
+        html+='<tr'+(pending?' class="row-pending"':(edited?' class="row-edited"':''))+'>';
+        html+='<td>'+fmtFecha(DATES[r[0]])+(pending?' <span class="pending-dot" title="Cambio pendiente"></span>':(edited?' <span class="edited-dot" title="Ajustado manualmente"></span>':''))+'</td>';
         html+='<td>'+fmtCadena(L[0])+'</td>';
         html+='<td class="code">'+fmtCodigo(L[1])+'</td>';
         html+='<td>'+titleCase(L[2])+'</td>';
         html+='<td>'+fmtRuta(L[3])+'</td>';
         html+='<td>'+CLIENT_LABELS[r[2]]+'</td>';
-        html+='<td class="td-center"><span class="bit bit-plan">'+e.plan+'</span></td>';
-        html+='<td class="td-center"><span class="bit '+(e.real?'bit-1':'bit-0')+'">'+e.real+'</span></td>';
+        if(bulkEditMode){
+          html+='<td class="td-center">'+inlineToggle(r,'plan',e.plan)+'</td>';
+          html+='<td class="td-center">'+inlineToggle(r,'real',e.real)+'</td>';
+        } else {
+          html+='<td class="td-center"><span class="bit bit-plan">'+e.plan+'</span></td>';
+          html+='<td class="td-center"><span class="bit '+(e.real?'bit-1':'bit-0')+'">'+e.real+'</span></td>';
+        }
         html+='<td class="td-center">'+covCell(e.plan,e.real)+'</td>';
-        html+='<td class="td-center"><button class="edit-pencil" type="button" data-di="'+r[0]+'" data-li="'+r[1]+'" title="Editar asistencia de esta visita"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M4 20h4L18.5 9.5a2 2 0 0 0 0-3l-1-1a2 2 0 0 0-3 0L4 16v4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m13.5 7.5 3 3" stroke="currentColor" stroke-width="1.8"/></svg></button></td>';
+        html+='<td class="td-center">'+(bulkEditMode?'<span class="cov-na">—</span>':'<button class="edit-pencil" type="button" data-di="'+r[0]+'" data-li="'+r[1]+'" title="Editar asistencia de esta visita"><svg viewBox="0 0 24 24" width="15" height="15" fill="none"><path d="M4 20h4L18.5 9.5a2 2 0 0 0 0-3l-1-1a2 2 0 0 0-3 0L4 16v4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m13.5 7.5 3 3" stroke="currentColor" stroke-width="1.8"/></svg></button>')+'</td>';
         html+='</tr>';
       }
       tbody.innerHTML=html;
       document.getElementById('resultCount').innerHTML='<b>'+filtered.length.toLocaleString('es-CL')+'</b> registros · mostrando '+(startI+1)+'–'+endI;
       renderPager();
+    }
+    function inlineToggle(r, kind, value){
+      return '<div class="pill-toggle" data-di="'+r[0]+'" data-li="'+r[1]+'" data-ci="'+r[2]+'" data-kind="'+kind+'">'+
+        '<button type="button" data-v="1"'+(value===1?' class="on1"':'')+'>1</button>'+
+        '<button type="button" data-v="0"'+(value===0?' class="on0"':'')+'>0</button>'+
+      '</div>';
     }
 
     var pagerEl=document.getElementById('pager');
@@ -557,7 +597,8 @@
       xml+='<Row ss:Height="22">'; headers.forEach(function(h){ xml+='<Cell ss:StyleID="hdr"><Data ss:Type="String">'+xmlEsc(h)+'</Data></Cell>'; }); xml+='</Row>';
       filtered.forEach(function(r){
         var L=LOCALES[r[1]];
-        var vals=[fmtFecha(DATES[r[0]]), fmtCadena(L[0]), fmtCodigo(L[1]), titleCase(L[2]), fmtRuta(L[3]), CLIENT_LABELS[r[2]], r[3], r[4], covText(r[3],r[4])];
+        var e=eff(r);
+        var vals=[fmtFecha(DATES[r[0]]), fmtCadena(L[0]), fmtCodigo(L[1]), titleCase(L[2]), fmtRuta(L[3]), CLIENT_LABELS[r[2]], e.plan, e.real, covText(e.plan,e.real)];
         xml+='<Row>';
         vals.forEach(function(v,ci){ var t=(ci===6||ci===7)?'Number':'String'; xml+='<Cell ss:StyleID="c"><Data ss:Type="'+t+'">'+xmlEsc(v)+'</Data></Cell>'; });
         xml+='</Row>';
@@ -649,23 +690,118 @@
     document.getElementById('gen-plan').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; var v=parseInt(b.getAttribute('data-v'),10); curVisit.clients.forEach(function(c){ c.plan=v; }); renderEditor(); });
     document.getElementById('gen-real').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; var v=parseInt(b.getAttribute('data-v'),10); curVisit.clients.forEach(function(c){ c.real=v; }); renderEditor(); });
 
+    function ajustePayload(row, after){
+      var L=LOCALES[row[1]];
+      return {
+        fecha: DATES[row[0]],
+        codigo_local: L[1],
+        rut: row[6],
+        cliente: CLIENTS[row[2]],
+        planificado: after.plan,
+        asistido: after.real,
+        plan_anterior: row[3],
+        real_anterior: row[4],
+        motivo: 'Ajuste manual desde panel admin'
+      };
+    }
+    function applySavedRows(rows){
+      rows.forEach(function(item){
+        item.row[3]=item.after.plan;
+        item.row[4]=item.after.real;
+        item.row[5]=true;
+      });
+    }
+    function postAjustes(ajustes){
+      return window.RetailAPI.requestJson('/web/admin/asignaciones/asistencia/ajustes', {
+        method:'POST',
+        body:JSON.stringify({ ajustes:ajustes })
+      });
+    }
+
     function saveEditor(){
       if(!curVisit) return;
       var L=LOCALES[curVisit.li]; var iso=DATES[curVisit.di];
       var cambios=[];
+      var rowsToApply=[];
       curVisit.clients.forEach(function(c){
         if(c.plan!==c.basePlan || c.real!==c.baseReal){
-          cambios.push({ fecha: iso, codigo_local: L[1], rut: c.rut, cliente: CLIENTS[c.ci],
-            planificado: c.plan, asistido: c.real, plan_anterior: c.basePlan, real_anterior: c.baseReal,
-            motivo: 'Ajuste manual desde panel admin' });
+          var row=ROWS.find(function(r){ return r[0]===curVisit.di && r[1]===curVisit.li && r[2]===c.ci; });
+          if(row){
+            cambios.push(ajustePayload(row, { plan:c.plan, real:c.real }));
+            rowsToApply.push({ row:row, after:{ plan:c.plan, real:c.real } });
+          }
         }
       });
       if(cambios.length===0){ toast('No hubo cambios que guardar'); closeEditor(); return; }
       var btn=document.getElementById('e-save'); btn.disabled=true;
-      window.RetailAPI.requestJson('/web/admin/asignaciones/asistencia/ajustes', { method:'POST', body: JSON.stringify({ ajustes: cambios }) })
-        .then(function(){ closeEditor(); toast('Asistencia actualizada'); setTimeout(function(){ window.location.reload(); }, 900); })
+      postAjustes(cambios)
+        .then(function(){ applySavedRows(rowsToApply); closeEditor(); applyAll(); cargarHistorial(); toast('Asistencia sincronizada'); })
         .catch(function(err){ var msg='No se pudo guardar el ajuste'; try{ var j=JSON.parse(err.message); if(j.message) msg=Array.isArray(j.message)?j.message.join(', '):j.message; }catch(_){} toast(msg); })
         .finally(function(){ btn.disabled=false; });
+    }
+
+    /* ---- Edición masiva ---- */
+    var bulkEditBtn=document.getElementById('bulkEditBtn');
+    var savePendingBtn=document.getElementById('savePendingBtn');
+    var cancelPendingBtn=document.getElementById('cancelPendingBtn');
+    var pendingCountEl=document.getElementById('pendingCount');
+    function pendingKeys(){ return Object.keys(pendingOverrides); }
+    function findRowByKey(key){
+      var p=key.split(':').map(function(x){ return parseInt(x,10); });
+      return ROWS.find(function(r){ return r[0]===p[0] && r[1]===p[1] && r[2]===p[2]; }) || null;
+    }
+    function updateBulkButtons(){
+      var count=pendingKeys().length;
+      pendingCountEl.textContent=count;
+      bulkEditBtn.classList.toggle('active', bulkEditMode);
+      savePendingBtn.hidden=!bulkEditMode;
+      cancelPendingBtn.hidden=!bulkEditMode;
+      savePendingBtn.disabled=count===0;
+    }
+    function setBulkMode(on){
+      bulkEditMode=on;
+      if(!on) pendingOverrides={};
+      updateBulkButtons();
+      renderPage();
+    }
+    function setPendingCell(di, li, ci, kind, value){
+      var row=findRowByKey(di+':'+li+':'+ci);
+      if(!row) return;
+      var key=ovKey(row);
+      var current=pendingOverrides[key] || { plan:row[3], real:row[4] };
+      var next={ plan:current.plan, real:current.real };
+      next[kind]=value;
+      if(next.plan===row[3] && next.real===row[4]) delete pendingOverrides[key];
+      else pendingOverrides[key]=next;
+      updateBulkButtons();
+      refreshCurrentView();
+    }
+    function savePendingChanges(){
+      var keys=pendingKeys();
+      if(!keys.length){ toast('No hay cambios pendientes'); return; }
+      var ajustes=[]; var rowsToApply=[];
+      keys.forEach(function(key){
+        var row=findRowByKey(key); if(!row) return;
+        var after=pendingOverrides[key]; if(!after) return;
+        ajustes.push(ajustePayload(row, after));
+        rowsToApply.push({ row:row, after:after });
+      });
+      if(!ajustes.length){ toast('No hay cambios pendientes'); return; }
+      savePendingBtn.disabled=true;
+      postAjustes(ajustes).then(function(){
+        applySavedRows(rowsToApply);
+        pendingOverrides={};
+        bulkEditMode=false;
+        updateBulkButtons();
+        refreshCurrentView();
+        cargarHistorial();
+        toast(rowsToApply.length===1?'Cambio sincronizado':'Cambios sincronizados: '+rowsToApply.length);
+      }).catch(function(err){
+        savePendingBtn.disabled=false;
+        var msg='No se pudo guardar en la DB';
+        try{ var j=JSON.parse(err.message); if(j.message) msg=Array.isArray(j.message)?j.message.join(', '):j.message; }catch(_){}
+        toast(msg);
+      });
     }
 
     /* ---- Historial ---- */
@@ -722,9 +858,27 @@
     }
 
     tbody.addEventListener('click', function(e){
+      var toggle=e.target.closest('.pill-toggle button');
+      if(toggle && bulkEditMode){
+        var wrap=toggle.parentNode;
+        setPendingCell(
+          parseInt(wrap.getAttribute('data-di'),10),
+          parseInt(wrap.getAttribute('data-li'),10),
+          parseInt(wrap.getAttribute('data-ci'),10),
+          wrap.getAttribute('data-kind'),
+          parseInt(toggle.getAttribute('data-v'),10)
+        );
+        return;
+      }
       var btn=e.target.closest('.edit-pencil'); if(!btn) return;
       openEditor(parseInt(btn.getAttribute('data-di'),10), parseInt(btn.getAttribute('data-li'),10));
     });
+    bulkEditBtn.addEventListener('click', function(){
+      if(bulkEditMode && pendingKeys().length){ toast('Guarda o cancela los cambios pendientes'); return; }
+      setBulkMode(!bulkEditMode);
+    });
+    savePendingBtn.addEventListener('click', savePendingChanges);
+    cancelPendingBtn.addEventListener('click', function(){ setBulkMode(false); toast('Edición cancelada'); });
     document.getElementById('e-close').addEventListener('click', closeEditor);
     document.getElementById('e-cancel').addEventListener('click', closeEditor);
     document.getElementById('e-save').addEventListener('click', saveEditor);
@@ -736,6 +890,7 @@
     histOverlay.addEventListener('click', function(e){ if(e.target===histOverlay) closeHist(); });
     document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeEditor(); closeHist(); } });
     updateHistBtn();
+    updateBulkButtons();
     cargarHistorial();
 
     applyAll();
