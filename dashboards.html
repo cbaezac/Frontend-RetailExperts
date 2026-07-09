@@ -925,9 +925,10 @@
     var COM_DEMO_APERTURAS = COM.aperturas;
     var COM_REAL = false;
     /* El frontend manda las LLAVES estables de apertura/filtro; el mapeo a columnas reales
-       (Categoría→rubro, Descriptor Producto→subrubro) se hace en el BACKEND (COMERCIAL_DIMENSIONES). */
-    var DRILL_PARAM = {cadena:'cadena', formato:'formato', region:'region', codlocal:'codigo_local', nomlocal:'nombre_local', categoria:'categoria', marca:'marca', codprod:'codigo_producto', descriptor:'nombre_producto', producto:'nombre_producto'};
-    var API_AP = {producto:'descriptor'};
+       (Categoría→rubro, Marca→cliente, Descriptor Producto→subrubro, Producto→nombre) se hace
+       en el BACKEND (COMERCIAL_DIMENSIONES / ventaClienteWhere). */
+    var DRILL_PARAM = {cadena:'cadena', formato:'formato', region:'region', codlocal:'codigo_local', nomlocal:'nombre_local', categoria:'categoria', marca:'marca', codprod:'codigo_producto', descriptor:'descriptor', producto:'nombre_producto'};
+    var API_AP = {};
     COM.aperturas = {};   // en modo real cada apertura se carga del backend
     function fetchComercial(apertura, extra){
       var params = withCliente(Object.assign({apertura: API_AP[apertura]||apertura, desde: comPeriod.start, hasta: comPeriod.end}, extra||{}));
