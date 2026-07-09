@@ -118,7 +118,7 @@
   /* Table */
   .table-card{ background:var(--card); border:1px solid var(--line); border-radius:16px; overflow:hidden; }
   .table-scroll{ overflow-x:auto; }
-  table.matrix{ width:100%; border-collapse:collapse; font-size:0.9rem; min-width:1100px; }
+  table.matrix{ width:100%; border-collapse:collapse; font-size:0.9rem; min-width:1240px; }
   table.matrix thead th{ position:sticky; top:0; z-index:2; background:var(--frame); color:#FFF8E7; font-family:var(--font-display); font-weight:600; font-size:0.76rem; text-transform:uppercase; letter-spacing:.03em; text-align:left; padding:13px 14px; white-space:nowrap; }
   table.matrix thead th.center{ text-align:center; }
   table.matrix tbody td{ padding:11px 14px; border-bottom:1px solid var(--line-soft); white-space:nowrap; color:var(--ink); }
@@ -281,6 +281,8 @@
           <thead>
             <tr>
               <th>Fecha</th>
+              <th class="center">Semana</th>
+              <th>Mes</th>
               <th>Cadena</th>
               <th>Código Local</th>
               <th>Nombre Local</th>
@@ -382,6 +384,28 @@
     function fmtRuta(v){ return /^rm\s*\d+$/i.test(String(v).replace(/\s/g,'')) ? String(v).toUpperCase().replace(/\s/g,'') : titleCase(v); }
     function fmtCodigo(v){ return String(v).toUpperCase(); }
     function fmtFecha(iso){ var p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+    function isoWeek(iso){
+      var p=iso.split('-').map(Number);
+      var d=new Date(Date.UTC(p[0], p[1]-1, p[2]));
+      var day=d.getUTCDay()||7;
+      d.setUTCDate(d.getUTCDate()+4-day);
+      var yearStart=new Date(Date.UTC(d.getUTCFullYear(),0,1));
+      return Math.ceil((((d-yearStart)/86400000)+1)/7);
+    }
+    function weekKey(iso){
+      var p=iso.split('-').map(Number);
+      var d=new Date(Date.UTC(p[0], p[1]-1, p[2]));
+      var day=d.getUTCDay()||7;
+      d.setUTCDate(d.getUTCDate()+4-day);
+      return d.getUTCFullYear()+'-W'+String(isoWeek(iso)).padStart(2,'0');
+    }
+    function fmtSemana(key){ return String(parseInt(String(key).split('W')[1]||key,10)); }
+    function monthKey(iso){ return iso.slice(0,7); }
+    function fmtMes(key){
+      var p=String(key).split('-');
+      var names=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      return (names[Number(p[1])-1]||key)+' '+p[0];
+    }
 
     // distinct helpers
     function distinct(getter, sortNum){
@@ -390,8 +414,10 @@
     }
     var CADENAS = distinct(function(L){return L[0];});
     var RUTAS = distinct(function(L){return L[3];}, true);
+    var SEMANAS = Array.from(new Set(DATES.map(weekKey))).sort(function(a,b){ return a.localeCompare(b, 'es', {numeric:true}); });
+    var MESES = Array.from(new Set(DATES.map(monthKey))).sort();
 
-    var sel = { cadena:[], ruta:[], cliente:[], fStart:'', fEnd:'', estado:'todas', q:'' };
+    var sel = { semana:[], mes:[], cadena:[], ruta:[], cliente:[], fStart:'', fEnd:'', estado:'todas', q:'' };
 
     /* ---------- Filtros ---------- */
     var filtersEl = document.getElementById('filters');
@@ -444,6 +470,8 @@
     }
 
     buildDate();
+    buildList('Semana','semana',SEMANAS,fmtSemana);
+    buildList('Mes','mes',MESES,fmtMes);
     buildList('Cadena','cadena',CADENAS,fmtCadena);
     buildList('Ruta','ruta',RUTAS,fmtRuta);
     buildList('Cliente','cliente',CLIENTS,function(c){ return CLIENT_LABELS[CLIENTS.indexOf(c)]; });
@@ -469,7 +497,7 @@
     var clearBtn=document.createElement('button'); clearBtn.className='clear-inline hidden'; clearBtn.type='button';
     clearBtn.innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M5 5l14 14M19 5 5 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Limpiar filtros';
     clearBtn.addEventListener('click', function(){
-      sel={ cadena:[], ruta:[], cliente:[], fStart:'', fEnd:'', estado:'todas', q:'' };
+      sel={ semana:[], mes:[], cadena:[], ruta:[], cliente:[], fStart:'', fEnd:'', estado:'todas', q:'' };
       filtersEl.querySelectorAll('.filter').forEach(function(b){ b.classList.remove('has-selection'); var c=b.querySelector('.count'); if(c)c.remove(); });
       filtersEl.querySelectorAll('.dd-item input:checked').forEach(function(c){ c.checked=false; });
       filtersEl.querySelectorAll('.dd-date').forEach(function(d){ d.value=''; });
@@ -486,8 +514,10 @@
       var L=LOCALES[r[1]];
       if(sel.cadena.length && sel.cadena.indexOf(L[0])===-1) return false;
       if(sel.ruta.length && sel.ruta.indexOf(L[3])===-1) return false;
-      if(sel.cliente.length && sel.cliente.indexOf(CLIENTS[r[2]])===-1) return false;
       var iso=DATES[r[0]];
+      if(sel.semana.length && sel.semana.indexOf(weekKey(iso))===-1) return false;
+      if(sel.mes.length && sel.mes.indexOf(monthKey(iso))===-1) return false;
+      if(sel.cliente.length && sel.cliente.indexOf(CLIENTS[r[2]])===-1) return false;
       if(sel.fStart && iso<sel.fStart) return false;
       if(sel.fEnd && iso>sel.fEnd) return false;
       if(sel.q){ if((String(L[1]).toLowerCase().indexOf(sel.q)===-1) && (String(L[2]).toLowerCase().indexOf(sel.q)===-1)) return false; }
@@ -502,7 +532,7 @@
     function applyAll(){
       filtered=ROWS.filter(rowMatches);
       page=0;
-      var anyFilter = sel.cadena.length||sel.ruta.length||sel.cliente.length||sel.fStart||sel.fEnd||sel.q||sel.estado!=='todas';
+      var anyFilter = sel.semana.length||sel.mes.length||sel.cadena.length||sel.ruta.length||sel.cliente.length||sel.fStart||sel.fEnd||sel.q||sel.estado!=='todas';
       clearBtn.classList.toggle('hidden', !anyFilter);
       updateKpis(); renderPage();
     }
@@ -529,7 +559,7 @@
       return '<span class="cov-na">—</span>';
     }
     function renderPage(){
-      if(filtered.length===0){ tbody.innerHTML='<tr class="empty-row"><td colspan="10">No hay registros para los filtros seleccionados.</td></tr>'; document.getElementById('resultCount').innerHTML='Sin resultados'; renderPager(); return; }
+      if(filtered.length===0){ tbody.innerHTML='<tr class="empty-row"><td colspan="12">No hay registros para los filtros seleccionados.</td></tr>'; document.getElementById('resultCount').innerHTML='Sin resultados'; renderPager(); return; }
       var totalPages=Math.ceil(filtered.length/PAGE_SIZE);
       if(page>=totalPages) page=totalPages-1;
       var startI=page*PAGE_SIZE, endI=Math.min(startI+PAGE_SIZE, filtered.length);
@@ -537,7 +567,10 @@
       for(var i=startI;i<endI;i++){
         var r=filtered[i]; var L=LOCALES[r[1]]; var e=eff(r); var edited=esAjustada(r); var pending=!!pendingOverrides[ovKey(r)];
         html+='<tr'+(pending?' class="row-pending"':(edited?' class="row-edited"':''))+'>';
-        html+='<td>'+fmtFecha(DATES[r[0]])+(pending?' <span class="pending-dot" title="Cambio pendiente"></span>':(edited?' <span class="edited-dot" title="Ajustado manualmente"></span>':''))+'</td>';
+        var iso=DATES[r[0]];
+        html+='<td>'+fmtFecha(iso)+(pending?' <span class="pending-dot" title="Cambio pendiente"></span>':(edited?' <span class="edited-dot" title="Ajustado manualmente"></span>':''))+'</td>';
+        html+='<td class="td-center">'+fmtSemana(weekKey(iso))+'</td>';
+        html+='<td>'+fmtMes(monthKey(iso))+'</td>';
         html+='<td>'+fmtCadena(L[0])+'</td>';
         html+='<td class="code">'+fmtCodigo(L[1])+'</td>';
         html+='<td>'+titleCase(L[2])+'</td>';
@@ -587,8 +620,8 @@
     function covText(plan, real){ if(plan===1&&real===1)return '100%'; if(plan===1&&real===0)return '0%'; if(plan===0&&real===1)return '100%'; return ''; }
     document.getElementById('exportBtn').addEventListener('click', function(){
       if(filtered.length===0){ toast('No hay registros para exportar'); return; }
-      var headers=['Fecha','Cadena','Código Local','Nombre Local','Ruta','Cliente','Planificado','Realizado','% Cobertura'];
-      var widths=[80,90,90,200,80,120,90,90,100];
+      var headers=['Fecha','Semana','Mes','Cadena','Código Local','Nombre Local','Ruta','Cliente','Planificado','Realizado','% Cobertura'];
+      var widths=[80,65,105,90,90,200,80,120,90,90,100];
       var xml='<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n';
       xml+='<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
       xml+='<Styles><Style ss:ID="hdr"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#15130E" ss:Pattern="Solid"/></Style><Style ss:ID="c"><Alignment ss:Vertical="Center"/></Style></Styles>';
@@ -598,9 +631,10 @@
       filtered.forEach(function(r){
         var L=LOCALES[r[1]];
         var e=eff(r);
-        var vals=[fmtFecha(DATES[r[0]]), fmtCadena(L[0]), fmtCodigo(L[1]), titleCase(L[2]), fmtRuta(L[3]), CLIENT_LABELS[r[2]], e.plan, e.real, covText(e.plan,e.real)];
+        var iso=DATES[r[0]];
+        var vals=[fmtFecha(iso), fmtSemana(weekKey(iso)), fmtMes(monthKey(iso)), fmtCadena(L[0]), fmtCodigo(L[1]), titleCase(L[2]), fmtRuta(L[3]), CLIENT_LABELS[r[2]], e.plan, e.real, covText(e.plan,e.real)];
         xml+='<Row>';
-        vals.forEach(function(v,ci){ var t=(ci===6||ci===7)?'Number':'String'; xml+='<Cell ss:StyleID="c"><Data ss:Type="'+t+'">'+xmlEsc(v)+'</Data></Cell>'; });
+        vals.forEach(function(v,ci){ var t=(ci===1||ci===8||ci===9)?'Number':'String'; xml+='<Cell ss:StyleID="c"><Data ss:Type="'+t+'">'+xmlEsc(v)+'</Data></Cell>'; });
         xml+='</Row>';
       });
       xml+='</Table></Worksheet></Workbook>';
