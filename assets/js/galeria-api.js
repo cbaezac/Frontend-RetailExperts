@@ -138,6 +138,28 @@
     });
   }
 
+  function nomPropio(value) {
+    var raw = String(value == null ? '' : value).trim();
+    if (!raw) return '';
+    if (raw.toLocaleLowerCase('es-CL') === 'smu') return 'SMU';
+    return raw.toLocaleLowerCase('es-CL').replace(/(^|[\s([{'"\/-])([\p{L}])/gu, function (_, prefix, letter) {
+      return prefix + letter.toLocaleUpperCase('es-CL');
+    });
+  }
+
+  function displayValue(key, value) {
+    if (value == null || value === '') return '';
+    if (key === 'codigo_local' || key === 'id_local' || key === 'id_foto') return String(value);
+    if (key === 'cadena' || key === 'formato' || key === 'region' || key === 'nombre_local' || key === 'cliente' || key === 'clientes' || key === 'ruta' || key === 'categoria' || key === 'nombre_ciclo' || key === 'mueble') {
+      return nomPropio(value);
+    }
+    return String(value);
+  }
+
+  function displayFilterValue(name, value) {
+    return displayValue(PARAM_BY_FILTER[name] || name, value);
+  }
+
   function optionsFor(name) {
     if (!filterOptions) return [];
     if (name === 'Cadena') return unique(filterOptions.cadenas);
@@ -276,8 +298,8 @@
       var id = String(photo.id_foto || photo.id);
       var rutaArchivo = photo.ruta_archivo || '';
       var formattedDate = formatPhotoDateTime(photo.creado_en) || formatPhotoDate(photo.fecha);
-      var metaLine1 = [photo.formato, photo.codigo_local].filter(Boolean).join(' · ');
-      var metaLine2 = photo.nombre_local || '';
+      var metaLine1 = [displayValue('formato', photo.formato), displayValue('codigo_local', photo.codigo_local || photo.id_local)].filter(Boolean).join(' · ');
+      var metaLine2 = displayValue('nombre_local', photo.nombre_local);
       photos.push(photo);
       var card = document.createElement('div');
       card.className = 'photo';
@@ -364,7 +386,7 @@
       optionsFor(name).forEach(function (opt) {
         var item = document.createElement('label');
         item.className = 'dd-item';
-        item.innerHTML = '<input type="checkbox" value="' + opt.replace(/"/g, '&quot;') + '" /><span>' + opt + '</span>';
+        item.innerHTML = '<input type="checkbox" value="' + escapeHtml(opt) + '" /><span>' + escapeHtml(displayFilterValue(name, opt)) + '</span>';
         dd.querySelector('.dd-list').appendChild(item);
       });
     }
@@ -494,7 +516,14 @@
     lightboxMeta.textContent = [
       'ID foto: ' + id,
       'Ruta: ' + (photo.ruta_archivo || ''),
-      [photo.clientes, photo.cadena, photo.codigo_local, formatPhotoDateTime(photo.creado_en) || formatPhotoDate(photo.fecha)].filter(Boolean).join(' · ')
+      [
+        displayValue('clientes', photo.clientes || photo.cliente),
+        displayValue('cadena', photo.cadena),
+        displayValue('formato', photo.formato),
+        displayValue('codigo_local', photo.codigo_local || photo.id_local),
+        displayValue('nombre_local', photo.nombre_local),
+        formatPhotoDateTime(photo.creado_en) || formatPhotoDate(photo.fecha)
+      ].filter(Boolean).join(' · ')
     ].filter(Boolean).join(' | ');
     lightbox.classList.add('open');
   }

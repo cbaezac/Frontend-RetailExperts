@@ -65,6 +65,23 @@
     });
   }
 
+  function nomPropio(value) {
+    if (value == null) return '';
+    var raw = String(value).trim();
+    if (!raw) return '';
+    return raw.toLocaleLowerCase('es-CL').replace(/(^|[\s([{'"\/-])([\p{L}])/gu, function (_, prefix, letter) {
+      return prefix + letter.toLocaleUpperCase('es-CL');
+    });
+  }
+
+  function displayValue(key, value) {
+    if (key === 'disponible' || key === 'implementado') return formatBoolean(value);
+    if (key === 'cadena' || key === 'formato' || key === 'nombre_local' || key === 'cliente' || key === 'producto' || key === 'categoria_tareas' || key === 'nombre_ciclo' || key === 'mueble' || key === 'observacion') {
+      return nomPropio(value);
+    }
+    return value == null ? '' : String(value);
+  }
+
   function listFor(name) {
     if (!options) return [];
     if (name === 'Cadena') return unique(options.cadenas);
@@ -114,7 +131,7 @@
       listFor(name).forEach(function (opt) {
         var item = document.createElement('label');
         item.className = 'dd-item';
-        item.innerHTML = '<input type="checkbox" value="' + escapeAttribute(opt) + '" /><span>' + escapeHtml(opt) + '</span>';
+        item.innerHTML = '<input type="checkbox" value="' + escapeAttribute(opt) + '" /><span>' + escapeHtml(nomPropio(opt)) + '</span>';
         list.appendChild(item);
       });
       if (!list.children.length) {
@@ -281,7 +298,7 @@
       '</tr></thead><tbody>';
     html += visible.map(function (row) {
       return '<tr>' + columns.map(function (column) {
-        var value = column.key === 'disponible' || column.key === 'implementado' ? formatBoolean(row[column.key]) : row[column.key];
+        var value = displayValue(column.key, row[column.key]);
         return '<td title="' + escapeAttribute(value) + '">' + escapeHtml(value) + '</td>';
       }).join('') + '</tr>';
     }).join('');

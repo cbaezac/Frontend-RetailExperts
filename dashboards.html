@@ -454,6 +454,11 @@
     function num(n){ return Math.round(n).toLocaleString('es-CL'); }
     function numShort(n){ if(Math.abs(n)>=1e6) return (n/1e6).toFixed(1).replace('.0','')+'M'; if(Math.abs(n)>=1e3) return (n/1e3).toFixed(0)+'K'; return num(n); }
     function pct(n){ return n.toFixed(1).replace('.0','')+'%'; }
+    function nomPropio(v){
+      var s=String(v==null?'':v).trim();
+      if(!s) return '';
+      return s.toLocaleLowerCase('es-CL').replace(/(^|[\s([{'"\/-])([\p{L}])/gu,function(_,p,l){return p+l.toLocaleUpperCase('es-CL');});
+    }
 
     /* ---------- Paleta de gráficos (pastel).
        El color se asigna por POSICIÓN del ítem dentro de la apertura (no por su nombre),
@@ -539,6 +544,24 @@
         :'<svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12l7 7 7-7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>')
         +(up?'+':'')+d.toFixed(1).replace('.0','')+(d===Math.round(d)&&Math.abs(d)<100?'%':'%')+'</span>';
     }
+    function addDays(d,n){ var x=new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate()+n); return x; }
+    function isoDate(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+    function isoAddYears(iso,n){ var p=iso.split('-').map(Number); return isoDate(new Date(p[0]+n,p[1]-1,p[2])); }
+    var MONTHS_SHORT=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    function fmtDayMonth(d){ return ('0'+d.getDate()).slice(-2)+' '+MONTHS_SHORT[d.getMonth()]; }
+    function parseIsoDate(iso){ var p=iso.split('-').map(Number); return new Date(p[0],p[1]-1,p[2]); }
+    function periodLabel(p){
+      var s=parseIsoDate(p.start), e=parseIsoDate(p.end);
+      return fmtDayMonth(s)+' - '+fmtDayMonth(e)+' '+e.getFullYear();
+    }
+    var TODAY=new Date();
+    var YESTERDAY=addDays(TODAY,-1);
+    var MONTH_START=new Date(YESTERDAY.getFullYear(), YESTERDAY.getMonth(), 1);
+    var DEFAULT_PERIODS={
+      mtd:{start:isoDate(MONTH_START), end:isoDate(YESTERDAY)},
+      yesterday:{start:isoDate(YESTERDAY), end:isoDate(YESTERDAY)},
+      last28:{start:isoDate(addDays(YESTERDAY,-27)), end:isoDate(YESTERDAY)}
+    };
 
     /* ---------- KPI card ---------- */
     function kpiCard(k){
@@ -695,6 +718,22 @@
     var COM = D.comercial;
     var APERTURAS = [['cadena','Cadena'],['formato','Formato'],['region','Región'],['codlocal','Código Local'],['nomlocal','Nombre Local'],['categoria','Categoría'],['marca','Marca'],['codprod','Código Producto'],['descriptor','Descriptor Producto']];
     if(COM.aperturas.descriptor && !COM.aperturas.codprod){ COM.aperturas.codprod = { values: COM.aperturas.descriptor.values.map(function(v,i){ return Object.assign({}, v, {label:'SKU'+(1001+i)}); }) }; }
+    function displayAperturaLabel(ap, value){
+      var raw=String(value==null?'':value).trim();
+      if(!raw) return '';
+      if(ap==='codlocal' || ap==='codprod') return raw;
+      if(raw.toLocaleLowerCase('es-CL')==='smu') return 'SMU';
+      if(raw.indexOf(' · ')>=0){
+        return raw.split(' · ').map(function(part,i){ return i===0 && /^(SKU|[A-Z]{1,4})[-]?\d+/i.test(part) ? part.toUpperCase() : displayAperturaLabel(ap, part); }).join(' · ');
+      }
+      return nomPropio(raw);
+    }
+    function normalizeAperturaValues(ap, values){
+      return (values||[]).map(function(v){
+        var raw=(v.rawLabel!=null?v.rawLabel:v.label);
+        return Object.assign({}, v, {rawLabel:raw, label:displayAperturaLabel(ap, raw)});
+      });
+    }
     var METRIC_KEYS = ['pesos','costo','unidades','precio'];
     var METRIC_LABEL = {pesos:'Venta pesos',costo:'Venta costo',unidades:'Venta unidades',precio:'Precio promedio'};
     var METRIC_COLORS = {pesos:'#E0561C',costo:'#5A0D74',unidades:'#1F8A4C',precio:'#F2A03D'};
@@ -805,7 +844,7 @@
           e.stopPropagation();
           var row=byKey[cue.getAttribute('data-key')]; if(!row) return;
           var gal=null;
-          if(DRILL_LOCAL[curAp]){ gal = row.cod ? {ap:'codlocal', val:row.cod} : {ap:curAp, val:(row.label||row.cadena||row.local||'')}; }
+          if(DRILL_LOCAL[curAp]){ gal = row.cod ? {ap:'codlocal', val:row.cod} : {ap:curAp, val:(row.rawLabel||row.label||row.cadena||row.local||'')}; }
           openDrillMenu(cue, { options:drillOptionsFor(usedAps), gallery:gal, onPick:function(ap){ onPick(ap, row); } });
         });
       });
@@ -837,11 +876,11 @@
     function loadComercial(apertura){
       return fetchComercial(apertura).then(function(r){
         if(r.weeks && r.weeks.length) D.weeks = r.weeks;
-        COM.aperturas[apertura] = { values: r.values||[] };
+        COM.aperturas[apertura] = { values: normalizeAperturaValues(apertura, r.values) };
         COM_REAL = true;
         refreshFilterOptionsFromCom(apertura);
       }).catch(function(){
-        COM.aperturas[apertura] = COM_DEMO_APERTURAS[apertura] || {values:[]};
+        COM.aperturas[apertura] = { values: normalizeAperturaValues(apertura, ((COM_DEMO_APERTURAS[apertura]||{}).values||[])) };
         refreshFilterOptionsFromCom(apertura);
       });
     }
@@ -864,7 +903,7 @@
     var drillCache = {};
     function drillPathFilters(baseAp, path){
       var f={}; var prevAp=baseAp;
-      path.forEach(function(pp){ var param=DRILL_PARAM[prevAp]; if(param) f[param]=pp.label; prevAp=pp.ap; });
+      path.forEach(function(pp){ var param=DRILL_PARAM[prevAp]; if(param) f[param]=pp.rawLabel||pp.label; prevAp=pp.ap; });
       return f;
     }
     function drillValuesReal(baseAp, path, onReady){
@@ -873,7 +912,7 @@
       if(drillCache[key+':p']) return null;
       drillCache[key+':p']=1;
       fetchComercial(path[path.length-1].ap, drillPathFilters(baseAp, path)).then(function(r){
-        drillCache[key]=r.values||[]; delete drillCache[key+':p']; onReady();
+        drillCache[key]=normalizeAperturaValues(path[path.length-1].ap, r.values); delete drillCache[key+':p']; onReady();
       }).catch(function(){ drillCache[key]=[]; delete drillCache[key+':p']; onReady(); });
       return null;
     }
@@ -992,7 +1031,7 @@
     var COM_PROD_NAMES=['Aceite 1L','Detergente 3kg','Café 250g','Shampoo 400ml','Galletas 140g','Atún 170g','Arroz 1kg','Jugo 1.5L'];
     function comHashN(s){ var h=2166136261; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619);} return h>>>0; }
     function comDimRows(m){
-      return dimValues().map(function(v,idx){ var val=metricTotal(v,m.k); var ratioCV=sumArr(v.costo)/(sumArr(v.pesos)||1); var price=(sumArr(v.pesos)/(sumArr(v.unidades)||1))||1; var ly=(m.k==='pesos')?v.ly:(m.k==='costo'?v.ly*ratioCV:v.ly/price); var meta=(m.k==='pesos')?v.meta:(m.k==='costo'?v.meta*ratioCV:v.meta/price); return {label:v.label, val:val, ly:ly, meta:meta, idx:idx}; });
+      return dimValues().map(function(v,idx){ var val=metricTotal(v,m.k); var ratioCV=sumArr(v.costo)/(sumArr(v.pesos)||1); var price=(sumArr(v.pesos)/(sumArr(v.unidades)||1))||1; var ly=(m.k==='pesos')?v.ly:(m.k==='costo'?v.ly*ratioCV:v.ly/price); var meta=(m.k==='pesos')?v.meta:(m.k==='costo'?v.meta*ratioCV:v.meta/price); return {label:v.label, rawLabel:v.rawLabel||v.label, val:val, ly:ly, meta:meta, idx:idx}; });
     }
     function comLocalesFor(label, val, meta){
       var n=4+(comHashN(label)%5); var arr=[]; for(var i=0;i<n;i++){ var h=comHashN(label+'L'+i); arr.push({h:h, w:0.5+(h%100)/100}); }
@@ -1013,7 +1052,7 @@
       var comTerminal=(comCurAp==='producto'||comCurAp==='codprod'||comCurAp==='descriptor');
       var rows, firstCol, subTitle, backBtn='';
       if(level===0){
-        rows=comDimRows(m).map(function(r){ return {key:r.label, label:r.label, idx:r.idx, val:r.val, meta:r.meta, drill:!comTerminal}; });
+        rows=comDimRows(m).map(function(r){ return {key:r.label, label:r.label, rawLabel:r.rawLabel, idx:r.idx, val:r.val, meta:r.meta, drill:!comTerminal}; });
         firstCol={key:'label',label:drillName(comCurAp),type:'text',thLeft:true,get:function(r){return r.label;},cell:function(r){return '<td><span class="cell-chain"><span class="cell-dot" style="background:'+apColor(r.idx,r.label)+'"></span>'+r.label+'</span>'+(r.drill?drillCueHtml(r.key):'')+'</td>';}};
         subTitle='Base bruta por '+drillName(comCurAp).toLowerCase();
       } else {
@@ -1021,7 +1060,7 @@
         if(COM_REAL){
           var rvC=drillValuesReal(comApertura, comDrill, comRerender);
           if(rvC===null){ setTimeout(function(){ rewireComMat(); },0); return '<div class="panel-card full" id="comMatrix"><div class="pc-head"><div><div class="pc-title">Matriz de datos · Comercial</div><div class="pc-sub">Cargando apertura…</div></div></div></div>'; }
-          rows=rvC.map(function(v){ var val=metricTotal(v,m.k); return {key:v.label, label:v.label, cod:(comCurAp==='codlocal'?v.label:null), val:val, meta:0, drill:!comTerminal}; });
+          rows=rvC.map(function(v){ var val=metricTotal(v,m.k); return {key:v.label, label:v.label, rawLabel:v.rawLabel||v.label, cod:(comCurAp==='codlocal'?(v.rawLabel||v.label):null), val:val, meta:0, drill:!comTerminal}; });
         } else {
         var seedC=comDrill.map(function(p){return p.label;}).join('>');
         rows=drillChildren(lastC.ap, seedC).map(function(o){ var j=0.9+(o.h%20)/100; return {key:o.cod||o.label, label:o.label, cod:o.cod, val:lastC.row.val*o.frac*j, meta:lastC.row.meta*o.frac, drill:!comTerminal}; });
@@ -1059,12 +1098,12 @@
       e.stopPropagation();
       var row=comRowsByKey[cue.getAttribute('data-key')]; if(!row) return;
       var gal=null;
-      if(DRILL_LOCAL[comCurAp]){ gal = row.cod ? {ap:'codlocal', val:row.cod} : {ap:comCurAp, val:row.label}; }
-      openDrillMenu(cue, { options:drillOptionsFor(comUsedAps), gallery:gal, onPick:function(ap){ comDrill.push({ap:ap,label:row.label,row:row}); comRerender(); } });
+          if(DRILL_LOCAL[comCurAp]){ gal = row.cod ? {ap:'codlocal', val:row.cod} : {ap:comCurAp, val:row.rawLabel||row.label}; }
+      openDrillMenu(cue, { options:drillOptionsFor(comUsedAps), gallery:gal, onPick:function(ap){ comDrill.push({ap:ap,label:row.label,rawLabel:row.rawLabel||row.label,row:row}); comRerender(); } });
     });
 
     /* ---- Abastecimiento ---- */
-    var abaPeriod={start:'2026-06-25', end:'2026-06-25'};
+    var abaPeriod={start:DEFAULT_PERIODS.yesterday.start, end:DEFAULT_PERIODS.yesterday.end};
     var abaDrill=[];
     var abaCadDrill=null, abaTopDrill=null; /* legacy, sin uso */
     var abaCadSort={key:'instock',dir:-1}, abaLocSort={key:'instock',dir:-1}, abaProdSort={key:'instock',dir:-1};
@@ -1126,7 +1165,7 @@
       host.innerHTML=html;
       // Período: usa el período editable de la barra superior (default un solo día)
       var de=document.getElementById('f-desde'), ha=document.getElementById('f-hasta');
-      if(de&&!de._aba){ de._aba=1; de.value=abaPeriod.start; ha.value=abaPeriod.end; }
+      if(de&&ha&&!de._aba){ de._aba=1; de.value=abaPeriod.start; ha.value=abaPeriod.end; }
       // Torta distribución stock (círculo completo)
       pieChart(document.getElementById('aba-pie'), ['Sala','Tránsito','CD'], [tStock,tTra,tCd], [chartColor(0),chartColor(1),chartColor(2)], num);
       // DOH por cadena (barras verticales, pastel) con número arriba
@@ -1352,9 +1391,9 @@
 
     var MESES_LBL=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     function fmtMesLabel(iso){ var p=iso.split('-'); return MESES_LBL[Number(p[1])-1]+' '+p[0].slice(2); }
-    function fmtCadDash(v){ v=String(v||''); return v.toLowerCase()==='smu'?'SMU':v.charAt(0).toUpperCase()+v.slice(1); }
+    function fmtCadDash(v){ v=String(v||''); return v.toLowerCase()==='smu'?'SMU':nomPropio(v); }
     function mapLocalResumen(l){
-      return { cad:fmtCadDash(l.cadena), fmt:l.formato||'', cod:l.codigo, nom:l.nombre||l.codigo, region:l.region||'',
+      return { cad:fmtCadDash(l.cadena), fmt:nomPropio(l.formato), cod:l.codigo, nom:nomPropio(l.nombre)||l.codigo, region:nomPropio(l.region),
         vp:Number(l.venta_pesos)||0, vc:Number(l.venta_costo)||0, vu:Number(l.venta_unidades)||0,
         vpLy:Number(l.venta_pesos_ly)||0, vcLy:Number(l.venta_costo_ly)||0, vuLy:Number(l.venta_unidades_ly)||0,
         mVp:0, mVc:0, mVu:0, osa:0, ins:0, doh:0, qb:0 };
@@ -1706,7 +1745,7 @@
       // datos: análisis = período actual; comparativo = período anterior (demo)
       function cmpVal(v){ var aP=sumArr(v.pesos), aU=sumArr(v.unidades), aC=sumArr(v.costo), aPr=aU?aP/aU:0; var cP=v.ly, cU=aPr?v.ly/(aPr*0.98):0, cC=aP?v.ly*(aC/aP):0, cPr=cU?cP/cU:0; var key=m.k; return { ana: key==='pesos'?aP:key==='costo'?aC:key==='unidades'?aU:aPr, cmp: key==='pesos'?cP:key==='costo'?cC:key==='unidades'?cU:cPr }; }
       var cmpValsSrc=filterDimValues(cmpApertura, COM.aperturas[cmpApertura].values);
-      var vals=cmpValsSrc.map(function(v,idx){ var d=cmpVal(v); return {label:v.label, ana:d.ana, cmp:d.cmp, idx:idx}; });
+      var vals=cmpValsSrc.map(function(v,idx){ var d=cmpVal(v); return {label:v.label, rawLabel:v.rawLabel||v.label, ana:d.ana, cmp:d.cmp, idx:idx}; });
       var tA=0,tB=0; vals.forEach(function(o){tA+=o.ana;tB+=o.cmp;});
       // KPIs resumen comparativo
       var totVar=tB?(tA/tB-1)*100:0;
@@ -1730,7 +1769,7 @@
       var cmpTerminal=(cmpCur==='producto'||cmpCur==='codprod'||cmpCur==='descriptor');
       var rows, firstCol, cmpSub, cmpBack='';
       if(cmpLevel===0){
-        rows=vals.map(function(r){ return {key:r.label, label:r.label, idx:r.idx, ana:r.ana, cmp:r.cmp, drill:!cmpTerminal}; });
+        rows=vals.map(function(r){ return {key:r.label, label:r.label, rawLabel:r.rawLabel, idx:r.idx, ana:r.ana, cmp:r.cmp, drill:!cmpTerminal}; });
         firstCol={key:'label',label:drillName(cmpCur),type:'text',thLeft:true,get:function(r){return r.label;},cell:function(r){return '<td><span class="cell-chain"><span class="cell-dot" style="background:'+chartColor(r.idx)+'"></span>'+r.label+'</span>'+(r.drill?drillCueHtml(r.key):'')+'</td>';}};
         cmpSub='Análisis sobre comparativo · por '+drillName(cmpCur).toLowerCase();
       } else {
@@ -1738,7 +1777,7 @@
         if(COM_REAL){
           var rvM=drillValuesReal(cmpApertura, cmpDrill, function(){ panelComparativo(); });
           if(rvM===null){ rows=[]; cmpSub='Cargando apertura…'; }
-          else rows=rvM.map(function(v){ var d=cmpVal(v); return {key:v.label, label:v.label, cod:(cmpCur==='codlocal'?v.label:null), ana:d.ana, cmp:d.cmp, drill:!cmpTerminal}; });
+          else rows=rvM.map(function(v){ var d=cmpVal(v); return {key:v.label, label:v.label, rawLabel:v.rawLabel||v.label, cod:(cmpCur==='codlocal'?(v.rawLabel||v.label):null), ana:d.ana, cmp:d.cmp, drill:!cmpTerminal}; });
         } else {
         var seedM=cmpDrill.map(function(p){return p.label;}).join('>');
         rows=drillChildren(lastM.ap, seedM).map(function(o){ var j=0.9+(o.h%20)/100, j2=0.9+((o.h>>3)%20)/100; return {key:o.cod||o.label, label:o.label, cod:o.cod, ana:lastM.row.ana*o.frac*j, cmp:lastM.row.cmp*o.frac*j2, drill:!cmpTerminal}; });
@@ -1774,7 +1813,7 @@
       document.getElementById('cmpApSeg').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; cmpApertura=b.getAttribute('data-ap'); cmpDrill=[]; destroyCharts(); panelComparativo(); });
       document.getElementById('cmpMetSw').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; cmpMetric=b.getAttribute('data-m'); destroyCharts(); panelComparativo(); });
       var cmpBackEl=document.getElementById('cmpBack'); if(cmpBackEl){ cmpBackEl.addEventListener('click', function(){ cmpDrill.pop(); destroyCharts(); panelComparativo(); }); }
-      wireDrillMenu('#cmpMatrix', cmpByKey, cmpCur, cmpUsed, function(ap,row){ cmpDrill.push({ap:ap,label:row.label,row:row}); destroyCharts(); panelComparativo(); });
+      wireDrillMenu('#cmpMatrix', cmpByKey, cmpCur, cmpUsed, function(ap,row){ cmpDrill.push({ap:ap,label:row.label,rawLabel:row.rawLabel||row.label,row:row}); destroyCharts(); panelComparativo(); });
       var sorted=smSortRows(cols,vals,cmpSort);
       var c=new Chart(document.getElementById('cmp-bar'), { type:'bar', data:{ labels:sorted.map(function(o){return o.label;}), datasets:[
         { label:'Análisis', data:sorted.map(function(o){return o.ana;}), backgroundColor:'#E0561C', borderRadius:5, maxBarThickness:30 },
@@ -1841,10 +1880,10 @@
       html+='<div class="pz-step"><div class="pz-step-h"><span class="pz-num">1</span> Período</div><div class="pz-step-b">'
         + '<div class="metric-switch" id="pzModeSw"><button type="button" data-m="consolidado"'+(pzMode==='consolidado'?' class="on"':'')+'>Consolidado</button><button type="button" data-m="evolutivo"'+(evo?' class="on"':'')+'>Evolutivo</button><button type="button" data-m="comparativo"'+(comp?' class="on"':'')+'>Comparativo</button></div>';
       if(comp){
-        html+='<div class="pz-dates"><div class="pz-date-grp"><span class="pz-date-lbl">Análisis</span><input type="date" id="pz-a1" value="2026-06-01" /><span class="period-sep">→</span><input type="date" id="pz-a2" value="2026-06-25" /></div>'
-          + '<div class="pz-date-grp"><span class="pz-date-lbl">Comparativo</span><input type="date" id="pz-b1" value="2025-06-01" /><span class="period-sep">→</span><input type="date" id="pz-b2" value="2025-06-25" /></div></div>';
+        html+='<div class="pz-dates"><div class="pz-date-grp"><span class="pz-date-lbl">Análisis</span><input type="date" id="pz-a1" value="'+DEFAULT_PERIODS.mtd.start+'" /><span class="period-sep">→</span><input type="date" id="pz-a2" value="'+DEFAULT_PERIODS.mtd.end+'" /></div>'
+          + '<div class="pz-date-grp"><span class="pz-date-lbl">Comparativo</span><input type="date" id="pz-b1" value="'+isoAddYears(DEFAULT_PERIODS.mtd.start,-1)+'" /><span class="period-sep">→</span><input type="date" id="pz-b2" value="'+isoAddYears(DEFAULT_PERIODS.mtd.end,-1)+'" /></div></div>';
       } else {
-        html+='<div class="pz-dates"><div class="pz-date-grp"><span class="pz-date-lbl">'+(evo?'Período':'Inicio')+'</span><input type="date" id="pz-e1" value="2026-06-01" /><span class="period-sep">→</span><input type="date" id="pz-e2" value="2026-06-25" /></div></div>';
+        html+='<div class="pz-dates"><div class="pz-date-grp"><span class="pz-date-lbl">'+(evo?'Período':'Inicio')+'</span><input type="date" id="pz-e1" value="'+DEFAULT_PERIODS.mtd.start+'" /><span class="period-sep">→</span><input type="date" id="pz-e2" value="'+DEFAULT_PERIODS.mtd.end+'" /></div></div>';
       }
       if(evo){
         html+='<div class="pz-date-grp"><span class="pz-date-lbl">Ver por</span><div class="metric-switch" id="pzGranSw">'
@@ -2185,7 +2224,24 @@
     };
     var AREA_LOG={resumen:'Resumen de Negocio',mapa:'Mapa',comercial:'Venta · Evolutivo',comparativo:'Venta · Comparativo',abastecimiento:'Abastecimiento',osa:'OSA',forecast:'Venta Perdida',promociones:'Promociones',personalizado:'Personalizado'};
     var _lastLoggedArea=null;
+    var _currentArea=null;
+    function periodForArea(area){
+      if(area==='abastecimiento') return DEFAULT_PERIODS.yesterday;
+      if(area==='osa' || area==='forecast' || area==='promociones') return DEFAULT_PERIODS.last28;
+      return DEFAULT_PERIODS.mtd;
+    }
+    function syncPeriodInputs(area){
+      var p=periodForArea(area);
+      var de=document.getElementById('f-desde'), ha=document.getElementById('f-hasta'), el=document.getElementById('periodLabel');
+      if(de) de.value=p.start;
+      if(ha) ha.value=p.end;
+      if(el) el.textContent=periodLabel(p);
+      if(area==='abastecimiento') abaPeriod={start:p.start,end:p.end};
+    }
     function showArea(area){
+      var changedArea = area!==_currentArea;
+      _currentArea=area;
+      if(changedArea) syncPeriodInputs(area);
       if(window.logEvent && area!==_lastLoggedArea){ _lastLoggedArea=area; try{ logEvent('Dashboards', AREA_LOG[area]||area); }catch(e){} }
       // Período editable en todas las áreas EXCEPTO Resumen de Negocio (bloqueado)
       // Comercial-Evolutivo y Comparativo traen su propio período en el panel; ocultar solo el chip de período
@@ -2221,15 +2277,7 @@
 
     /* ---------- Default date range = acumulado del mes hasta ayer ---------- */
     (function(){
-      var yesterday=new Date(Date.now()-86400000);
-      var meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-      var d1=new Date(yesterday.getFullYear(), yesterday.getMonth(), 1);
-      function f(d){ return d.getDate()+' '+meses[d.getMonth()]; }
-      var el=document.getElementById('periodLabel');
-      if(el) el.textContent='01 '+meses[yesterday.getMonth()]+' – '+f(yesterday)+' '+yesterday.getFullYear();
-      var iso=function(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); };
-      var de=document.getElementById('f-desde'), ha=document.getElementById('f-hasta');
-      if(de) de.value=iso(d1); if(ha) ha.value=iso(yesterday);
+      syncPeriodInputs('resumen');
       wireDMY();
     })();
 
