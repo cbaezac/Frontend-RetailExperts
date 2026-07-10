@@ -536,6 +536,18 @@
 
     /* ---------- Filtros de la barra superior: aplicación real a los datos ---------- */
     var AP_FILTER={cadena:['locales','Cadena'],formato:['locales','Formato'],region:['locales','Región'],codlocal:['locales','Código Local'],nomlocal:['locales','Nombre Local'],categoria:['productos','Categoría'],marca:['productos','Marca'],codprod:['productos','Código Producto'],descriptor:['productos','Descriptor Producto']};
+    /* Label del filtro -> parámetro que espera el backend (ventaClienteWhere).
+       Categoría→rubro, Marca→cliente, Descriptor→subrubro se resuelven en el backend. */
+    var FB_PARAM={'Cadena':'cadena','Formato':'formato','Región':'region','Código Local':'codigo_local','Nombre Local':'nombre_local','Categoría':'categoria','Marca':'marca','Código Producto':'codigo_producto','Descriptor Producto':'descriptor'};
+    /* Selección actual de la barra superior como params para el endpoint comercial */
+    function fbFilterParams(){
+      var out={};
+      ['locales','productos'].forEach(function(grp){
+        var g=(typeof gFilters!=='undefined'&&gFilters[grp])||{};
+        Object.keys(g).forEach(function(label){ var p=FB_PARAM[label], vals=g[label]||[]; if(p&&vals.length) out[p]=vals.slice(); });
+      });
+      return out;
+    }
     function eqCI(a,b){ return String(a).trim().toLowerCase()===String(b).trim().toLowerCase(); }
     function selMatch(sel,val){ for(var i=0;i<sel.length;i++){ if(eqCI(sel[i],val)) return true; } return false; }
     function filtersActive(){ var on=false; ['locales','productos'].forEach(function(g){ var o=gFilters[g]||{}; Object.keys(o).forEach(function(k){ if(o[k]&&o[k].length) on=true; }); }); return on; }
@@ -583,6 +595,18 @@
       if(!vals.length) return;
       FILTER_DEFS.productos=FILTER_DEFS.productos.map(function(d){ return d[0]===mfd[1]?[mfd[1],vals]:d; });
       buildMultiFilters();
+    }
+    /* Opciones de TODOS los filtros desde la DB real (SELECT DISTINCT de local/producto). */
+    function loadAtributos(){
+      if(!window.RetailAPI) return Promise.resolve();
+      return window.RetailAPI.requestJson('/web/dashboard/atributos'+window.RetailAPI.buildQuery(withCliente({}))).then(function(a){
+        a=a||{}; function arr(x){ return Array.isArray(x)?x:[]; }
+        if(arr(a.cadenas).length||arr(a.formatos).length){
+          FILTER_DEFS.locales=[['Cadena',arr(a.cadenas)],['Formato',arr(a.formatos)],['Región',arr(a.regiones)],['Código Local',arr(a.codigos_local)],['Nombre Local',arr(a.nombres_local)]];
+        }
+        FILTER_DEFS.productos=[['Categoría',arr(a.categorias)],['Marca',arr(a.marcas)],['Código Producto',arr(a.codigos_producto)],['Descriptor Producto',arr(a.descriptores)]];
+        buildMultiFilters();
+      }).catch(function(){ /* deja las opciones que haya (resumen/demo) */ });
     }
 
     /* ---------- Sparkline (inline SVG) ---------- */
@@ -931,7 +955,8 @@
     var API_AP = {};
     COM.aperturas = {};   // en modo real cada apertura se carga del backend
     function fetchComercial(apertura, extra){
-      var params = withCliente(Object.assign({apertura: API_AP[apertura]||apertura, desde: comPeriod.start, hasta: comPeriod.end}, extra||{}));
+      // apertura + período + filtros de la barra superior (fbFilterParams) + filtros del drill (extra)
+      var params = withCliente(Object.assign({apertura: API_AP[apertura]||apertura, desde: comPeriod.start, hasta: comPeriod.end}, fbFilterParams(), extra||{}));
       return window.RetailAPI.requestJson('/web/dashboard/comercial'+window.RetailAPI.buildQuery(params));
     }
     function loadComercial(apertura){
@@ -1448,10 +1473,8 @@
           HAS_OPS = false;
           setDataBadge(true);
           refreshFilterOptionsFromResumen();
-          // Conectar los filtros de PRODUCTO a datos reales: cada apertura de producto trae
-          // los valores distinct de su columna vía el endpoint comercial (Categoría→rubro,
-          // Descriptor Producto→subrubro por el mapeo API_AP). Si falla, cada uno cae a demo.
-          ['categoria','marca','codprod','descriptor'].forEach(function(ap){ if(!COM.aperturas[ap]) loadComercial(ap); });
+          // Todos los filtros (locales y productos) con valores DISTINCT reales de la DB.
+          loadAtributos();
         })
         .catch(function(){ RES = RES_DEMO; VENTA_REAL = false; setDataBadge(true); refreshFilterOptionsFromResumen(); });
     }
