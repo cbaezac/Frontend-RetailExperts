@@ -121,8 +121,14 @@
   .ms2-btn .ms2-cv{ flex:0 0 auto; }
   .ms2-pop{ position:absolute; top:calc(100% + 4px); left:0; min-width:170px; background:#fff; border:1px solid var(--line); border-radius:9px; box-shadow:0 16px 40px rgba(42,20,8,.18); padding:7px; z-index:60; display:none; }
   .ms2-pop.open{ display:block; }
+  .ms2-search{ width:100%; font-family:var(--font-body); font-size:.78rem; color:var(--ink); background:#fff; border:1.2px solid var(--accent); border-radius:8px; padding:7px 9px; outline:none; margin-bottom:7px; }
+  .ms2-search::placeholder{ color:var(--muted); opacity:.75; }
   .ms2-list{ max-height:200px; overflow-y:auto; display:flex; flex-direction:column; gap:1px; }
   .ms2-item{ display:flex; align-items:center; gap:8px; padding:6px 7px; border-radius:6px; cursor:pointer; font-size:.82rem; white-space:nowrap; flex:0 0 auto; }
+  .ms2-item.is-selected{ order:-1; }
+  .ms2-item.is-hidden{ display:none; }
+  .ms2-empty{ display:none; padding:10px 7px; font-size:.78rem; color:var(--muted); }
+  .ms2-empty.show{ display:block; }
   .ms2-item:hover{ background:rgba(42,20,8,.05); }
   .ms2-item input{ accent-color:var(--accent); width:14px; height:14px; flex:0 0 auto; cursor:pointer; }
   /* Período aplicado (no editable) */
@@ -959,10 +965,13 @@
     var DRILL_PARAM = {cadena:'cadena', formato:'formato', region:'region', codlocal:'codigo_local', nomlocal:'nombre_local', categoria:'categoria', marca:'marca', codprod:'codigo_producto', descriptor:'descriptor', producto:'nombre_producto'};
     var API_AP = {};
     COM.aperturas = {};   // en modo real cada apertura se carga del backend
-    function fetchComercial(apertura, extra){
+    function fetchComercialPeriod(apertura, period, extra){
       // apertura + período + filtros de la barra superior (fbFilterParams) + filtros del drill (extra)
-      var params = withCliente(Object.assign({apertura: API_AP[apertura]||apertura, desde: comPeriod.start, hasta: comPeriod.end}, fbFilterParams(), extra||{}));
+      var params = withCliente(Object.assign({apertura: API_AP[apertura]||apertura, desde: period.start, hasta: period.end}, fbFilterParams(), extra||{}));
       return window.RetailAPI.requestJson('/web/dashboard/comercial'+window.RetailAPI.buildQuery(params));
+    }
+    function fetchComercial(apertura, extra){
+      return fetchComercialPeriod(apertura, comPeriod, extra);
     }
     function loadComercial(apertura){
       return fetchComercial(apertura).then(function(r){
@@ -1671,11 +1680,18 @@
         sub='Distribución, variación y avance de meta versus mismo periodo año anterior · abre otra apertura con la flecha';
       } else {
         var last=cadDrill[level-1];
-        var seed=cadDrill.map(function(p){return p.label;}).join('>');
-        rows=drillChildren(last.ap, seed).map(function(o){ var j=0.9+(o.h%20)/100; return {key:o.cod||o.label, label:o.label, cod:o.cod, val:last.row.val*o.frac*j, ly:last.row.ly*o.frac, meta:last.row.meta*o.frac, drill:!terminal}; });
         title=last.label+' · por '+drillName(curAp).toLowerCase();
         sub='Apertura por '+drillName(curAp).toLowerCase();
         back=drillBackHtml('cadBack', level>1?cadDrill[level-2].ap:'cadena');
+        if(VENTA_REAL){
+          // Datos reales: venta por la apertura elegida, filtrada por el camino (cadena, etc.)
+          var rv=drillValuesReal('cadena', cadDrill, renderCadenaMatrix);
+          if(rv===null){ rows=[]; sub='Cargando…'; }
+          else { rows=rv.map(function(v){ var p=sumArr(v.pesos),c=sumArr(v.costo),u=sumArr(v.unidades); var val=(resMetric==='vp')?p:(resMetric==='vc'?c:u); var lyP=v.ly||0; var lyv=(resMetric==='vp')?lyP:(resMetric==='vc'?(p?lyP*(c/p):0):(u&&p?lyP/(p/u):0)); return {key:v.label, label:v.label, rawLabel:v.rawLabel||v.label, val:val, ly:lyv, meta:0, drill:!terminal}; }); }
+        } else {
+          var seed=cadDrill.map(function(p){return p.label;}).join('>');
+          rows=drillChildren(last.ap, seed).map(function(o){ var j=0.9+(o.h%20)/100; return {key:o.cod||o.label, label:o.label, cod:o.cod, val:last.row.val*o.frac*j, ly:last.row.ly*o.frac, meta:last.row.meta*o.frac, drill:!terminal}; });
+        }
       }
       var byKey={}; rows.forEach(function(r){ byKey[r.key]=r; });
       var tot=0,totLy=0,totMeta=0; rows.forEach(function(r){tot+=r.val;totLy+=r.ly;totMeta+=r.meta;});
@@ -1696,7 +1712,7 @@
         + '<tfoot><tr><td>Total</td><td>100%</td><td>'+m.fmtFull(tot)+'</td><td class="'+(totVar>=0?'pos':'neg')+'">'+(totVar>=0?'+':'')+totVar.toFixed(1)+'%</td>'+metaTd(m,totMeta)+avanceTd(totAv)+'</tr></tfoot></table></div></div>';
       smWire('#cadWrap', cols, cadSort, renderCadenaMatrix);
       var backEl=document.getElementById('cadBack'); if(backEl){ backEl.addEventListener('click', function(){ cadDrill.pop(); renderCadenaMatrix(); }); }
-      wireDrillMenu('#cadMatrix', byKey, curAp, usedAps, function(ap,row){ cadDrill.push({ap:ap,label:row.label,row:row}); renderCadenaMatrix(); });
+      wireDrillMenu('#cadMatrix', byKey, curAp, usedAps, function(ap,row){ cadDrill.push({ap:ap,label:row.label,rawLabel:row.rawLabel||row.label,row:row}); renderCadenaMatrix(); });
     }
     /* legacy, sin uso */
     function renderCadenaLocales(m){
@@ -1789,12 +1805,82 @@
 
     var cmpApertura='cadena'; var cmpMetric='vp';
     var cmpDrill=[];
+    var CMP={ana:{}, comp:{}};
+    var cmpDrillCache={};
     var cmpSort={key:'ana',dir:-1};
+    function cmpAnaPeriod(){ return {start:cmpPeriod.a1, end:cmpPeriod.a2}; }
+    function cmpCompPeriod(){ return {start:cmpPeriod.b1, end:cmpPeriod.b2}; }
+    function cloneValue(v){ return Object.assign({}, v, {pesos:(v.pesos||[]).slice(), costo:(v.costo||[]).slice(), unidades:(v.unidades||[]).slice()}); }
+    function scaledValue(v, factor){
+      var out=cloneValue(v);
+      out.pesos=out.pesos.map(function(x){return x*factor;});
+      out.costo=out.costo.map(function(x){return x*factor;});
+      out.unidades=out.unidades.map(function(x){return x*factor;});
+      out.ly=0; out.meta=(out.meta||0)*factor;
+      return out;
+    }
+    function cmpFallbackValues(apertura, side){
+      var vals=normalizeAperturaValues(apertura, (((COM_DEMO_APERTURAS[apertura]||{}).values)||[]));
+      if(side==='ana') return vals.map(cloneValue);
+      return vals.map(function(v){ var p=sumArr(v.pesos||[]); return scaledValue(v, p?(Number(v.ly)||0)/p:0.92); });
+    }
+    function cmpCacheKey(apertura){
+      return apertura+'|'+cmpPeriod.a1+'|'+cmpPeriod.a2+'|'+cmpPeriod.b1+'|'+cmpPeriod.b2;
+    }
+    function loadComparativo(apertura){
+      var key=cmpCacheKey(apertura);
+      if(CMP.ana[key]&&CMP.comp[key]) return Promise.resolve();
+      return Promise.all([
+        fetchComercialPeriod(apertura, cmpAnaPeriod()),
+        fetchComercialPeriod(apertura, cmpCompPeriod())
+      ]).then(function(rs){
+        CMP.ana[key] = { values: normalizeAperturaValues(apertura, rs[0].values) };
+        CMP.comp[key] = { values: normalizeAperturaValues(apertura, rs[1].values) };
+        COM.aperturas[apertura] = CMP.ana[key];
+        COM_REAL = true;
+        refreshFilterOptionsFromCom(apertura);
+      }).catch(function(){
+        CMP.ana[key] = { values: cmpFallbackValues(apertura, 'ana') };
+        CMP.comp[key] = { values: cmpFallbackValues(apertura, 'comp') };
+        COM.aperturas[apertura] = CMP.ana[key];
+      });
+    }
+    function cmpVals(side, apertura){
+      var key=cmpCacheKey(apertura);
+      return filterDimValues(apertura, ((CMP[side]&&CMP[side][key]||{}).values)||[]);
+    }
+    function cmpPairRows(apertura){
+      var ana=cmpVals('ana', apertura), comp=cmpVals('comp', apertura), compByRaw={};
+      comp.forEach(function(v){ compByRaw[v.rawLabel||v.label]=v; });
+      return ana.map(function(a,idx){ return {a:a, b:compByRaw[a.rawLabel||a.label]||null, idx:idx}; });
+    }
+    function cmpPairValue(a,b,m){
+      function total(v,key){ return v?metricTotal(v,key):0; }
+      return { ana:total(a,m.k), cmp:total(b,m.k) };
+    }
+    function cmpDrillValuesReal(baseAp, path, onReady){
+      var key=cmpCacheKey(baseAp)+'|'+path.map(function(pp){return pp.ap+'='+pp.label;}).join('|');
+      if(cmpDrillCache[key]) return cmpDrillCache[key];
+      if(cmpDrillCache[key+':p']) return null;
+      cmpDrillCache[key+':p']=1;
+      var extra=drillPathFilters(baseAp, path);
+      Promise.all([
+        fetchComercialPeriod(path[path.length-1].ap, cmpAnaPeriod(), extra),
+        fetchComercialPeriod(path[path.length-1].ap, cmpCompPeriod(), extra)
+      ]).then(function(rs){
+        cmpDrillCache[key]={
+          ana: normalizeAperturaValues(path[path.length-1].ap, rs[0].values),
+          comp: normalizeAperturaValues(path[path.length-1].ap, rs[1].values)
+        };
+        delete cmpDrillCache[key+':p']; onReady();
+      }).catch(function(){ cmpDrillCache[key]={ana:[],comp:[]}; delete cmpDrillCache[key+':p']; onReady(); });
+      return null;
+    }
     function panelComparativo(){
       if(!cmpDrill._keep) cmpDrill=cmpDrill||[];
-      if(!COM.aperturas[cmpApertura]){
+      if(!CMP.ana[cmpCacheKey(cmpApertura)] || !CMP.comp[cmpCacheKey(cmpApertura)]){
         host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--muted)">Cargando datos comerciales…</div>';
-        loadComercial(cmpApertura).then(panelComparativo).catch(function(){
+        loadComparativo(cmpApertura).then(panelComparativo).catch(function(){
           host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--red)">No se pudieron cargar los datos.</div>';
         });
         return;
@@ -1803,15 +1889,14 @@
       var m=COM_MET[cmpMetric];
       var html='';
       // Controles (períodos · apertura · métrica) viven en la barra de filtros superior (buildAreaControls)
-      // datos: análisis = período actual; comparativo = período anterior (demo)
-      function cmpVal(v){ var aP=sumArr(v.pesos), aU=sumArr(v.unidades), aC=sumArr(v.costo), aPr=aU?aP/aU:0; var cP=v.ly, cU=aPr?v.ly/(aPr*0.98):0, cC=aP?v.ly*(aC/aP):0, cPr=cU?cP/cU:0; var key=m.k; return { ana: key==='pesos'?aP:key==='costo'?aC:key==='unidades'?aU:aPr, cmp: key==='pesos'?cP:key==='costo'?cC:key==='unidades'?cU:cPr }; }
-      var cmpValsSrc=filterDimValues(cmpApertura, COM.aperturas[cmpApertura].values);
-      var vals=cmpValsSrc.map(function(v,idx){ var d=cmpVal(v); return {label:v.label, rawLabel:v.rawLabel||v.label, ana:d.ana, cmp:d.cmp, idx:idx}; });
+      // datos: análisis y comparativo usan sus propios rangos desde/hasta.
+      var cmpPairs=cmpPairRows(cmpApertura);
+      var vals=cmpPairs.map(function(p){ var d=cmpPairValue(p.a,p.b,m); return {label:p.a.label, rawLabel:p.a.rawLabel||p.a.label, ana:d.ana, cmp:d.cmp, idx:p.idx}; });
       var tA=0,tB=0; vals.forEach(function(o){tA+=o.ana;tB+=o.cmp;});
       // KPIs resumen comparativo
       var totVar=tB?(tA/tB-1)*100:0;
       // Precio promedio análisis / comparativo (totales ponderados)
-      var ppA=0,ppB=0;(function(){var aP=0,aU=0,cP=0,cU=0;cmpValsSrc.forEach(function(v){var p=sumArr(v.pesos),u=sumArr(v.unidades),pr=u?p/u:0;aP+=p;aU+=u;cP+=v.ly;cU+=pr?v.ly/(pr*0.98):0;});ppA=aU?aP/aU:0;ppB=cU?cP/cU:0;})();
+      var ppA=0,ppB=0;(function(){var aP=0,aU=0,cP=0,cU=0;cmpPairs.forEach(function(p){aP+=sumArr(p.a.pesos||[]);aU+=sumArr(p.a.unidades||[]);if(p.b){cP+=sumArr(p.b.pesos||[]);cU+=sumArr(p.b.unidades||[]);}});ppA=aU?aP/aU:0;ppB=cU?cP/cU:0;})();
       var ppVar=ppB?(ppA/ppB-1)*100:0;
       html+='<div class="kpis">'
         + kpiCard({label:m.label+' · Análisis', value:m.fmt(tA), icon:IC.money, tone:'accent'})
@@ -1836,9 +1921,12 @@
       } else {
         var lastM=cmpDrill[cmpLevel-1];
         if(COM_REAL){
-          var rvM=drillValuesReal(cmpApertura, cmpDrill, function(){ panelComparativo(); });
+          var rvM=cmpDrillValuesReal(cmpApertura, cmpDrill, function(){ panelComparativo(); });
           if(rvM===null){ rows=[]; cmpSub='Cargando apertura…'; }
-          else rows=rvM.map(function(v){ var d=cmpVal(v); return {key:v.label, label:v.label, rawLabel:v.rawLabel||v.label, cod:(cmpCur==='codlocal'?(v.rawLabel||v.label):null), ana:d.ana, cmp:d.cmp, drill:!cmpTerminal}; });
+          else {
+            var rvCompByRaw={}; rvM.comp.forEach(function(v){ rvCompByRaw[v.rawLabel||v.label]=v; });
+            rows=rvM.ana.map(function(v){ var d=cmpPairValue(v, rvCompByRaw[v.rawLabel||v.label]||null, m); return {key:v.label, label:v.label, rawLabel:v.rawLabel||v.label, cod:(cmpCur==='codlocal'?(v.rawLabel||v.label):null), ana:d.ana, cmp:d.cmp, drill:!cmpTerminal}; });
+          }
         } else {
         var seedM=cmpDrill.map(function(p){return p.label;}).join('>');
         rows=drillChildren(lastM.ap, seedM).map(function(o){ var j=0.9+(o.h%20)/100, j2=0.9+((o.h>>3)%20)/100; return {key:o.cod||o.label, label:o.label, cod:o.cod, ana:lastM.row.ana*o.frac*j, cmp:lastM.row.cmp*o.frac*j2, drill:!cmpTerminal}; });
@@ -2392,7 +2480,7 @@
     document.getElementById('applyBtn').addEventListener('click', function(){
       var active = document.querySelector('.tab.on').getAttribute('data-area');
       // Invalidar cachés para que los datos se refetcheen con los filtros aplicados
-      if(active==='comercial' || active==='comparativo'){ COM.aperturas={}; drillCache={}; }
+      if(active==='comercial' || active==='comparativo'){ COM.aperturas={}; drillCache={}; CMP={ana:{}, comp:{}}; cmpDrillCache={}; }
       if(active==='resumen' || active==='mapa'){ RES=null; cadDrill=[]; topDrill=null; if(window.__mapaInvalidate) window.__mapaInvalidate(); }
       showArea(active);
     });
@@ -2409,6 +2497,7 @@
       productos:[['Categoría',['Alimentos','Bebidas','Limpieza','Cuidado Personal','Hogar']],['Marca',['Adclean','Bekys','Café Haití','Kuna Foods','Olisur','Prater']],['Código Producto',['SKU1001','SKU1002','SKU1003']],['Descriptor Producto',['Aceite 1L','Detergente 3kg','Café 250g','Shampoo 400ml']]]
     };
     var gFilters={ locales:{}, productos:{} };
+    function ms2Esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
     function buildMultiFilters(){
       ['locales','productos'].forEach(function(grp){
         var host2=document.getElementById(grp==='locales'?'fgLocales':'fgProductos'); if(!host2) return; host2.innerHTML='';
@@ -2417,15 +2506,27 @@
           if(!gFilters[grp][label]) gFilters[grp][label]=[];
           var f=document.createElement('div'); f.className='fb-field';
           var ph='Todos';
-          f.innerHTML='<label>'+label+'</label><div class="ms2"><button type="button" class="ms2-btn"><span class="ms2-txt">'+ph+'</span><span class="ms2-cv"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button><div class="ms2-pop"><div class="ms2-list">'+opts.map(function(o){return '<label class="ms2-item"><input type="checkbox" value="'+o.replace(/"/g,'&quot;')+'"><span>'+o+'</span></label>';}).join('')+'</div></div></div>';
+          f.innerHTML='<label>'+label+'</label><div class="ms2"><button type="button" class="ms2-btn"><span class="ms2-txt">'+ph+'</span><span class="ms2-cv"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button><div class="ms2-pop"><input type="search" class="ms2-search" placeholder="Buscar" autocomplete="off" /><div class="ms2-list">'+opts.map(function(o){return '<label class="ms2-item" data-text="'+ms2Esc(o).toLowerCase()+'"><input type="checkbox" value="'+ms2Esc(o)+'"><span>'+ms2Esc(o)+'</span></label>';}).join('')+'</div><div class="ms2-empty">Sin coincidencias</div></div></div>';
           host2.appendChild(f);
-          var btn=f.querySelector('.ms2-btn'), pop=f.querySelector('.ms2-pop'), txt=f.querySelector('.ms2-txt');
+          var btn=f.querySelector('.ms2-btn'), pop=f.querySelector('.ms2-pop'), txt=f.querySelector('.ms2-txt'), search=f.querySelector('.ms2-search'), empty=f.querySelector('.ms2-empty');
           function syncTxt(){ var sel=gFilters[grp][label]; txt.textContent = sel.length===0?ph:(sel.length===1?sel[0]:sel.length+' seleccionados'); }
+          function syncItems(){
+            var q=(search.value||'').trim().toLowerCase();
+            var shown=0;
+            pop.querySelectorAll('.ms2-item').forEach(function(item){
+              var c=item.querySelector('input'), ok=!q || (item.getAttribute('data-text')||'').indexOf(q)>=0 || c.checked;
+              item.classList.toggle('is-selected', c.checked);
+              item.classList.toggle('is-hidden', !ok);
+              if(ok) shown++;
+            });
+            if(empty) empty.classList.toggle('show', shown===0);
+          }
           pop.querySelectorAll('input').forEach(function(c){ c.checked = gFilters[grp][label].indexOf(c.value)>=0; });
-          syncTxt();
-          btn.addEventListener('click', function(e){ e.stopPropagation(); var open=pop.classList.contains('open'); document.querySelectorAll('.ms2-pop.open').forEach(function(p){p.classList.remove('open');}); if(!open)pop.classList.add('open'); });
+          syncTxt(); syncItems();
+          btn.addEventListener('click', function(e){ e.stopPropagation(); var open=pop.classList.contains('open'); document.querySelectorAll('.ms2-pop.open').forEach(function(p){p.classList.remove('open');}); if(!open){ pop.classList.add('open'); search.focus(); search.select(); syncItems(); } });
           pop.addEventListener('click', function(e){ e.stopPropagation(); });
-          pop.addEventListener('change', function(){ gFilters[grp][label]=[].slice.call(pop.querySelectorAll('input:checked')).map(function(c){return c.value;}); syncTxt(); });
+          search.addEventListener('input', syncItems);
+          pop.addEventListener('change', function(){ gFilters[grp][label]=[].slice.call(pop.querySelectorAll('.ms2-item input:checked')).map(function(c){return c.value;}); syncTxt(); syncItems(); });
         });
       });
     }
