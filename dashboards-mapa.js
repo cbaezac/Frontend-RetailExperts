@@ -197,17 +197,23 @@
     });
   }
   var _datap = null;
+  function mapaFiltros() {
+    var f = (typeof window.fbFilterParams === 'function') ? window.fbFilterParams() : {};
+    return window.withCliente(Object.assign({}, f));
+  }
   function ensureData() {
     if (_datap) return _datap;
     var canReal = window.RetailAPI && typeof window.withCliente === 'function';
     _datap = (canReal
-      ? window.RetailAPI.requestJson('/web/dashboard/mapa' + window.RetailAPI.buildQuery(window.withCliente({})))
+      ? window.RetailAPI.requestJson('/web/dashboard/mapa' + window.RetailAPI.buildQuery(mapaFiltros()))
           .then(function (r) { MAPDATA = buildRealData(r.locales || []); MAPA_REAL = true; })
           .catch(function () { MAPDATA = demoMapData(); MAPA_REAL = false; })
       : Promise.resolve().then(function () { MAPDATA = demoMapData(); }))
       .then(function () { NAT = buildNat(); });
     return _datap;
   }
+  // Permite al dashboard invalidar la caché del mapa al aplicar filtros
+  window.__mapaInvalidate = function () { _datap = null; MAPDATA = null; NAT = null; };
 
   /* ---------- carga diferida ---------- */
   var _d3p = null, _geop = null;
@@ -491,7 +497,7 @@
     if (l.prod === null) {
       if (!l._loadingProd) {
         l._loadingProd = true;
-        window.RetailAPI.requestJson('/web/dashboard/mapa/productos' + window.RetailAPI.buildQuery(window.withCliente({ codigo_local: l.cod })))
+        window.RetailAPI.requestJson('/web/dashboard/mapa/productos' + window.RetailAPI.buildQuery(window.withCliente(Object.assign((typeof window.fbFilterParams === 'function' ? window.fbFilterParams() : {}), { codigo_local: l.cod }))))
           .then(function (r) {
             l.prod = (r.productos || []).map(function (p) {
               return { cat: p.categoria || '\u2014', name: p.nombre, cr: { pesos: growth(p.venta_pesos, p.venta_pesos_ly), costo: growth(p.venta_costo, p.venta_costo_ly), unidades: growth(p.venta_unidades, p.venta_unidades_ly) } };

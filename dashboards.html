@@ -566,7 +566,10 @@
     function FL(){
       if(!RES) return [];
       var out=RES.locales;
-      ['locales','productos'].forEach(function(grp){
+      // En modo real los filtros de PRODUCTO ya los aplicó el backend (venta_historica);
+      // aquí solo se filtra por atributos de LOCAL. En demo se aplican ambos (asignación sintética).
+      var grupos = VENTA_REAL ? ['locales'] : ['locales','productos'];
+      grupos.forEach(function(grp){
         var g=gFilters[grp]||{};
         Object.keys(g).forEach(function(label){
           var sel=g[label]||[]; if(!sel.length) return;
@@ -831,6 +834,8 @@
     }
     function galCamLoc(cod){ return galCam('codlocal', cod); }
     window.__galCam=galCam; window.__galCamLoc=galCamLoc; window.__openDrillMenu=openDrillMenu; window.__galAsk=galAsk;
+    // Exponer para el mapa (dashboards-mapa.js): así consume venta real con cliente + filtros
+    window.withCliente=withCliente; window.fbFilterParams=fbFilterParams;
     function galGo(ap,val){
       var params=[GAL_PARAM[ap]+'='+encodeURIComponent(val)];
       fbGalContext(GAL_PARAM[ap]).forEach(function(f){ params.push(f.param+'='+encodeURIComponent(f.values.join('||'))); });
@@ -1459,7 +1464,7 @@
         mVp:0, mVc:0, mVu:0, osa:0, ins:0, doh:0, qb:0 };
     }
     function loadResumen(){
-      return window.RetailAPI.requestJson('/web/dashboard/resumen-mtd'+window.RetailAPI.buildQuery(withCliente({})))
+      return window.RetailAPI.requestJson('/web/dashboard/resumen-mtd'+window.RetailAPI.buildQuery(withCliente(fbFilterParams())))
         .then(function(r){
           RES = {
             locales: (r.locales||[]).map(mapLocalResumen),
@@ -2386,8 +2391,9 @@
     });
     document.getElementById('applyBtn').addEventListener('click', function(){
       var active = document.querySelector('.tab.on').getAttribute('data-area');
-      // Comercial y Comparativo dependen de datos por período/apertura: invalidar caché para refetch
+      // Invalidar cachés para que los datos se refetcheen con los filtros aplicados
       if(active==='comercial' || active==='comparativo'){ COM.aperturas={}; drillCache={}; }
+      if(active==='resumen' || active==='mapa'){ RES=null; cadDrill=[]; topDrill=null; if(window.__mapaInvalidate) window.__mapaInvalidate(); }
       showArea(active);
     });
 
