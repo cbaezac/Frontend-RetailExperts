@@ -947,7 +947,12 @@
     var comCurAp='cadena', comUsedAps=[], comRowsByKey={};
     var comMetrics={pesos:true,costo:false,unidades:false,precio:false};
     function sumArr(a){return a.reduce(function(x,y){return x+y;},0);}
-    function metricWeekly(v,key){ if(key==='pesos')return v.pesos; if(key==='costo')return v.costo; if(key==='unidades')return v.unidades; return v.pesos.map(function(p,i){return v.unidades[i]?p/v.unidades[i]:0;}); }
+    // Precio promedio por semana para un valor de apertura.
+    // Preferimos el precio REAL que mande el backend en v.precio (columna
+    // indicadores_abastecimiento_diario.precio_promedio, array por semana);
+    // si no viene, lo derivamos como pesos/unidades (venta_historica).
+    function precioWeekly(v){ if(Array.isArray(v.precio)) return v.precio; return v.pesos.map(function(p,i){return v.unidades[i]?p/v.unidades[i]:0;}); }
+    function metricWeekly(v,key){ if(key==='pesos')return v.pesos; if(key==='costo')return v.costo; if(key==='unidades')return v.unidades; return precioWeekly(v); }
     function metricTotal(v,key){ if(key==='precio'){var p=sumArr(v.pesos),u=sumArr(v.unidades);return u?p/u:0;} return sumArr(metricWeekly(v,key)); }
     function metricFmt(key){ return key==='unidades'?numShort:(key==='precio'?clp:clpShort); }
     function activeMetrics(){ return METRIC_KEYS.filter(function(k){return comMetrics[k];}); }
@@ -1070,7 +1075,10 @@
       var vals=dimValues().map(function(v,idx){ return {v:v, idx:idx, tot:metricTotal(v,key)}; }).sort(function(a,b){return b.tot-a.tot;}).slice(0,8);
       vals.forEach(function(o){ datasets.push({ type:'bar', label:o.v.label, data:metricWeekly(o.v,key), backgroundColor:apColor(o.idx,o.v.label), borderRadius:4, maxBarThickness:14, yAxisID:'yL', _mkey:key }); });
       title.textContent=METRIC_LABEL[key]+' por '+apLabel;
-      if(precioOn){ datasets.push({ type:'line', label:'Precio promedio', data:grandWeekly('precio'), borderColor:METRIC_COLORS.precio, backgroundColor:'transparent', tension:.35, borderWidth:2.6, pointRadius:0, pointHoverRadius:5, yAxisID:'yP', _mkey:'precio' }); }
+      // Una línea de precio promedio por cada valor de la apertura (misma
+      // paleta que su barra, punteada para diferenciarla). Precio real de
+      // indicadores_abastecimiento_diario si el backend lo manda; si no, derivado.
+      if(precioOn){ vals.forEach(function(o){ datasets.push({ type:'line', label:'Precio · '+o.v.label, data:precioWeekly(o.v), borderColor:apColor(o.idx,o.v.label), backgroundColor:'transparent', borderDash:[5,4], tension:.35, borderWidth:2, pointRadius:0, pointHoverRadius:4, yAxisID:'yP', _mkey:'precio' }); }); }
       sub.textContent=METRIC_LABEL[key]+' en barras por '+apLabel.toLowerCase()+(precioOn?' y precio promedio en línea':'')+' · últimas 13 semanas';
       comEvoChart(labels, datasets, leftFmt, false);
     }
