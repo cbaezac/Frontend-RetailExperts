@@ -2818,11 +2818,12 @@
       else if(area==='forecast'){ onSeg('fcApSeg', function(v){ fcApertura=v; }); }
       else if(area==='promociones'){ onSeg('promoApSeg', function(v){ promoApertura=v; promoSort={key:null,dir:1}; }); onSeg('promoGranSeg', function(v){ promoGran=v; }); }
     }
-    var MAPA_FIELDS={'Cadena':1,'Formato':1,'Categoría':1,'Marca':1,'Descriptor Producto':1};
     function applyFieldVisibility(area){
+      // Todos los filtros disponibles en todas las áreas (incluido Mapa): el
+      // mapa consume los mismos filtros de la barra (cadena, formato, región,
+      // local, producto, etc.) vía window.fbFilterParams.
       document.querySelectorAll('#fgLocales .fb-field, #fgProductos .fb-field').forEach(function(f){
-        var lbl=((f.querySelector('label')||{}).textContent||'').trim();
-        f.style.display=(area==='mapa' && !MAPA_FIELDS[lbl])?'none':'flex';
+        f.style.display='flex';
       });
     }
     function showArea(area){

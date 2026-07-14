@@ -87,14 +87,28 @@
   function r1(v) { return Math.round(v * 10) / 10; }
   function metricLabel() { return METRICS.filter(function (m) { return m.k === mode; })[0].label; }
 
-  /* agrega una lista de locales para una métrica dada */
+  /* Formato de venta según la métrica: pesos/costo en $, unidades entero. */
+  function fmtVenta(v, key) {
+    v = Math.round(v || 0);
+    return key === 'unidades' ? fmtInt(v) : '$' + v.toLocaleString('es-CL');
+  }
+  /* agrega una lista de locales para una métrica dada.
+     crec = crecimiento PONDERADO real (venta total período / venta total año
+     anterior − 1), no el promedio simple de los % por local. venta = venta real
+     del período (métrica key). up/down siguen contando locales por su crec. */
   function aggregate(locales, key) {
-    var arr = locales.map(function (l) { return l.cr[key]; });
+    var v = 0, ly = 0, up = 0, down = 0;
+    locales.forEach(function (l) {
+      v += (l.v && l.v[key]) || 0;
+      ly += (l.ly && l.ly[key]) || 0;
+      var g = (l.cr && l.cr[key]) || 0;
+      if (g > 0) up++; else if (g < 0) down++;
+    });
     return {
       total: locales.length,
-      up: arr.filter(function (x) { return x > 0; }).length,
-      down: arr.filter(function (x) { return x < 0; }).length,
-      crec: r1(mean(arr))
+      venta: v,
+      up: up, down: down,
+      crec: ly > 0 ? r1((v / ly - 1) * 100) : 0
     };
   }
 
@@ -131,8 +145,13 @@
           var pcU = r1(pcP - (2 + q2 * 8));
           prods.push({ cat: cat, name: plist[Math.floor(q2 * plist.length) % plist.length], cr: { pesos: pcP, costo: pcC, unidades: pcU } });
         }
+        var vP = Math.round(400000 + s1 * 6000000);           // venta $ sintética
+        var vU = Math.max(1, Math.round(vP / (900 + s2 * 800)));
+        var vv = { pesos: vP, costo: Math.round(vP * (0.68 + s4 * 0.12)), unidades: vU };
+        var lly = { pesos: Math.round(vP / (1 + crecP / 100)), costo: Math.round(vv.costo / (1 + crecC / 100)), unidades: Math.max(1, Math.round(vU / (1 + crecU / 100))) };
         locales.push({
           cod: PREFIX[c.k] + '-' + (nm[1] || ri) + '-' + pad3(j + 1), nombre: fmt, comuna: com,
+          v: vv, ly: lly,
           cr: { pesos: crecP, costo: crecC, unidades: crecU },
           cu: { pesos: cumplP, costo: cumplC, unidades: cumplU }, prod: prods
         });
@@ -180,6 +199,8 @@
       if (!regs[idx].byChain[cad]) regs[idx].byChain[cad] = [];
       regs[idx].byChain[cad].push({
         cod: rw.codigo, nombre: rw.nombre || rw.codigo, comuna: rw.comuna || '',
+        v: { pesos: Number(rw.venta_pesos) || 0, costo: Number(rw.venta_costo) || 0, unidades: Number(rw.venta_unidades) || 0 },
+        ly: { pesos: Number(rw.venta_pesos_ly) || 0, costo: Number(rw.venta_costo_ly) || 0, unidades: Number(rw.venta_unidades_ly) || 0 },
         cr: { pesos: growth(rw.venta_pesos, rw.venta_pesos_ly), costo: growth(rw.venta_costo, rw.venta_costo_ly), unidades: growth(rw.venta_unidades, rw.venta_unidades_ly) },
         cu: { pesos: 0, costo: 0, unidades: 0 }, prod: null
       });
@@ -386,10 +407,10 @@
   }
   function kpiGrid(a) {
     return '<div class="mapa-kpis">' +
+      kpi(fmtVenta(a.venta, mode), metricLabel() + ' · período', 'big') +
+      kpi(fmtPct(a.crec), 'Crecimiento vs año anterior', 'big ' + cls(a.crec)) +
       kpi(fmtInt(a.total), 'Cantidad Locales') +
-      kpi(fmtPct(a.crec), 'Crecimiento General', 'big ' + cls(a.crec)) +
-      kpi(fmtInt(a.up), 'Locales con Crecimiento', 'pos') +
-      kpi(fmtInt(a.down), 'Locales con Decrecimiento', 'neg') +
+      kpi('<span class="pos">' + fmtInt(a.up) + '↑</span> / <span class="neg">' + fmtInt(a.down) + '↓</span>', 'Locales que crecen / caen') +
       '</div>';
   }
   function galCam(ap, val, nav) {
@@ -419,14 +440,15 @@
 
   function chainTable(chains, clickable) {
     var head = '<div class="mapa-chead">' +
-      '<span></span><span>Cadena</span>' +
-      '<span>Cantidad Locales</span><span>Crecimiento General</span>' +
+      '<span></span><span>Cadena</span><span>' + metricLabel() + '</span>' +
+      '<span>Cantidad Locales</span><span>Crecimiento</span>' +
       '<span>Locales con Crecimiento</span><span>Locales con Decrecimiento</span></div>';
     var rows = chains.map(function (c) {
       var a = c.agg[mode];
       return '<div class="mapa-crow' + (clickable ? ' click' : '') + '"' + (clickable ? ' data-chain="' + c.k + '"' : '') + '>' +
         '<span class="mapa-cdot" style="background:' + c.dot + '"></span>' +
         '<span class="mapa-cname">' + c.k + (clickable ? galCam('cadena', c.k, 'chain') : galCam('cadena', c.k)) + '</span>' +
+        '<span class="mapa-cnum" style="font-weight:700">' + fmtVenta(a.venta, mode) + '</span>' +
         '<span class="mapa-cnum">' + fmtInt(a.total) + '</span>' +
         '<span class="mapa-cperf ' + cls(a.crec) + '">' + fmtPct(a.crec) + '</span>' +
         '<span class="mapa-cup">' + fmtInt(a.up) + '</span>' +
@@ -477,6 +499,7 @@
       return '<div class="mapa-lrow click" data-loc="' + o.i + '">' +
         '<span class="mapa-lcode">' + l.cod + '</span>' +
         '<span class="mapa-lname">' + l.nombre + galCam('codlocal', l.cod, 'loc') + '</span>' +
+        '<span class="mapa-lnum" style="font-weight:700;text-align:right">' + fmtVenta((l.v && l.v[mode]) || 0, mode) + '</span>' +
         '<span class="mapa-lperf ' + cls(l.cr[mode]) + '">' + fmtPct(l.cr[mode]) + '</span>' +
         '</div>';
     }).join('');
@@ -486,7 +509,7 @@
         '<div class="mapa-dsub">' + fmtInt(a.total) + ' locales en ' + region.name + ' · <span class="mapa-secmetric">' + metricLabel() + '</span></div></div>' +
       kpiGrid(a) +
       '<div class="mapa-sec">Locales · haz clic para ver productos</div>' +
-      '<div class="mapa-lhead"><span>Código Local</span><span>Nombre Local</span><span>Crecimiento</span></div>' +
+      '<div class="mapa-lhead"><span>Código Local</span><span>Nombre Local</span><span style="text-align:right">' + metricLabel() + '</span><span>Crecimiento</span></div>' +
       rows;
   }
 
@@ -500,7 +523,9 @@
         window.RetailAPI.requestJson('/web/dashboard/mapa/productos' + window.RetailAPI.buildQuery(window.withCliente(Object.assign((typeof window.fbFilterParams === 'function' ? window.fbFilterParams() : {}), { codigo_local: l.cod }))))
           .then(function (r) {
             l.prod = (r.productos || []).map(function (p) {
-              return { cat: p.categoria || '\u2014', name: p.nombre, cr: { pesos: growth(p.venta_pesos, p.venta_pesos_ly), costo: growth(p.venta_costo, p.venta_costo_ly), unidades: growth(p.venta_unidades, p.venta_unidades_ly) } };
+              return { cat: p.categoria || '\u2014', name: p.nombre,
+                v: { pesos: Number(p.venta_pesos) || 0, costo: Number(p.venta_costo) || 0, unidades: Number(p.venta_unidades) || 0 },
+                cr: { pesos: growth(p.venta_pesos, p.venta_pesos_ly), costo: growth(p.venta_costo, p.venta_costo_ly), unidades: growth(p.venta_unidades, p.venta_unidades_ly) } };
             });
             renderDetail();
           })
@@ -516,6 +541,7 @@
       return '<div class="mapa-prow">' +
         '<span class="mapa-pcat">' + p.cat + '</span>' +
         '<span class="mapa-pname">' + p.name + '</span>' +
+        '<span class="mapa-pnum" style="font-weight:700;text-align:right">' + fmtVenta((p.v && p.v[mode]) || 0, mode) + '</span>' +
         '<span class="mapa-pperf ' + cls(p.cr[mode]) + '">' + fmtPct(p.cr[mode]) + '</span>' +
         '</div>';
     }).join('');
@@ -524,7 +550,7 @@
         '<div class="mapa-drillname"><span class="mapa-cdot" style="background:' + ch.dot + '"></span>' + l.nombre + '</div>' +
         '<div class="mapa-dsub">' + l.cod + ' · ' + l.comuna + ' · <span class="mapa-secmetric">' + metricLabel() + '</span></div></div>' +
       '<div class="mapa-sec">Productos · ordenados por crecimiento</div>' +
-      '<div class="mapa-phead"><span>Categoría</span><span>Producto</span><span>Crecimiento</span></div>' +
+      '<div class="mapa-phead"><span>Categoría</span><span>Producto</span><span style="text-align:right">' + metricLabel() + '</span><span>Crecimiento</span></div>' +
       rows;
   }
 
@@ -576,9 +602,9 @@
       '.mapa-sec{font-family:var(--font-display,sans-serif);font-weight:700;font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;color:var(--purple,#5A0D74);margin:4px 0 10px;}' +
       '.mapa-secmetric{color:var(--accent,#FF5A1F);}' +
       /* tabla cadenas — títulos completos (con ajuste de línea) */
-      '.mapa-chead{display:grid;grid-template-columns:auto minmax(70px,1fr) repeat(4,minmax(48px,1fr));gap:9px;align-items:end;font-family:var(--font-display,sans-serif);font-weight:700;font-size:.6rem;line-height:1.15;text-transform:uppercase;letter-spacing:.02em;color:var(--muted,#6E6275);padding:0 3px 9px;border-bottom:1px solid var(--line,#eadfce);}' +
+      '.mapa-chead{display:grid;grid-template-columns:auto minmax(60px,1fr) minmax(80px,1.3fr) repeat(4,minmax(44px,.9fr));gap:9px;align-items:end;font-family:var(--font-display,sans-serif);font-weight:700;font-size:.6rem;line-height:1.15;text-transform:uppercase;letter-spacing:.02em;color:var(--muted,#6E6275);padding:0 3px 9px;border-bottom:1px solid var(--line,#eadfce);}' +
       '.mapa-chead span{text-align:right;}.mapa-chead span:nth-child(2){text-align:left;}' +
-      '.mapa-crow{display:grid;grid-template-columns:auto minmax(70px,1fr) repeat(4,minmax(48px,1fr));gap:9px;align-items:center;padding:12px 3px;border-bottom:1px solid rgba(0,0,0,.05);font-size:.88rem;}' +
+      '.mapa-crow{display:grid;grid-template-columns:auto minmax(60px,1fr) minmax(80px,1.3fr) repeat(4,minmax(44px,.9fr));gap:9px;align-items:center;padding:12px 3px;border-bottom:1px solid rgba(0,0,0,.05);font-size:.88rem;}' +
       '.mapa-crow:last-of-type{border-bottom:0;}' +
       '.mapa-crow.click{cursor:pointer;border-radius:9px;transition:background .13s;}' +
       '.mapa-crow.click:hover{background:rgba(90,13,116,.06);}' +
@@ -596,9 +622,9 @@
       '.mapa-back:hover{background:rgba(90,13,116,.16);}.mapa-back svg{width:15px;height:15px;}' +
       '.mapa-drillname{display:flex;align-items:center;gap:9px;font-family:var(--font-display,sans-serif);font-weight:800;font-size:1.55rem;color:var(--ink,#241026);letter-spacing:-.01em;}' +
       '.mapa-drillname .mapa-cdot{width:14px;height:14px;}' +
-      '.mapa-lhead{display:grid;grid-template-columns:1fr 1.4fr auto;gap:14px;font-family:var(--font-display,sans-serif);font-weight:700;font-size:.64rem;text-transform:uppercase;letter-spacing:.03em;color:var(--muted,#6E6275);padding:0 4px 9px;border-bottom:1px solid var(--line,#eadfce);}' +
+      '.mapa-lhead{display:grid;grid-template-columns:1fr 1.4fr auto auto;gap:14px;font-family:var(--font-display,sans-serif);font-weight:700;font-size:.64rem;text-transform:uppercase;letter-spacing:.03em;color:var(--muted,#6E6275);padding:0 4px 9px;border-bottom:1px solid var(--line,#eadfce);}' +
       '.mapa-lhead span:nth-child(3){text-align:right;min-width:80px;}' +
-      '.mapa-lrow{display:grid;grid-template-columns:1fr 1.4fr auto;gap:14px;align-items:center;padding:11px 4px;border-bottom:1px solid rgba(0,0,0,.05);font-size:.9rem;}' +
+      '.mapa-lrow{display:grid;grid-template-columns:1fr 1.4fr auto auto;gap:14px;align-items:center;padding:11px 4px;border-bottom:1px solid rgba(0,0,0,.05);font-size:.9rem;}' +
       '.mapa-lrow.click{cursor:pointer;border-radius:9px;transition:background .13s;}' +
       '.mapa-lrow.click:hover{background:rgba(90,13,116,.06);}' +
       '.mapa-lcode{font-variant-numeric:tabular-nums;font-weight:600;color:var(--purple,#5A0D74);font-size:.82rem;white-space:nowrap;}' +
@@ -606,9 +632,9 @@
       '.mapa-lrow.click:hover .mapa-chev{color:var(--purple,#5A0D74);opacity:1;}' +
       '.mapa-lperf{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;min-width:80px;}' +
       '.mapa-lperf.pos{color:#1F8A4C;}.mapa-lperf.neg{color:#C0392B;}' +
-      '.mapa-phead{display:grid;grid-template-columns:1fr 1.4fr auto;gap:14px;font-family:var(--font-display,sans-serif);font-weight:700;font-size:.64rem;text-transform:uppercase;letter-spacing:.03em;color:var(--muted,#6E6275);padding:0 4px 9px;border-bottom:1px solid var(--line,#eadfce);}' +
+      '.mapa-phead{display:grid;grid-template-columns:1fr 1.4fr auto auto;gap:14px;font-family:var(--font-display,sans-serif);font-weight:700;font-size:.64rem;text-transform:uppercase;letter-spacing:.03em;color:var(--muted,#6E6275);padding:0 4px 9px;border-bottom:1px solid var(--line,#eadfce);}' +
       '.mapa-phead span:nth-child(3){text-align:right;min-width:80px;}' +
-      '.mapa-prow{display:grid;grid-template-columns:1fr 1.4fr auto;gap:14px;align-items:center;padding:11px 4px;border-bottom:1px solid rgba(0,0,0,.05);font-size:.9rem;}' +
+      '.mapa-prow{display:grid;grid-template-columns:1fr 1.4fr auto auto;gap:14px;align-items:center;padding:11px 4px;border-bottom:1px solid rgba(0,0,0,.05);font-size:.9rem;}' +
       '.mapa-prow:last-of-type{border-bottom:0;}' +
       '.mapa-pcat{font-weight:600;color:var(--muted,#6E6275);font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
       '.mapa-pname{font-weight:600;color:var(--ink,#241026);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
