@@ -76,7 +76,8 @@
     var pageSize = mode === 'localproducto' ? 5000 : 500;
     function loadAllPages() {
       return request(baseEndpoint + '?limit=' + pageSize + '&page=1').then(function (first) {
-        var pages = Math.ceil(Number(first.total || 0) / pageSize);
+        var effectiveLimit = Number(first.limit || pageSize) || pageSize;
+        var pages = Math.ceil(Number(first.total || 0) / effectiveLimit);
         var requests = [];
         for (var page = 2; page <= pages; page += 1) {
           requests.push(request(baseEndpoint + '?limit=' + pageSize + '&page=' + page));

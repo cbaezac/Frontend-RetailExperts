@@ -342,23 +342,34 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
   document.getElementById('search').addEventListener('input', function(){ sel.q=this.value.trim().toLowerCase(); pager.reset(); render(); });
 
   var filtersHost=document.getElementById('filters');
-  C.filters.forEach(function(f){
-    var wrap=document.createElement('div'); wrap.className='filter-wrap';
-    var btn=document.createElement('button'); btn.className='filter'; btn.type='button'; btn.setAttribute('aria-expanded','false');
-    btn.innerHTML='<span>'+f.label+'</span><span class="chev"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
-    var dd=document.createElement('div'); dd.className='dropdown';
-    var opts=uniq(f.key);
-    var searchable=opts.length>8;
-    dd.innerHTML=(searchable?'<input class="dd-search" type="text" placeholder="Buscar '+f.label.toLowerCase()+'…" />':'')+'<div class="dd-list"></div>';
-    var list=dd.querySelector('.dd-list');
-    opts.forEach(function(o){ var it=document.createElement('label'); it.className='dd-item'; it.innerHTML='<input type="checkbox" value="'+esc(o)+'" /><span>'+esc(o)+'</span>'; list.appendChild(it); });
-    wrap.appendChild(btn); wrap.appendChild(dd); filtersHost.appendChild(wrap);
-    btn.addEventListener('click', function(e){ e.stopPropagation(); var open=wrap.classList.contains('open'); closeAll(); if(!open){ wrap.classList.add('open'); btn.setAttribute('aria-expanded','true'); var s=dd.querySelector('.dd-search'); if(s)s.focus(); } });
-    dd.addEventListener('click', function(e){ e.stopPropagation(); });
-    var sb=dd.querySelector('.dd-search');
-    if(sb){ sb.addEventListener('input', function(){ var q=sb.value.toLowerCase().trim(); var any=false; list.querySelectorAll('.dd-item').forEach(function(it){ var m=it.textContent.toLowerCase().indexOf(q)!==-1; it.style.display=m?'flex':'none'; if(m)any=true; var cb=it.querySelector('input[type="checkbox"]'); if(cb){ if(q&&m&&!cb.checked){ cb.checked=true; cb.setAttribute('data-auto','1'); } else if(cb.getAttribute('data-auto')==='1'&&(!q||!m)){ cb.checked=false; cb.removeAttribute('data-auto'); } } }); dd.dispatchEvent(new Event('change')); var e=dd.querySelector('.dd-empty'); if(!any&&!e){ e=document.createElement('div'); e.className='dd-empty'; e.textContent='Sin resultados'; list.appendChild(e);} else if(any&&e){e.remove();} }); }
-    dd.addEventListener('change', function(){ sel.filters[f.key]=[].slice.call(dd.querySelectorAll('input:checked')).map(function(c){return c.value;}); var n=sel.filters[f.key].length; if(n){ btn.classList.add('has-selection'); var c=btn.querySelector('.count'); if(!c){c=document.createElement('span'); c.className='count'; btn.appendChild(c);} c.textContent=n; } else { btn.classList.remove('has-selection'); var c2=btn.querySelector('.count'); if(c2)c2.remove(); } pager.reset(); render(); });
-  });
+  function buildFilters(){
+    filtersHost.innerHTML='';
+    C.filters.forEach(function(f){
+      var selected={}; (sel.filters[f.key]||[]).forEach(function(value){ selected[String(value)]=true; });
+      var wrap=document.createElement('div'); wrap.className='filter-wrap';
+      var btn=document.createElement('button'); btn.className='filter'; btn.type='button'; btn.setAttribute('aria-expanded','false');
+      btn.innerHTML='<span>'+f.label+'</span><span class="chev"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+      var dd=document.createElement('div'); dd.className='dropdown';
+      var opts=uniq(f.key);
+      var searchable=opts.length>8;
+      dd.innerHTML=(searchable?'<input class="dd-search" type="text" placeholder="Buscar '+f.label.toLowerCase()+'…" />':'')+'<div class="dd-list"></div>';
+      var list=dd.querySelector('.dd-list');
+      opts.forEach(function(o){ var checked=selected[String(o)]?' checked':''; var it=document.createElement('label'); it.className='dd-item'; it.innerHTML='<input type="checkbox" value="'+esc(o)+'"'+checked+' /><span>'+esc(o)+'</span>'; list.appendChild(it); });
+      wrap.appendChild(btn); wrap.appendChild(dd); filtersHost.appendChild(wrap);
+      btn.addEventListener('click', function(e){ e.stopPropagation(); var open=wrap.classList.contains('open'); closeAll(); if(!open){ wrap.classList.add('open'); btn.setAttribute('aria-expanded','true'); var s=dd.querySelector('.dd-search'); if(s)s.focus(); } });
+      dd.addEventListener('click', function(e){ e.stopPropagation(); });
+      var sb=dd.querySelector('.dd-search');
+      if(sb){ sb.addEventListener('input', function(){ var q=sb.value.toLowerCase().trim(); var any=false; list.querySelectorAll('.dd-item').forEach(function(it){ var m=it.textContent.toLowerCase().indexOf(q)!==-1; it.style.display=m?'flex':'none'; if(m)any=true; var cb=it.querySelector('input[type="checkbox"]'); if(cb){ if(q&&m&&!cb.checked){ cb.checked=true; cb.setAttribute('data-auto','1'); } else if(cb.getAttribute('data-auto')==='1'&&(!q||!m)){ cb.checked=false; cb.removeAttribute('data-auto'); } } }); dd.dispatchEvent(new Event('change')); var e=dd.querySelector('.dd-empty'); if(!any&&!e){ e=document.createElement('div'); e.className='dd-empty'; e.textContent='Sin resultados'; list.appendChild(e);} else if(any&&e){e.remove();} }); }
+      dd.addEventListener('change', function(){ sel.filters[f.key]=[].slice.call(dd.querySelectorAll('input:checked')).map(function(c){return c.value;}); refreshFilterButton(btn, f.key); pager.reset(); render(); });
+      refreshFilterButton(btn, f.key);
+    });
+  }
+  function refreshFilterButton(btn, key){
+    var n=(sel.filters[key]||[]).length;
+    if(n){ btn.classList.add('has-selection'); var c=btn.querySelector('.count'); if(!c){c=document.createElement('span'); c.className='count'; btn.appendChild(c);} c.textContent=n; }
+    else { btn.classList.remove('has-selection'); var c2=btn.querySelector('.count'); if(c2)c2.remove(); }
+  }
+  buildFilters();
   function closeAll(){ document.querySelectorAll('.filter-wrap.open').forEach(function(w){ w.classList.remove('open'); var b=w.querySelector('.filter'); if(b)b.setAttribute('aria-expanded','false'); }); }
   document.addEventListener('click', closeAll);
 
@@ -529,7 +540,8 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
   function installBackendRows(rows){
     if(!Array.isArray(rows)) return;
     data=rows;
-    currentPage=1;
+    pager.reset();
+    buildFilters();
     render();
   }
   window.addEventListener('mant:backend-data', function(e){ installBackendRows(e.detail); });
