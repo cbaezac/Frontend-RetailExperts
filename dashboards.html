@@ -2199,13 +2199,24 @@
     var PZ_FILTERS=[['cadena','Cadena'],['formato','Formato'],['region','Región'],['codlocal','Código Local'],['local','Nombre Local'],['categoria','Categoría'],['marca','Marca'],['codprod','Código Producto'],['descriptor','Descriptor Producto']];
     var PZ_FILTER_OPTS={ cadena:['Cencosud','Walmart','SMU','Tottus'], formato:['Jumbo','Santa Isabel','Hiper Líder','Líder Express','Unimarc','Hiper Tottus'], region:['R. Metropolitana','Valparaíso','Biobío','Maule','Coquimbo'], codlocal:['J101','I103','L101','U101','T101','M102'], local:['Jumbo Kennedy','Hiper Líder Maipú','Unimarc Providencia'], categoria:['Alimentos','Bebidas','Limpieza','Cuidado Personal','Hogar'], marca:['Adclean','Bekys','Café Haití','Kuna Foods','Olisur','Prater'], codprod:['SKU1001','SKU1002','SKU1003'], descriptor:['Aceite 1L','Detergente 3kg','Café 250g','Shampoo 400ml'] };
     var pzFilters={};
+    // Opciones de filtro del armador desde los atributos REALES del cliente
+    // (loadAtributos → FILTER_DEFS); si aún no cargan, cae a las de ejemplo.
+    var PZ_FILTER_DEF_LABEL={cadena:'Cadena',formato:'Formato',region:'Región',codlocal:'Código Local',local:'Nombre Local',categoria:'Categoría',marca:'Marca',codprod:'Código Producto',descriptor:'Descriptor Producto'};
+    function pzFilterOpts(key){
+      var lbl=PZ_FILTER_DEF_LABEL[key];
+      var grp=(key==='categoria'||key==='marca'||key==='codprod'||key==='descriptor')?'productos':'locales';
+      var defs=(typeof FILTER_DEFS!=='undefined'&&FILTER_DEFS[grp])||[];
+      var found=defs.filter(function(d){return d[0]===lbl;})[0];
+      if(found && found[1] && found[1].length) return found[1];
+      return PZ_FILTER_OPTS[key]||[];
+    }
     var pzCharts=[]; var pzDraft=null; var pzStage='type'; var pzApplied=false; var pzCfgIdx=0; var pzEditIdx=-1;
     var PZ_TYPES=[['matriz','Matriz de datos','Tabla con indicadores y aperturas'],['barras','Gr\u00e1fico de Barras / L\u00edneas','Barras con l\u00edneas superpuestas'],['torta','Gr\u00e1fico de Tortas','Distribuci\u00f3n porcentual']];
     function pzTypeLabel(t){ for(var i=0;i<PZ_TYPES.length;i++){ if(PZ_TYPES[i][0]===t) return PZ_TYPES[i][1]; } return t; }
     function pzApName(a){ for(var i=0;i<PZ_AP.length;i++){ if(PZ_AP[i][0]===a) return PZ_AP[i][1]; } return a; }
-    function pzNewDraft(t){ return {type:t,mode:'consolidado',gran:'semanal',ap:'cadena',inds:['vp'],filters:{},drill:[],sort:{key:'vp',dir:-1}}; }
+    function pzNewDraft(t){ return {type:t,mode:'consolidado',gran:'semanal',ap:'cadena',inds:['vp'],filters:{},drill:[],sort:{key:'vp',dir:-1},period:pzDefaultPeriod()}; }
     function pzCloneFilters(f){ var o={}; Object.keys(f).forEach(function(k){ o[k]=(f[k]||[]).slice(); }); return o; }
-    function pzCloneCfg(c){ return {type:c.type,mode:c.mode,gran:c.gran,ap:c.ap,inds:c.inds.slice(),filters:pzCloneFilters(c.filters),drill:[],sort:{key:c.sort.key,dir:c.sort.dir}}; }
+    function pzCloneCfg(c){ return {type:c.type,mode:c.mode,gran:c.gran,ap:c.ap,inds:c.inds.slice(),filters:pzCloneFilters(c.filters),drill:[],sort:{key:c.sort.key,dir:c.sort.dir},period:c.period?JSON.parse(JSON.stringify(c.period)):pzDefaultPeriod()}; }
     var PZ_FCPRICE=410;
     var PZ_INDS=[
       {k:'vp',label:'Venta pesos',get:function(o){return o.vp;},ly:function(o){return o.vpLy;},fmt:clp},
@@ -2249,6 +2260,69 @@
     function pzProductsFor(l){ var n=4+(hashN(l.cod)%4); var arr=[]; for(var i=0;i<n;i++){ var h=hashN(l.cod+'pz'+i); arr.push({h:h,w:0.5+(h%100)/100,name:PROD_NAMES[h%PROD_NAMES.length]}); } var sw=arr.reduce(function(a,b){return a+b.w;},0); return arr.map(function(p){ var f=p.w/sw, j=0.9+(p.h%20)/100; var o={vp:l.vp*f,vc:l.vc*f,vu:l.vu*f,vpLy:l.vpLy*f*j,vcLy:l.vcLy*f*j,vuLy:l.vuLy*f*j,mVp:l.mVp*f,mVc:l.mVc*f,mVu:l.mVu*f,w:l.vp*f}; var osa=Math.min(99.5,l.osa+((p.h%70)/10-3.5)),ins=Math.min(99.5,l.ins+((p.h%50)/10-2.5)),doh=Math.max(2,l.doh+((p.h%90)/10-4.5)),qb=Math.max(0,l.qb+((p.h%40)/10-2)); o.osaW=osa*o.w;o.insW=ins*o.w;o.dohW=doh*o.w;o.qbW=qb*o.w; return {key:'SKU'+(1000+(p.h%9000)),label:'SKU'+(1000+(p.h%9000))+' · '+p.name,raw:o}; }); }
     function pzFilteredLocs(){ var locs=FL(); Object.keys(pzFilters).forEach(function(f){ var sel=pzFilters[f]; if(sel&&sel.length){ locs=locs.filter(function(l){ return sel.indexOf(pzAttrKey(l,f))>=0; }); } }); return locs; }
     function pzSubset(){ var locs=pzFilteredLocs(); if(pzDrill.length && pzDrill[0].type==='group'){ var key=pzDrill[0].key; locs=locs.filter(function(l){ return pzAttrKey(l,pzAp)===key; }); } return locs; }
+
+    /* ---------- Datos REALES del armador (venta_historica + abastecimiento) ----------
+       La vista Personalizado consume los mismos endpoints que Evolutivo/Abastecimiento:
+       - Venta (pesos/costo/unidades/precio): /web/dashboard/comercial (respeta apertura,
+         granularidad, período elegido y filtros; trae serie por bucket y año anterior).
+       - Operacional (OSA/Instock/DOH/Quiebres): /web/dashboard/abastecimiento por apertura.
+       Forecast y venta perdida siguen derivándose de la venta real (sin fuente propia). */
+    var PZ_DATA={};   // caché por firma de gráfico+drill -> {rows,total,labels}
+    var pzActive=null; // dataset del gráfico que se está renderizando ahora
+    function pzApiAp(ap){ return ap==='local'?'nomlocal':ap; }
+    function pzDefaultPeriod(){ return {a1:DEFAULT_PERIODS.mtd.start,a2:DEFAULT_PERIODS.mtd.end,b1:isoAddYears(DEFAULT_PERIODS.mtd.start,-1),b2:isoAddYears(DEFAULT_PERIODS.mtd.end,-1)}; }
+    function pzPeriodA(cfg){ var p=cfg.period||{}; return {start:p.a1||DEFAULT_PERIODS.mtd.start, end:p.a2||DEFAULT_PERIODS.mtd.end}; }
+    function pzPeriodB(cfg){ var p=cfg.period||{}; return {start:p.b1||isoAddYears(DEFAULT_PERIODS.mtd.start,-1), end:p.b2||isoAddYears(DEFAULT_PERIODS.mtd.end,-1)}; }
+    function pzChartFilters(cfg){ var out={}; Object.keys(cfg.filters||{}).forEach(function(k){ var vals=cfg.filters[k]||[]; if(!vals.length) return; var param=DRILL_PARAM[pzApiAp(k)]; if(param) out[param]=vals.slice(); }); return out; }
+    function pzDrillPathFilters(baseAp, path){ var f={}, prev=baseAp; (path||[]).forEach(function(pp){ var param=DRILL_PARAM[prev]; if(param) f[param]=pp.cod||pp.rawLabel||pp.label; prev=pp.ap; }); return f; }
+    function pzNeedsOps(cfg){ return (cfg.inds||[]).some(function(k){ return k==='osa'||k==='ins'||k==='doh'||k==='qb'; }); }
+    function pzSig(cfg, drill){ return [ (typeof CLIENTE_ID!=='undefined'?CLIENTE_ID:''), cfg.type,cfg.mode,cfg.gran,cfg.ap,(cfg.inds||[]).join('+'),JSON.stringify(cfg.filters||{}),JSON.stringify(cfg.period||{}), (drill||[]).map(function(d){return d.ap+'='+(d.cod||d.rawLabel||d.label);}).join('>') ].join('|'); }
+    function pzFetchAba(apiAp, filters, period){ var base={apertura:apiAp}; if(period){ base.desde=period.start; base.hasta=period.end; } var params=withCliente(Object.assign(base, fbFilterParams(), filters||{})); return window.RetailAPI.requestJson('/web/dashboard/abastecimiento'+window.RetailAPI.buildQuery(params)); }
+    function pzBuild(cfg, rA, rB, rOsa){
+      var labels=(rA&&rA.weeks)||[];
+      var apiAp=pzApiAp(cfg.ap);
+      var valsA=normalizeAperturaValues(apiAp, (rA&&rA.values)||[]);
+      var compByRaw={}; if(rB){ normalizeAperturaValues(apiAp,(rB.values||[])).forEach(function(v){ compByRaw[(v.rawLabel||v.label||'').toLowerCase()]=v; }); }
+      var opsByRaw={}; if(rOsa){ (rOsa.values||[]).forEach(function(v){ opsByRaw[String(v.label||'').toLowerCase()]=v; }); }
+      var rows=valsA.map(function(v){
+        var vp=sumArr(v.pesos||[]), vc=sumArr(v.costo||[]), vu=sumArr(v.unidades||[]);
+        var rawKey=(v.rawLabel||v.label||'');
+        var cv=rB?compByRaw[rawKey.toLowerCase()]:null;
+        var vpLy=rB?sumArr((cv&&cv.pesos)||[]):(Number(v.ly)||0);
+        var vcLy=rB?sumArr((cv&&cv.costo)||[]):(vp?vpLy*(vc/vp):0);
+        var vuLy=rB?sumArr((cv&&cv.unidades)||[]):(vu&&vp?vpLy/(vp/vu):0);
+        var raw={vp:vp,vc:vc,vu:vu,vpLy:vpLy,vcLy:vcLy,vuLy:vuLy,mVp:0,mVc:0,mVu:0,w:vp,osaW:0,insW:0,dohW:0,qbW:0};
+        var op=opsByRaw[rawKey.toLowerCase()];
+        if(op){ var ins=Number(op.instock)||0, doh=Number(op.doh)||0, qb=Number(op.quiebre)||0; var osa=(op.osa!=null?Number(op.osa):ins); raw.osaW=osa*vp; raw.insW=ins*vp; raw.dohW=doh*vp; raw.qbW=qb*vp; }
+        return { key:rawKey, label:v.label, rawLabel:rawKey, cod:(cfg.ap==='codlocal'||cfg.ap==='local')?rawKey:null, raw:raw,
+                 series:{ vp:(v.pesos||[]).slice(), vc:(v.costo||[]).slice(), vu:(v.unidades||[]).slice() } };
+      });
+      var total={vp:0,vc:0,vu:0,vpLy:0,vcLy:0,vuLy:0,mVp:0,mVc:0,mVu:0,w:0,osaW:0,insW:0,dohW:0,qbW:0};
+      rows.forEach(function(r){ Object.keys(total).forEach(function(k){ total[k]+=(r.raw[k]||0); }); });
+      var tSeries={ vp:[], vc:[], vu:[] };
+      labels.forEach(function(_,i){ ['vp','vc','vu'].forEach(function(k){ var s=0; rows.forEach(function(r){ s+=Number((r.series[k]||[])[i])||0; }); tSeries[k].push(s); }); });
+      return { rows:rows, total:total, labels:labels, totalSeries:tSeries };
+    }
+    // Serie por bucket real para una fila+indicador (evolutivo). Solo venta tiene
+    // serie temporal; el resto cae a plano (total repartido) para no romper el eje.
+    function pzSeriesFor(row, key, n){
+      var s=row.series||{};
+      if(key==='vp'||key==='vc'||key==='vu') return (s[key]||[]).slice();
+      if(key==='pp'){ return (s.vp||[]).map(function(p,i){ var u=(s.vu||[])[i]; return u?p/u:0; }); }
+      var d=pzIndDef(key), v=d.get(row.raw)||0, len=n||(s.vp||[]).length||1, out=[]; for(var i=0;i<len;i++) out.push(v); return out;
+    }
+    function pzLoad(cfg, drillPath){
+      drillPath=drillPath||[];
+      var baseAp=pzApiAp(cfg.ap);
+      var apiAp=drillPath.length?drillPath[drillPath.length-1].ap:baseAp;
+      var filters=Object.assign(pzChartFilters(cfg), pzDrillPathFilters(baseAp, drillPath));
+      var gran=(cfg.mode==='evolutivo')?(cfg.gran||'semanal'):'mensual';
+      var extra=Object.assign({gran:gran}, filters);
+      var pA=fetchComercialPeriod(apiAp, pzPeriodA(cfg), extra);
+      var pB=(cfg.mode==='comparativo')?fetchComercialPeriod(apiAp, pzPeriodB(cfg), extra):Promise.resolve(null);
+      var pOps=pzNeedsOps(cfg)?pzFetchAba(apiAp, filters, pzPeriodA(cfg)).catch(function(){return null;}):Promise.resolve(null);
+      return Promise.all([pA,pB,pOps]).then(function(rs){ return pzBuild(cfg, rs[0], rs[1], rs[2]); });
+    }
     function panelPersonalizado(){
       if(needsData('personalizado', null, panelPersonalizado)) return;
       var d=pzDraft;
@@ -2270,11 +2344,12 @@
         if(d.type!=='torta'){
           html+='<div class="metric-switch" id="pzModeSw"><button type="button" data-m="consolidado"'+(d.mode==='consolidado'?' class="on"':'')+'>Consolidado</button><button type="button" data-m="evolutivo"'+(evo?' class="on"':'')+'>Evolutivo</button><button type="button" data-m="comparativo"'+(comp?' class="on"':'')+'>Comparativo</button></div>';
         }
+        var dp=d.period||pzDefaultPeriod();
         if(comp){
-          html+='<div class="pz-dates"><div class="pz-date-grp"><span class="pz-date-lbl">An\u00e1lisis</span><input type="date" id="pz-a1" value="'+DEFAULT_PERIODS.mtd.start+'" /><span class="period-sep">\u2192</span><input type="date" id="pz-a2" value="'+DEFAULT_PERIODS.mtd.end+'" /></div>'
-            + '<div class="pz-date-grp"><span class="pz-date-lbl">Comparativo</span><input type="date" id="pz-b1" value="'+isoAddYears(DEFAULT_PERIODS.mtd.start,-1)+'" /><span class="period-sep">\u2192</span><input type="date" id="pz-b2" value="'+isoAddYears(DEFAULT_PERIODS.mtd.end,-1)+'" /></div></div>';
+          html+='<div class="pz-dates"><div class="pz-date-grp"><span class="pz-date-lbl">An\u00e1lisis</span><input type="date" id="pz-a1" value="'+(dp.a1||DEFAULT_PERIODS.mtd.start)+'" /><span class="period-sep">\u2192</span><input type="date" id="pz-a2" value="'+(dp.a2||DEFAULT_PERIODS.mtd.end)+'" /></div>'
+            + '<div class="pz-date-grp"><span class="pz-date-lbl">Comparativo</span><input type="date" id="pz-b1" value="'+(dp.b1||isoAddYears(DEFAULT_PERIODS.mtd.start,-1))+'" /><span class="period-sep">\u2192</span><input type="date" id="pz-b2" value="'+(dp.b2||isoAddYears(DEFAULT_PERIODS.mtd.end,-1))+'" /></div></div>';
         } else {
-          html+='<div class="pz-dates"><div class="pz-date-grp"><span class="pz-date-lbl">'+(evo?'Per\u00edodo':'Inicio')+'</span><input type="date" id="pz-e1" value="'+DEFAULT_PERIODS.mtd.start+'" /><span class="period-sep">\u2192</span><input type="date" id="pz-e2" value="'+DEFAULT_PERIODS.mtd.end+'" /></div></div>';
+          html+='<div class="pz-dates"><div class="pz-date-grp"><span class="pz-date-lbl">'+(evo?'Per\u00edodo':'Inicio')+'</span><input type="date" id="pz-e1" value="'+(dp.a1||DEFAULT_PERIODS.mtd.start)+'" /><span class="period-sep">\u2192</span><input type="date" id="pz-e2" value="'+(dp.a2||DEFAULT_PERIODS.mtd.end)+'" /></div></div>';
         }
         if(evo){
           html+='<div class="pz-date-grp"><span class="pz-date-lbl">Ver por</span><div class="metric-switch" id="pzGranSw">'
@@ -2283,7 +2358,7 @@
         }
         html+='</div></div>';
         html+='<div class="pz-step"><div class="pz-step-h"><span class="pz-num">2</span> Qu\u00e9 filtros realizar</div><div class="pz-step-b"><div class="pz-filters" id="pzFilters">'
-          + PZ_FILTERS.map(function(f){ var sel=d.filters[f[0]]||[]; return '<div class="pz-filter"><label>'+f[1]+'</label><div class="ms2"><button type="button" class="ms2-btn" data-f="'+f[0]+'"><span class="ms2-txt">Todos</span><span class="ms2-cv"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5 5 6.5 8 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button><div class="ms2-pop"><div class="ms2-list">'+PZ_FILTER_OPTS[f[0]].map(function(o){return '<label class="ms2-item"><input type="checkbox" value="'+o+'"'+(sel.indexOf(o)>=0?' checked':'')+' />'+o+'</label>';}).join('')+'</div></div></div></div>'; }).join('')
+          + PZ_FILTERS.map(function(f){ var sel=d.filters[f[0]]||[]; return '<div class="pz-filter"><label>'+f[1]+'</label><div class="ms2"><button type="button" class="ms2-btn" data-f="'+f[0]+'"><span class="ms2-txt">Todos</span><span class="ms2-cv"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5 5 6.5 8 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button><div class="ms2-pop"><div class="ms2-list">'+pzFilterOpts(f[0]).map(function(o){return '<label class="ms2-item"><input type="checkbox" value="'+o+'"'+(sel.indexOf(o)>=0?' checked':'')+' />'+o+'</label>';}).join('')+'</div></div></div></div>'; }).join('')
           + '</div></div></div>';
         html+='<div class="pz-step"><div class="pz-step-h"><span class="pz-num">3</span> Qu\u00e9 indicadores ver'+(d.type==='torta'?' <span style="font-weight:600;color:var(--muted);font-size:12px;margin-left:6px">(uno para la torta)</span>':'')+'</div><div class="pz-step-b"><div class="metric-chips" id="pzIndChips">'
           + PZ_INDS.map(function(x){ var on=d.inds.indexOf(x.k)>=0; return '<button type="button" class="metric-chip'+(on?' on':'')+'" data-k="'+x.k+'" style="color:var(--purple)"><span class="mdot" style="background:var(--purple)"></span><span style="color:var(--ink)">'+x.label+'</span></button>';}).join('')
@@ -2324,8 +2399,22 @@
           pop.addEventListener('click', function(e){ e.stopPropagation(); });
           pop.addEventListener('change', function(){ d.filters[f]=[].slice.call(pop.querySelectorAll('input:checked')).map(function(c){return c.value;}); syncTxt(); });
         });
-        document.getElementById('pzSave').addEventListener('click', function(){ d.sort={key:d.inds[0],dir:-1}; if(pzEditIdx>=0){ pzCharts[pzEditIdx]=d; pzEditIdx=-1; pzStage=pzApplied?'done':'ask'; } else { pzCharts.push(d); pzStage='ask'; } pzDraft=null; panelPersonalizado(); });
+        document.getElementById('pzSave').addEventListener('click', function(){
+          d.sort={key:d.inds[0],dir:-1};
+          // Capturar el período elegido en el armador (antes se ignoraba: los datos
+          // siempre salían del MTD). Ahora se guarda en la config del gráfico.
+          var gv=function(id){ var e=document.getElementById(id); return e&&e.value; };
+          if(d.mode==='comparativo'){ d.period={a1:gv('pz-a1'),a2:gv('pz-a2'),b1:gv('pz-b1'),b2:gv('pz-b2')}; }
+          else { d.period={a1:gv('pz-e1'),a2:gv('pz-e2')}; }
+          if(pzEditIdx>=0){ pzCharts[pzEditIdx]=d; pzEditIdx=-1; pzStage=pzApplied?'done':'ask'; } else { pzCharts.push(d); pzStage='ask'; } pzDraft=null; panelPersonalizado(); });
         document.getElementById('pzCancel').addEventListener('click', function(){ pzDraft=null; pzEditIdx=-1; pzStage=pzCharts.length?(pzApplied?'done':'ask'):'type'; panelPersonalizado(); });
+        // Persistir el período al vuelo: al cambiar apertura/modo/indicadores el
+        // paso se re-renderiza, así que guardamos las fechas en d.period apenas
+        // cambian para no perderlas (antes se capturaban solo al "Guardar").
+        [['pz-a1','a1'],['pz-a2','a2'],['pz-b1','b1'],['pz-b2','b2'],['pz-e1','a1'],['pz-e2','a2']].forEach(function(p){
+          var el=document.getElementById(p[0]); if(!el) return;
+          el.addEventListener('change', function(){ d.period=d.period||{}; d.period[p[1]]=el.value; });
+        });
       }
       var mo=document.getElementById('pzMore'); if(mo) mo.addEventListener('click', function(){ pzStage='type'; panelPersonalizado(); });
       var dn=document.getElementById('pzDone'); if(dn) dn.addEventListener('click', function(){ pzStage='done'; panelPersonalizado(); });
@@ -2338,12 +2427,26 @@
       w.innerHTML=pzCharts.map(function(c,i){ return '<div id="pzChart'+i+'"></div>'; }).join('');
       pzCharts.forEach(function(c,i){ renderPzChartAt(i); });
     }
-    function renderPzChartAt(i){
-      var cfg=pzCharts[i]; if(!cfg || !document.getElementById('pzChart'+i)) return;
-      pzMode=cfg.mode; pzGran=cfg.gran; pzAp=cfg.ap; pzInds=cfg.inds; pzFilters=cfg.filters; pzDrill=cfg.drill; pzSort=cfg.sort; pzCfgIdx=i;
+    function pzSetActive(cfg,i){ pzMode=cfg.mode; pzGran=cfg.gran; pzAp=cfg.ap; pzInds=cfg.inds; pzFilters=cfg.filters; pzDrill=cfg.drill; pzSort=cfg.sort; pzCfgIdx=i; }
+    function pzDoRender(cfg,i){
+      pzSetActive(cfg,i);
       if(cfg.type==='matriz') renderPzMatrix();
       else if(cfg.type==='barras') renderPzBar(cfg,i);
       else renderPzPie(cfg,i);
+    }
+    function renderPzChartAt(i){
+      var cfg=pzCharts[i]; var el=document.getElementById('pzChart'+i); if(!cfg || !el) return;
+      var sig=pzSig(cfg, cfg.drill||[]);
+      if(PZ_DATA[sig]){ pzActive=PZ_DATA[sig]; pzDoRender(cfg,i); return; }
+      el.innerHTML='<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Gráfico '+(i+1)+' · '+pzTypeLabel(cfg.type)+'</div><div class="pc-sub">Cargando datos…</div></div></div><div style="padding:34px;text-align:center;color:var(--muted)">Cargando datos…</div></div>';
+      pzLoad(cfg, cfg.drill||[]).then(function(data){
+        PZ_DATA[sig]=data;
+        if(pzCharts[i]!==cfg || !document.getElementById('pzChart'+i)) return; // el gráfico cambió mientras cargaba
+        pzActive=data; pzDoRender(cfg,i);
+      }).catch(function(){
+        if(!document.getElementById('pzChart'+i)) return;
+        el.innerHTML='<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Gráfico '+(i+1)+' · '+pzTypeLabel(cfg.type)+'</div><div class="pc-sub" style="color:var(--red)">No se pudieron cargar los datos.</div></div></div></div>';
+      });
     }
     function pzRowsFor(cfg){
       if(cfg.ap==='local'){ return pzFilteredLocs().map(function(l){ return {key:l.cod,label:l.cod+' \u00b7 '+l.nom,raw:pzRaw([l])}; }); }
@@ -2352,12 +2455,12 @@
     function pzCard(i,cfg,sub,body){ return '<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Gr\u00e1fico '+(i+1)+' \u00b7 '+pzTypeLabel(cfg.type)+'</div><div class="pc-sub">'+sub+'</div></div></div>'+body+'</div>'; }
     function renderPzBar(cfg,i){
       var el=document.getElementById('pzChart'+i);
-      var rows=pzRowsFor(cfg); var d0=pzIndDef(cfg.inds[0]);
+      var rows=(pzActive&&pzActive.rows)||[]; var d0=pzIndDef(cfg.inds[0]);
       var evo=(cfg.mode==='evolutivo'), comp=(cfg.mode==='comparativo');
       var labels,datasets,sub;
       if(evo){
-        labels=pzBucketLabels();
-        datasets=rows.slice(0,6).map(function(r,ri){ return {type:'bar',label:r.label,data:pzRowBuckets(d0.get(r.raw),cfg.inds[0],'pzb'+i+':'+r.key),backgroundColor:chartColor(ri),borderRadius:4,maxBarThickness:14}; });
+        labels=(pzActive&&pzActive.labels)||[];
+        datasets=rows.slice(0,6).map(function(r,ri){ return {type:'bar',label:r.label,data:pzSeriesFor(r,cfg.inds[0],labels.length),backgroundColor:chartColor(ri),borderRadius:4,maxBarThickness:14}; });
         sub=d0.label+' por '+pzApName(cfg.ap).toLowerCase()+' \u00b7 apertura '+cfg.gran;
       } else if(comp){
         rows=rows.slice(0,12); labels=rows.map(function(r){return r.label;});
@@ -2383,7 +2486,7 @@
     function renderPzPie(cfg,i){
       var el=document.getElementById('pzChart'+i);
       var d0=pzIndDef(cfg.inds[0]);
-      var rows=pzRowsFor(cfg).map(function(r){ return {label:r.label,v:Math.max(0,d0.get(r.raw))}; }).sort(function(a,b){return b.v-a.v;});
+      var rows=((pzActive&&pzActive.rows)||[]).map(function(r){ return {label:r.label,v:Math.max(0,d0.get(r.raw))}; }).sort(function(a,b){return b.v-a.v;});
       var top=rows.slice(0,8); var rest=rows.slice(8);
       if(rest.length){ var ov=0; rest.forEach(function(r){ov+=r.v;}); top.push({label:'Otros',v:ov}); }
       var tot=0; top.forEach(function(r){tot+=r.v;}); if(!tot) tot=1;
@@ -2401,20 +2504,16 @@
       var terminal=(curAp==='producto'||curAp==='codprod'||curAp==='descriptor');
       var cur=(curAp==='nomlocal'||curAp==='codlocal')?'local':(terminal?'product':curAp);
       var rows, firstLabel, drill, sub, back='';
+      // Filas reales del gráfico (el loader ya trajo la apertura correcta, sea el
+      // nivel base o un drill: pzActive.rows corresponde a lo que se está viendo).
+      var rowsData=(pzActive&&pzActive.rows)||[];
       if(level===0){
-        if(pzAp==='local'){ var locs0=pzFilteredLocs(); rows=locs0.map(function(l){ return {key:l.cod,label:l.cod+' · '+l.nom,cod:l.cod,raw:pzRaw([l])}; }); firstLabel='Local'; }
-        else { rows=pzGroupRows(pzFilteredLocs(),pzAp); firstLabel=apLabel; }
+        rows=rowsData; firstLabel=(pzAp==='local')?'Local':apLabel;
         drill=!terminal;
         sub='Apertura por '+apLabel.toLowerCase()+(drill?' · abre otra apertura con la flecha':'');
       } else {
         var last=pzDrill[level-1];
-        var seed=pzDrill.map(function(p){return p.label;}).join('>');
-        rows=drillChildren(last.ap, seed).map(function(o){
-          var j=0.9+(o.h%20)/100; var raw={};
-          Object.keys(last.row.raw).forEach(function(k){ var v=last.row.raw[k]; raw[k]=(typeof v==='number')?v*o.frac*(k==='w'?1:j):v; });
-          return {key:o.cod||o.label, label:o.label, cod:o.cod, raw:raw};
-        });
-        firstLabel=drillName(curAp); drill=!terminal;
+        rows=rowsData; firstLabel=drillName(curAp); drill=!terminal;
         sub=last.label+' · apertura por '+drillName(curAp).toLowerCase();
         back=drillBackHtml('pzBack'+_ci, level>1?pzDrill[level-2].ap:pzNorm(pzAp));
       }
@@ -2422,8 +2521,9 @@
       var cols=[ {key:'label',label:firstLabel,type:'text',thLeft:true,get:function(r){return r.label;},cell:function(r){ return '<td>'+r.label+(drill?drillCueHtml(r.key):'')+'</td>'; }} ];
       if(evo){
         var primK=pzInds[0]; var pd=pzIndDef(primK);
-        function rowBk(r){ if(!r._bk||r._bkKey!==primK+pzGran){ r._bk=pzRowBuckets(pd.get(r.raw),primK,r.key); r._bkKey=primK+pzGran; } return r._bk; }
-        pzBucketLabels().forEach(function(lab,i){ cols.push({key:'b'+i,label:lab,type:'num',get:function(r){return rowBk(r)[i];},cell:function(r){return '<td>'+pd.fmt(rowBk(r)[i])+'</td>';}}); });
+        var evoLabels=(pzActive&&pzActive.labels)||[];
+        function rowBk(r){ return pzSeriesFor(r, primK, evoLabels.length); }
+        evoLabels.forEach(function(lab,i){ cols.push({key:'b'+i,label:lab,type:'num',get:function(r){return rowBk(r)[i];},cell:function(r){return '<td>'+pd.fmt(rowBk(r)[i]||0)+'</td>';}}); });
       } else {
         pzInds.forEach(function(k){ var d=pzIndDef(k);
           if(comp && PZ_COMPKEYS.indexOf(k)>=0){
@@ -2436,11 +2536,10 @@
         });
       }
       if(!cols.filter(function(c){return c.key===pzSort.key;}).length){ pzSort={key:(cols[1]?cols[1].key:'label'),dir:-1}; if(_cfg) _cfg.sort=pzSort; }
-      var tot; 
-      if(level===0 && pzAp!=='local'){ tot=pzRaw(pzFilteredLocs()); }
-      else { tot={vp:0,vc:0,vu:0,vpLy:0,vcLy:0,vuLy:0,mVp:0,osaW:0,insW:0,dohW:0,qbW:0,w:0}; rows.forEach(function(r){ var o=r.raw; Object.keys(tot).forEach(function(k){ tot[k]+=(o[k]||0); }); }); }
+      var tot=(pzActive&&pzActive.total)||{vp:0,vc:0,vu:0,vpLy:0,vcLy:0,vuLy:0,mVp:0,osaW:0,insW:0,dohW:0,qbW:0,w:0};
+      var totalRow={raw:tot, key:'TOTAL', label:'Total', series:(pzActive&&pzActive.totalSeries)||{}};
       var body=smSortRows(cols,rows,pzSort).map(function(r){ return '<tr'+(drill?' class="clickable" data-key="'+r.key+'"':'')+'>'+cols.map(function(c){return c.cell(r);}).join('')+'</tr>'; }).join('');
-      var tfoot='<tr><td>Total</td>'+cols.slice(1).map(function(c){ var v=c.get({raw:tot,key:'TOTAL',label:'Total'}); if(/Var %/.test(c.label)) return '<td class="'+(v>=0?'pos':'neg')+'">'+(v>=0?'+':'')+v.toFixed(1)+'%</td>'; if(evo){ return '<td>'+pzIndDef(pzInds[0]).fmt(v)+'</td>'; } var d=pzIndDef(c.key.replace(/_c$/,'')); return '<td>'+(d?d.fmt(v):v)+'</td>'; }).join('')+'</tr>';
+      var tfoot='<tr><td>Total</td>'+cols.slice(1).map(function(c){ var v=c.get(totalRow); if(/Var %/.test(c.label)) return '<td class="'+(v>=0?'pos':'neg')+'">'+(v>=0?'+':'')+v.toFixed(1)+'%</td>'; if(evo){ return '<td>'+pzIndDef(pzInds[0]).fmt(v||0)+'</td>'; } var d=pzIndDef(c.key.replace(/_c$/,'')); return '<td>'+(d?d.fmt(v):v)+'</td>'; }).join('')+'</tr>';
       var tblClass=pzDrill.length>0?'matrix matrix-left':'matrix';
       var modeTxt=evo?('modo evolutivo · '+pzIndDef(pzInds[0]).label+' por '+pzGran):(comp?'modo comparativo (análisis vs comparativo)':'modo consolidado');
       document.getElementById('pzChart'+_ci).innerHTML='<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Gr\u00e1fico '+(_ci+1)+' \u00b7 Matriz de datos</div><div class="pc-sub">'+sub+' · '+modeTxt+'</div></div>'+back+'</div>'
@@ -2452,7 +2551,7 @@
         var gal=null;
         if(DRILL_LOCAL[curAp]){ gal = row.cod ? {ap:'codlocal', val:row.cod} : {ap:curAp, val:row.label}; }
         openDrillMenu(cue, { options:drillOptionsFor(usedAps), gallery:gal, onPick:function(ap){
-          pzDrill.push({ap:ap, key:key, label:row.label, row:row});
+          pzDrill.push({ap:ap, key:key, label:row.label, cod:row.cod, rawLabel:row.rawLabel||row.label, row:row});
           rerender();
         }});
       }); });
@@ -2939,8 +3038,21 @@
       flat.sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
       byArea[FAV_GKEY]=flat; s[u]=byArea; favSaveStore(s);
     }
-    function favListAll(){ favMigrateGlobal(); return favList(FAV_GKEY); }
-    function favWriteAll(list){ favWriteList(FAV_GKEY, list); }
+    // Los favoritos ahora persisten en el backend (por usuario), no en localStorage.
+    // FAV_CACHE es el espejo en memoria que leen renderFavs/favApply; localStorage
+    // queda solo como respaldo offline por si la API no responde.
+    var FAV_CACHE=null;
+    function favMapRemote(v){ var cfg=v.config||{}; return {id:v.id, name:v.nombre, area:v.area, filters:cfg.filters||{}, view:cfg.view||{}, ts:v.ts||0}; }
+    function favLocalGet(){ try{ return JSON.parse(localStorage.getItem('re_dash_favs_cache')||'[]'); }catch(e){ return []; } }
+    function favLocalSet(list){ try{ localStorage.setItem('re_dash_favs_cache', JSON.stringify(list||[])); }catch(e){} }
+    function favLoadRemote(){
+      if(!window.RetailAPI){ FAV_CACHE=favLocalGet(); return Promise.resolve(FAV_CACHE); }
+      return window.RetailAPI.requestJson('/web/dashboard/vistas').then(function(r){
+        FAV_CACHE=(r.vistas||[]).map(favMapRemote); favLocalSet(FAV_CACHE); return FAV_CACHE;
+      }).catch(function(){ if(FAV_CACHE==null) FAV_CACHE=favLocalGet(); return FAV_CACHE; });
+    }
+    function favListAll(){ if(FAV_CACHE==null) FAV_CACHE=favLocalGet(); return FAV_CACHE; }
+    function favWriteAll(list){ FAV_CACHE=list||[]; favLocalSet(FAV_CACHE); }
     function favFilterParts(fav){
       var parts=[];
       ['locales','productos'].forEach(function(g){ var o=(fav.filters&&fav.filters[g])||{}; Object.keys(o).forEach(function(k){ if(o[k]&&o[k].length) parts.push(k+': '+o[k].join(', ')); }); });
@@ -2953,7 +3065,7 @@
       else if(area==='comparativo'){ v.ap=cmpApertura; v.m=cmpMetric; }
       else if(area==='abastecimiento'){ v.sort={key:abaCadSort.key,dir:abaCadSort.dir}; }
       else if(area==='forecast'){ v.line=fcLineMetric; v.sort={key:fcSort.key,dir:fcSort.dir}; }
-      else if(area==='personalizado'){ v.charts=JSON.parse(JSON.stringify(pzCharts.map(function(c){ return {type:c.type,mode:c.mode,gran:c.gran,ap:c.ap,inds:c.inds,filters:c.filters,sort:c.sort}; }))); v.applied=pzApplied; }
+      else if(area==='personalizado'){ v.charts=JSON.parse(JSON.stringify(pzCharts.map(function(c){ return {type:c.type,mode:c.mode,gran:c.gran,ap:c.ap,inds:c.inds,filters:c.filters,sort:c.sort,period:c.period}; }))); v.applied=pzApplied; }
       return v;
     }
     function applyView(area,v){
@@ -2964,7 +3076,7 @@
       else if(area==='abastecimiento'){ if(v.sort){abaCadSort={key:v.sort.key,dir:v.sort.dir};} abaDrill=[]; }
       else if(area==='forecast'){ if(v.line)fcLineMetric=v.line; if(v.sort){fcSort={key:v.sort.key,dir:v.sort.dir};} fcDrill=[]; }
       else if(area==='personalizado'){
-        if(v.charts){ pzCharts=JSON.parse(JSON.stringify(v.charts)).map(function(c){ c.drill=[]; c.sort=c.sort||{key:(c.inds&&c.inds[0])||'vp',dir:-1}; c.filters=c.filters||{}; return c; }); pzApplied=(v.applied!==false)&&pzCharts.length>0; pzStage=pzCharts.length?'done':'type'; pzDraft=null; pzEditIdx=-1; }
+        if(v.charts){ pzCharts=JSON.parse(JSON.stringify(v.charts)).map(function(c){ c.drill=[]; c.sort=c.sort||{key:(c.inds&&c.inds[0])||'vp',dir:-1}; c.filters=c.filters||{}; c.period=c.period||pzDefaultPeriod(); return c; }); pzApplied=(v.applied!==false)&&pzCharts.length>0; pzStage=pzCharts.length?'done':'type'; pzDraft=null; pzEditIdx=-1; }
         else if(v.mode){ pzCharts=[{type:'matriz',mode:v.mode,gran:v.gran||'semanal',ap:v.ap||'cadena',inds:(v.inds||['vp']).slice(),filters:v.pf?JSON.parse(JSON.stringify(v.pf)):{},drill:[],sort:{key:(v.inds&&v.inds[0])||'vp',dir:-1}}]; pzApplied=true; pzStage='done'; pzDraft=null; pzEditIdx=-1; }
       }
     }
@@ -2979,16 +3091,24 @@
     function favSaveCurrent(){
       var area=favCurrentArea();
       openFavModal('Guardar favorito', '', function(name){
-        var list=favListAll();
-        list.push({ name:name, area:area, filters:JSON.parse(JSON.stringify(gFilters)), view:captureView(area), ts:Date.now() });
-        favWriteAll(list); renderFavs(); openFavManager();
+        var config={ filters:JSON.parse(JSON.stringify(gFilters)), view:captureView(area) };
+        var done=function(fav){ favListAll().push(fav); favLocalSet(FAV_CACHE); renderFavs(); openFavManager(); };
+        window.RetailAPI.requestJson('/web/dashboard/vistas', {method:'POST', body:JSON.stringify({nombre:name, area:area, config:config})})
+          .then(function(v){ done(favMapRemote(v)); })
+          .catch(function(){ done({ id:null, name:name, area:area, filters:config.filters, view:config.view, ts:Date.now() }); });
       });
     }
     function favRename(idx){
       var list=favListAll(); var fav=list[idx]; if(!fav) return;
-      openFavModal('Renombrar favorito', fav.name, function(name){ fav.name=name; favWriteAll(list); renderFavs(); openFavManager(); });
+      openFavModal('Renombrar favorito', fav.name, function(name){
+        fav.name=name; favLocalSet(FAV_CACHE); renderFavs(); openFavManager();
+        if(fav.id!=null) window.RetailAPI.requestJson('/web/dashboard/vistas/'+fav.id, {method:'PATCH', body:JSON.stringify({nombre:name})}).catch(function(){});
+      });
     }
-    function favDelete(idx){ var list=favListAll(); list.splice(idx,1); favWriteAll(list); renderFavs(); openFavManager(); }
+    function favDelete(idx){
+      var list=favListAll(); var fav=list[idx]; if(!fav) return; list.splice(idx,1); favLocalSet(FAV_CACHE); renderFavs(); openFavManager();
+      if(fav.id!=null) window.RetailAPI.requestJson('/web/dashboard/vistas/'+fav.id, {method:'DELETE'}).catch(function(){});
+    }
 
     /* ---- Modal nombre ---- */
     function openFavModal(title, current, onSave){
@@ -3048,7 +3168,7 @@
 
     function startDashboard(){
       setDataBadge(true);
-      setTimeout(function(){ buildMultiFilters(); showArea('resumen'); renderFavs(); }, 0);
+      setTimeout(function(){ buildMultiFilters(); showArea('resumen'); renderFavs(); favLoadRemote().then(renderFavs); }, 0);
     }
     if (IS_INTERNAL && !CLIENTE_ID) {
       showClientGate(startDashboard);
