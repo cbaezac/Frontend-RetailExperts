@@ -982,20 +982,24 @@
     var comCurAp='cadena', comUsedAps=[], comRowsByKey={};
     var comMetrics={pesos:true,costo:false,unidades:false,precio:false};
     function sumArr(a){return a.reduce(function(x,y){return x+y;},0);}
+    function avgArr(a){ var s=0,n=0; (a||[]).forEach(function(v){ v=Number(v); if(Number.isFinite(v)&&v>0){ s+=v; n++; } }); return n?s/n:0; }
     // Precio promedio por semana para un valor de apertura.
     // Preferimos el precio REAL que mande el backend en v.precio (columna
     // indicadores_abastecimiento_diario.precio_promedio, array por semana);
     // si no viene, lo derivamos como pesos/unidades (venta_historica).
     function precioWeekly(v){ if(Array.isArray(v.precio)) return v.precio; return v.pesos.map(function(p,i){return v.unidades[i]?p/v.unidades[i]:0;}); }
+    function precioTotal(v){ if(v&&v.precio_promedio!=null) return Number(v.precio_promedio)||0; if(v&&v.precio_total!=null) return Number(v.precio_total)||0; return avgArr(precioWeekly(v||{})); }
+    function precioCount(v){ return Number((v&&(v.precio_count||v.precio_n))||0); }
+    function precioLyTotal(v){ if(v&&v.precio_promedio_ly!=null) return Number(v.precio_promedio_ly)||0; if(v&&v.precio_ly_total!=null) return Number(v.precio_ly_total)||0; if(v&&Array.isArray(v.precio_ly)) return avgArr(v.precio_ly); var p=sumArr((v&&v.pesos)||[]),u=sumArr((v&&v.unidades)||[]); return p&&u?p/u:0; }
     function metricWeekly(v,key){ if(key==='pesos')return v.pesos; if(key==='costo')return v.costo; if(key==='unidades')return v.unidades; return precioWeekly(v); }
-    function metricTotal(v,key){ if(key==='precio'){var p=sumArr(v.pesos),u=sumArr(v.unidades);return u?p/u:0;} return sumArr(metricWeekly(v,key)); }
+    function metricTotal(v,key){ if(key==='precio') return precioTotal(v); return sumArr(metricWeekly(v,key)); }
     function metricFmt(key){ return key==='unidades'?numShort:(key==='precio'?clp:clpShort); }
     function activeMetrics(){ return METRIC_KEYS.filter(function(k){return comMetrics[k];}); }
     function primaryMetric(){ var a=activeMetrics(); return a.length?a[0]:'pesos'; }
     function apColor(i,label){ return chartColor(i); }
     function dimValues(){ return filterDimValues(comApertura, COM.aperturas[comApertura].values); }
-    function grandWeekly(key){ var vals=dimValues(), W=D.weeks.length, out=[]; for(var w=0;w<W;w++){ if(key==='precio'){var p=0,u=0;vals.forEach(function(v){p+=v.pesos[w];u+=v.unidades[w];});out.push(u?p/u:0);} else {var s=0;vals.forEach(function(v){s+=metricWeekly(v,key)[w];});out.push(s);} } return out; }
-    function comKpis(){ var vals=dimValues(); var tP=0,tC=0,tU=0,tMeta=0,lyP=0,lyC=0,lyU=0; vals.forEach(function(v){ var p=sumArr(v.pesos),c=sumArr(v.costo),u=sumArr(v.unidades); tP+=p;tC+=c;tU+=u;tMeta+=v.meta||0; lyP+=v.ly; lyC+=p&&c?v.ly*(c/p):0; lyU+=p&&u?v.ly/(p/u):0; }); var price=tU?tP/tU:0, lyPrice=lyU?lyP/lyU:0; function d(n,o){return o?(n/o-1)*100:0;} return { pesos:{v:tP,d:d(tP,lyP)}, costo:{v:tC,d:d(tC,lyC)}, unidades:{v:tU,d:d(tU,lyU)}, precio:{v:price,d:d(price,lyPrice)}, meta:{v:tMeta,avance:tMeta?tP/tMeta*100:0,d:d(tP,lyP)} }; }
+    function grandWeekly(key){ var vals=dimValues(), W=D.weeks.length, out=[]; for(var w=0;w<W;w++){ if(key==='precio'){var ps=0,pn=0;vals.forEach(function(v){var pv=Number(precioWeekly(v)[w]); if(Number.isFinite(pv)&&pv>0){ps+=pv;pn++;}});out.push(pn?ps/pn:0);} else {var s=0;vals.forEach(function(v){s+=metricWeekly(v,key)[w];});out.push(s);} } return out; }
+    function comKpis(){ var vals=dimValues(); var tP=0,tC=0,tU=0,tMeta=0,lyP=0,lyC=0,lyU=0,priceS=0,priceN=0,lyPriceS=0,lyPriceN=0; vals.forEach(function(v){ var p=sumArr(v.pesos),c=sumArr(v.costo),u=sumArr(v.unidades),pr=precioTotal(v),lyPr=precioLyTotal(v),pw=precioCount(v)||1; tP+=p;tC+=c;tU+=u;tMeta+=v.meta||0; lyP+=v.ly; lyC+=p&&c?v.ly*(c/p):0; lyU+=p&&u?v.ly/(p/u):0; if(pr){priceS+=pr*pw;priceN+=pw;} if(lyPr){lyPriceS+=lyPr;lyPriceN++;} }); var price=priceN?priceS/priceN:0, lyPrice=lyPriceN?lyPriceS/lyPriceN:0; function d(n,o){return o?(n/o-1)*100:0;} return { pesos:{v:tP,d:d(tP,lyP)}, costo:{v:tC,d:d(tC,lyC)}, unidades:{v:tU,d:d(tU,lyU)}, precio:{v:price,d:d(price,lyPrice)}, meta:{v:tMeta,avance:tMeta?tP/tMeta*100:0,d:d(tP,lyP)} }; }
 
     var COM_DEMO_APERTURAS = COM.aperturas;
     var COM_REAL = false;
@@ -1161,7 +1165,7 @@
     var COM_PROD_NAMES=['Aceite 1L','Detergente 3kg','Café 250g','Shampoo 400ml','Galletas 140g','Atún 170g','Arroz 1kg','Jugo 1.5L'];
     function comHashN(s){ var h=2166136261; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619);} return h>>>0; }
     function comDimRows(m){
-      return dimValues().map(function(v,idx){ var val=metricTotal(v,m.k); var ratioCV=sumArr(v.costo)/(sumArr(v.pesos)||1); var price=(sumArr(v.pesos)/(sumArr(v.unidades)||1))||1; var ly=(m.k==='pesos')?v.ly:(m.k==='costo'?v.ly*ratioCV:v.ly/price); var meta=(m.k==='pesos')?v.meta:(m.k==='costo'?v.meta*ratioCV:v.meta/price); return {label:v.label, rawLabel:v.rawLabel||v.label, val:val, ly:ly, meta:meta, weekly:metricWeekly(v,m.k), idx:idx}; });
+      return dimValues().map(function(v,idx){ var val=metricTotal(v,m.k); var ratioCV=sumArr(v.costo)/(sumArr(v.pesos)||1); var price=precioTotal(v)||1; var ly=(m.k==='pesos')?v.ly:(m.k==='costo'?v.ly*ratioCV:(m.k==='unidades'?v.ly/price:precioLyTotal(v))); var meta=(m.k==='pesos')?v.meta:(m.k==='costo'?v.meta*ratioCV:(m.k==='unidades'?v.meta/price:0)); return {label:v.label, rawLabel:v.rawLabel||v.label, val:val, ly:ly, meta:meta, weekly:metricWeekly(v,m.k), idx:idx}; });
     }
     function comLocalesFor(label, val, meta){
       var n=4+(comHashN(label)%5); var arr=[]; for(var i=0;i<n;i++){ var h=comHashN(label+'L'+i); arr.push({h:h, w:0.5+(h%100)/100}); }
@@ -2037,7 +2041,7 @@
     var cmpSort={key:'ana',dir:-1};
     function cmpAnaPeriod(){ return {start:cmpPeriod.a1, end:cmpPeriod.a2}; }
     function cmpCompPeriod(){ return {start:cmpPeriod.b1, end:cmpPeriod.b2}; }
-    function cloneValue(v){ return Object.assign({}, v, {pesos:(v.pesos||[]).slice(), costo:(v.costo||[]).slice(), unidades:(v.unidades||[]).slice()}); }
+    function cloneValue(v){ return Object.assign({}, v, {pesos:(v.pesos||[]).slice(), costo:(v.costo||[]).slice(), unidades:(v.unidades||[]).slice(), precio:Array.isArray(v.precio)?v.precio.slice():v.precio}); }
     function scaledValue(v, factor){
       var out=cloneValue(v);
       out.pesos=out.pesos.map(function(x){return x*factor;});
@@ -2122,8 +2126,8 @@
       var tA=0,tB=0; vals.forEach(function(o){tA+=o.ana;tB+=o.cmp;});
       // KPIs resumen comparativo
       var totVar=tB?(tA/tB-1)*100:0;
-      // Precio promedio análisis / comparativo (totales ponderados)
-      var ppA=0,ppB=0;(function(){var aP=0,aU=0,cP=0,cU=0;cmpPairs.forEach(function(p){aP+=sumArr(p.a.pesos||[]);aU+=sumArr(p.a.unidades||[]);if(p.b){cP+=sumArr(p.b.pesos||[]);cU+=sumArr(p.b.unidades||[]);}});ppA=aU?aP/aU:0;ppB=cU?cP/cU:0;})();
+      // Precio promedio análisis / comparativo: AVG(precio_promedio) real si viene del backend.
+      var ppA=0,ppB=0;(function(){var aS=0,aN=0,cS=0,cN=0;cmpPairs.forEach(function(p){var av=precioTotal(p.a),cv=precioTotal(p.b),aw=precioCount(p.a)||1,cw=precioCount(p.b)||1;if(av){aS+=av*aw;aN+=aw;}if(cv){cS+=cv*cw;cN+=cw;}});ppA=aN?aS/aN:0;ppB=cN?cS/cN:0;})();
       var ppVar=ppB?(ppA/ppB-1)*100:0;
       html+='<div class="kpis">'
         + kpiCard({label:m.label+' · Análisis', value:m.fmt(tA), icon:IC.money, tone:'accent'})
@@ -2570,7 +2574,7 @@
         var insW=promoWeeklyPct('promo-ins:'+v.label, 88+((h>>4)%1050)/100, 80, 99.5);
         return { label:v.label, impl:impl,
           osa:osaW[osaW.length-1], instock:insW[insW.length-1], osaW:osaW, insW:insW,
-          pesos:p, costo:c, unidades:u, precio:u?p/u:0,
+          pesos:p, costo:c, unidades:u, precio:precioTotal(v), precio_count:precioCount(v),
           wkPesos:v.pesos.slice(), wkCosto:v.costo.slice(), wkUnidades:v.unidades.slice() };
       });
     }
@@ -2585,7 +2589,7 @@
         var insW=promoWeeklyPct('promo-ins:'+parent.label+prefix+i, Math.min(99, parent.instock+((o.h%400)/100-2)), 78, 99.5);
         return { h:o.h, impl:Math.min(99, Math.max(60, parent.impl+((o.h%700)/100-3.5))),
           osa:osaW[osaW.length-1], instock:insW[insW.length-1], osaW:osaW, insW:insW,
-          pesos:p, costo:c, unidades:u, precio:u?p/u:0, wkPesos:wkP, wkCosto:wkC, wkUnidades:wkU };
+          pesos:p, costo:c, unidades:u, precio:parent.precio, precio_count:parent.precio_count, wkPesos:wkP, wkCosto:wkC, wkUnidades:wkU };
       });
     }
     function promoLocalesFor(d0){
@@ -2602,7 +2606,7 @@
       var rows=promoRows();
       var tot={pesos:0,costo:0,unidades:0,implW:0,osaW:0,insW:0};
       rows.forEach(function(r){ tot.pesos+=r.pesos; tot.costo+=r.costo; tot.unidades+=r.unidades; tot.implW+=r.impl*r.pesos; tot.osaW+=r.osa*r.pesos; tot.insW+=r.instock*r.pesos; });
-      var implTot=tot.pesos?tot.implW/tot.pesos:0, osaTot=tot.pesos?tot.osaW/tot.pesos:0, insTot=tot.pesos?tot.insW/tot.pesos:0, precioTot=tot.unidades?tot.pesos/tot.unidades:0;
+      var implTot=tot.pesos?tot.implW/tot.pesos:0, osaTot=tot.pesos?tot.osaW/tot.pesos:0, insTot=tot.pesos?tot.insW/tot.pesos:0, precioTot=(function(){var s=0,n=0;rows.forEach(function(r){var w=Number(r.precio_count)||1;if(r.precio){s+=r.precio*w;n+=w;}});return n?s/n:0;})();
       var m=promoMetric;
       var M_LABEL={pesos:'Venta pesos',costo:'Venta costo',unidades:'Venta unidades'};
       var M_FMT={pesos:clpShort,costo:clpShort,unidades:numShort};
@@ -2676,7 +2680,7 @@
           var costo=last.row.costo*o.frac*(0.9+((o.h>>3)%20)/100);
           var unidades=Math.max(1, Math.round(last.row.unidades*o.frac*(0.9+((o.h>>5)%20)/100)));
           var jit=function(base,sh){ return Math.min(99.5, Math.max(55, base+(((o.h>>sh)%600)/100-3))); };
-          return {key:o.cod||o.label, label:o.label, cod:o.cod, impl:jit(last.row.impl,2), osa:jit(last.row.osa,4), instock:jit(last.row.instock,6), pesos:pesos, costo:costo, unidades:unidades, precio:unidades?pesos/unidades:0, drill:!terminal};
+          return {key:o.cod||o.label, label:o.label, cod:o.cod, impl:jit(last.row.impl,2), osa:jit(last.row.osa,4), instock:jit(last.row.instock,6), pesos:pesos, costo:costo, unidades:unidades, precio:last.row.precio, precio_count:last.row.precio_count, drill:!terminal};
         });
         firstCol={key:'label',label:drillName(curAp),type:'text',thLeft:true,get:function(r){return r.label;},cell:function(r){return '<td>'+r.label+(r.drill?drillCueHtml(r.key):'')+'</td>';}};
         sub=last.label+' · apertura por '+drillName(curAp).toLowerCase();
@@ -2685,7 +2689,7 @@
       var promoByKey={}; rows.forEach(function(r){ promoByKey[r.key]=r; });
       var tot={pesos:0,costo:0,unidades:0,implW:0,osaW:0,insW:0};
       rows.forEach(function(r){ tot.pesos+=r.pesos; tot.costo+=r.costo; tot.unidades+=r.unidades; tot.implW+=r.impl*r.pesos; tot.osaW+=r.osa*r.pesos; tot.insW+=r.instock*r.pesos; });
-      var implT=tot.pesos?tot.implW/tot.pesos:0, osaT=tot.pesos?tot.osaW/tot.pesos:0, insT=tot.pesos?tot.insW/tot.pesos:0, precioT=tot.unidades?tot.pesos/tot.unidades:0;
+      var implT=tot.pesos?tot.implW/tot.pesos:0, osaT=tot.pesos?tot.osaW/tot.pesos:0, insT=tot.pesos?tot.insW/tot.pesos:0, precioT=(function(){var s=0,n=0;rows.forEach(function(r){var w=Number(r.precio_count)||1;if(r.precio){s+=r.precio*w;n+=w;}});return n?s/n:0;})();
       var cols=[ firstCol,
         {key:'impl',label:'% Implementación',type:'num',get:function(r){return r.impl;},cell:function(r){return '<td><span class="'+(r.impl>=90?'pos':'neg')+'">'+pct(r.impl)+'</span></td>';}},
         {key:'vp',label:'Venta pesos',type:'num',get:function(r){return r.pesos;},cell:function(r){return '<td>'+clp(r.pesos)+'</td>';}},
