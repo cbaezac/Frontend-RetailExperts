@@ -563,7 +563,7 @@
     var AP_FILTER={cadena:['locales','Cadena'],formato:['locales','Formato'],region:['locales','Región'],codlocal:['locales','Código Local'],nomlocal:['locales','Nombre Local'],categoria:['productos','Categoría'],marca:['productos','Marca'],codprod:['productos','Código Producto'],descriptor:['productos','Descriptor Producto']};
     /* Label del filtro -> parámetro que espera el backend (ventaClienteWhere).
        Categoría→rubro, Marca→cliente, Descriptor→subrubro se resuelven en el backend. */
-    var FB_PARAM={'Cadena':'cadena','Formato':'formato','Región':'region','Código Local':'codigo_local','Nombre Local':'nombre_local','Categoría':'categoria','Marca':'marca','Código Producto':'codigo_producto','Descriptor Producto':'descriptor'};
+    var FB_PARAM={'Cadena':'cadena','Formato':'formato','Región':'region','Código Local':'codigo_local','Nombre Local':'nombre_local','Categoría':'categoria','Marca':'marca','Código Producto':'codigo_producto','Descriptor Producto':'descriptor','Estado':'estado'};
     /* Selección actual de la barra superior como params para el endpoint comercial */
     function fbFilterParams(){
       var out={};
@@ -632,7 +632,10 @@
         if(arr(a.cadenas).length||arr(a.formatos).length){
           FILTER_DEFS.locales=[['Cadena',arr(a.cadenas)],['Formato',arr(a.formatos)],['Región',arr(a.regiones)],['Código Local',arr(a.codigos_local)],['Nombre Local',arr(a.nombres_local)]];
         }
-        FILTER_DEFS.productos=[['Categoría',arr(a.categorias)],['Marca',arr(a.marcas)],['Código Producto',arr(a.codigos_producto)],['Descriptor Producto',arr(a.descriptores)]];
+        // Estado normalizado a minúsculas (la DB tiene variantes "activo"/"Activo");
+        // el backend filtra case-insensitive, así que un solo valor por estado basta.
+        var estados=arr(a.estados).map(function(s){return String(s).trim().toLowerCase();}).filter(function(s,i,xs){return s&&xs.indexOf(s)===i;}).sort();
+        FILTER_DEFS.productos=[['Categoría',arr(a.categorias)],['Marca',arr(a.marcas)],['Código Producto',arr(a.codigos_producto)],['Descriptor Producto',arr(a.descriptores)],['Estado',estados.length?estados:['activo','inactivo']]];
         buildMultiFilters();
       }).catch(function(){ /* deja las opciones que haya (resumen/demo) */ });
     }
@@ -2982,9 +2985,12 @@
     /* ---- Multi-select filtros (visual) ---- */
     var FILTER_DEFS={
       locales:[['Cadena',['Cencosud','Walmart','SMU','Tottus']],['Formato',['Jumbo','Santa Isabel','Hiper Líder','Líder Express','Unimarc','Hiper Tottus']],['Región',['R. Metropolitana','Valparaíso','Biobío','Maule','Coquimbo']],['Código Local',['J101','U101','L101','T101']],['Nombre Local',['Jumbo Peñalolén','Hiper Líder Ñuñoa','Unimarc Peñalolén']]],
-      productos:[['Categoría',['Alimentos','Bebidas','Limpieza','Cuidado Personal','Hogar']],['Marca',['Adclean','Bekys','Café Haití','Kuna Foods','Olisur','Prater']],['Código Producto',['SKU1001','SKU1002','SKU1003']],['Descriptor Producto',['Aceite 1L','Detergente 3kg','Café 250g','Shampoo 400ml']]]
+      productos:[['Categoría',['Alimentos','Bebidas','Limpieza','Cuidado Personal','Hogar']],['Marca',['Adclean','Bekys','Café Haití','Kuna Foods','Olisur','Prater']],['Código Producto',['SKU1001','SKU1002','SKU1003']],['Descriptor Producto',['Aceite 1L','Detergente 3kg','Café 250g','Shampoo 400ml']],['Estado',['activo','inactivo']]]
     };
-    var gFilters={ locales:{}, productos:{} };
+    // Estado parte aplicado en "activo": todos los dashboards muestran solo productos
+    // activos al entrar. El cliente puede destildarlo (queda "Todos") para ver también
+    // los inactivos; el backend filtra case-insensitive sobre producto.estado.
+    var gFilters={ locales:{}, productos:{ 'Estado':['activo'] } };
     function ms2Esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
     function buildMultiFilters(){
       ['locales','productos'].forEach(function(grp){
