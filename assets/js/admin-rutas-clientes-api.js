@@ -7,6 +7,8 @@
   var state = { rows: [], clients: [], routes: [], filters: {}, current: null, draft: null, history: [] };
   var DAY_ORDER = ['l', 'm', 'x', 'j', 'v', 's', 'd'];
   var DAY_LABELS = { l: 'L', m: 'M', x: 'X', j: 'J', v: 'V', s: 'S', d: 'D' };
+  var DAY_NUMBERS = { l: '1', m: '2', x: '3', j: '4', v: '5', s: '6', d: '7' };
+  var DAY_KEYS_BY_TOKEN = { '1': 'l', '2': 'm', '3': 'x', '4': 'j', '5': 'v', '6': 's', '7': 'd', l: 'l', m: 'm', x: 'x', j: 'j', v: 'v', s: 's', d: 'd' };
   var tbody = document.getElementById('tbody');
   var filters = document.getElementById('filters');
   var resultCount = document.getElementById('resultCount');
@@ -20,10 +22,14 @@
   function routeLabel(value) { return /^rm\s*\d+$/i.test(text(value)) ? text(value).toUpperCase().replace(/\s/g, '') : title(value); }
   function daysObject(value) {
     var out = {};
-    text(value).toLowerCase().split(/[-,\s]+/).forEach(function (day) { if (DAY_ORDER.indexOf(day) >= 0) out[day] = true; });
+    text(value).toLowerCase().split(/[-,\s]+/).forEach(function (token) {
+      var day = DAY_KEYS_BY_TOKEN[token];
+      if (day) out[day] = true;
+    });
     return out;
   }
-  function daysString(days) { return DAY_ORDER.filter(function (day) { return days[day]; }).join('-').toUpperCase(); }
+  function daysString(days) { return DAY_ORDER.filter(function (day) { return days[day]; }).map(function (day) { return DAY_NUMBERS[day]; }).join(','); }
+  function normalizedDaysString(value) { return daysString(daysObject(value)); }
   function clientIds(row) { return (row.clientes || []).map(function (client) { return Number(client.id); }); }
   function activeRows() { return state.rows.filter(function (row) { return clientIds(row).length > 0; }); }
   function toast(message, isError) {
@@ -148,7 +154,7 @@
       return '<tr><td class="sticky-col c0">' + esc(title(row.cadena)) + '</td>' +
         '<td class="sticky-col c1 codigo editable" data-local="' + esc(row.id) + '">' + esc(row.id) + '</td>' +
         '<td class="sticky-col c2 nombre editable" data-local="' + esc(row.id) + '">' + esc(title(row.nombre)) + '</td>' +
-        '<td class="dias">' + (row.dias_visita ? esc(text(row.dias_visita).toUpperCase()) : '—') + '</td>' +
+        '<td class="dias">' + (normalizedDaysString(row.dias_visita) ? esc(normalizedDaysString(row.dias_visita)) : '—') + '</td>' +
         '<td><span class="freq">' + DAY_ORDER.filter(function (d) { return daysObject(row.dias_visita)[d]; }).length + '</span></td>' +
         '<td>' + (row.ruta ? '<span class="ruta-badge">' + esc(routeLabel(row.ruta)) + '</span>' : '<span class="visit-no">Sin ruta</span>') + '</td>' +
         '<td style="color:var(--muted)">' + esc(row.rut || '—') + '</td>' +
@@ -191,11 +197,13 @@
     var oldIds = clientIds(row), newIds = state.clients.filter(function (client) { return draft.clients[client.id]; }).map(function (client) { return Number(client.id); });
     var added = newIds.filter(function (id) { return oldIds.indexOf(id) < 0; });
     var removed = oldIds.filter(function (id) { return newIds.indexOf(id) < 0; });
-    var routeChanged = text(row.ruta) !== draft.ruta || text(row.dias_visita).toUpperCase() !== daysString(draft.days);
+    var nextDays = daysString(draft.days);
+    var currentDays = normalizedDaysString(row.dias_visita);
+    var routeChanged = text(row.ruta) !== draft.ruta || currentDays !== nextDays || (nextDays && text(row.dias_visita) !== nextDays);
     if (!routeChanged && !added.length && !removed.length) { closeEdit(); toast('No había diferencias para guardar'); return; }
     var button = document.getElementById('m-save'); button.disabled = true;
     var operations = [];
-    if (routeChanged) operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id), { method: 'PATCH', body: JSON.stringify({ ruta: draft.ruta || null, dias_visita: draft.ruta ? daysString(draft.days) : null }) }); });
+    if (routeChanged) operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id), { method: 'PATCH', body: JSON.stringify({ ruta: draft.ruta || null, dias_visita: draft.ruta ? nextDays : null }) }); });
     added.forEach(function (id) { operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id) + '/clientes/aplicar', { method: 'POST', body: JSON.stringify({ id_cliente: id }) }); }); });
     removed.forEach(function (id) { operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id) + '/clientes/quitar', { method: 'POST', body: JSON.stringify({ id_cliente: id }) }); }); });
     operations.reduce(function (chain, operation) { return chain.then(operation); }, Promise.resolve()).then(function () {
