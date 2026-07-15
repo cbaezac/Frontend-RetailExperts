@@ -617,9 +617,9 @@
       FILTER_DEFS.locales=[['Cadena',uniq(function(l){return l.cad;})],['Formato',uniq(function(l){return l.fmt;})],['Región',uniq(function(l){return l.region;})],['Código Local',uniq(function(l){return l.cod;})],['Nombre Local',uniq(function(l){return l.nom;})]];
       buildMultiFilters();
     }
-    function refreshFilterOptionsFromCom(ap){
+    function refreshFilterOptionsFromCom(ap, vals0){
       var mfd=AP_FILTER[ap]; if(!mfd||mfd[0]!=='productos') return;
-      var vals=(((COM.aperturas||{})[ap]||{}).values||[]).map(function(v){return v.label;});
+      var vals=(vals0||(((COM.aperturas||{})[ap]||{}).values||[])).map(function(v){return v.label;});
       if(!vals.length) return;
       FILTER_DEFS.productos=FILTER_DEFS.productos.map(function(d){ return d[0]===mfd[1]?[mfd[1],vals]:d; });
       buildMultiFilters();
@@ -2067,13 +2067,14 @@
       ]).then(function(rs){
         CMP.ana[key] = { values: normalizeAperturaValues(apertura, rs[0].values) };
         CMP.comp[key] = { values: normalizeAperturaValues(apertura, rs[1].values) };
-        COM.aperturas[apertura] = CMP.ana[key];
+        // OJO: no pisar COM.aperturas[apertura] (lo consume Evolutivo con su propia
+        // ventana temporal / D.weeks). El comparativo trae otro período (mes en curso),
+        // con distinto nº de buckets; compartir la caché desalinea el Evolutivo → NaN.
         COM_REAL = true;
-        refreshFilterOptionsFromCom(apertura);
+        refreshFilterOptionsFromCom(apertura, CMP.ana[key].values);
       }).catch(function(){
         CMP.ana[key] = { values: cmpFallbackValues(apertura, 'ana') };
         CMP.comp[key] = { values: cmpFallbackValues(apertura, 'comp') };
-        COM.aperturas[apertura] = CMP.ana[key];
       });
     }
     function cmpVals(side, apertura){
