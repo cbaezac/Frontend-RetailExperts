@@ -351,6 +351,7 @@
     var routeChanged = text(row.ruta) !== draft.ruta;
     var operations = [];
     var summary = { reps: 0 };
+    var aplicarQueued = false;
 
     if (!state.asigByLocal) {
       // Flujo clásico (backend sin /web/admin/asignaciones): un reponedor por local.
@@ -368,6 +369,10 @@
         operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id), { method: 'PATCH', body: JSON.stringify({ ruta: draft.ruta || null, dias_visita: draft.ruta ? (keepDays || null) : null }) }); });
       }
       var enabledIds = newIds;
+      // Habilitar marcas nuevas del local ANTES de tocar reponedores: el backend
+      // valida las marcas del reponedor contra cliente_local.
+      added.forEach(function (id) { operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id) + '/clientes/aplicar', { method: 'POST', body: JSON.stringify({ id_cliente: id }) }); }); });
+      aplicarQueued = true;
       draft.reps.forEach(function (rep) {
         var original = asigsFor(row.id).find(function (asig) { return asig.id === rep.id; });
         if (rep.removed) {
@@ -397,8 +402,9 @@
       });
     }
 
-    // Habilitación de marcas a nivel local (cliente_local) — igual que antes.
-    added.forEach(function (id) { operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id) + '/clientes/aplicar', { method: 'POST', body: JSON.stringify({ id_cliente: id }) }); }); });
+    // Habilitación de marcas a nivel local (cliente_local). En modo multi las
+    // altas ya se encolaron antes de los reponedores; las bajas van al final.
+    if (!aplicarQueued) added.forEach(function (id) { operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id) + '/clientes/aplicar', { method: 'POST', body: JSON.stringify({ id_cliente: id }) }); }); });
     removed.forEach(function (id) { operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id) + '/clientes/quitar', { method: 'POST', body: JSON.stringify({ id_cliente: id }) }); }); });
 
     if (!operations.length) { closeEdit(); toast('No había diferencias para guardar'); return; }
