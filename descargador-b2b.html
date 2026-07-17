@@ -35,7 +35,8 @@
   .wrap{ width:100%; max-width:1240px; margin:0 auto; padding:clamp(26px,4vh,44px) clamp(16px,3vw,40px) 60px; }
   .eyebrow{ font-family:var(--font-display); font-weight:600; text-transform:uppercase; letter-spacing:.2em; font-size:.76rem; color:var(--accent); margin-bottom:10px; }
   .page-title{ font-family:var(--font-display); font-weight:800; font-size:clamp(2rem,4.5vw,3rem); line-height:1; letter-spacing:-.02em; color:var(--accent-strong); }
-  .page-sub{ font-size:1rem; color:var(--muted); max-width:70ch; line-height:1.6; margin:13px 0 clamp(20px,3vh,30px); }
+  .page-sub{ font-size:1rem; color:var(--muted); max-width:none; white-space:nowrap; line-height:1.6; margin:13px 0 clamp(20px,3vh,30px); }
+  @media (max-width:1100px){ .page-sub{ white-space:normal; } }
 
   /* Favoritos */
   .favs{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px 18px; margin-bottom:22px; }
@@ -63,7 +64,7 @@
 
   /* Indicadores checkboxes */
   .ind-grid{ display:grid; grid-template-columns:1fr 1fr; gap:9px; }
-  .ind{ display:flex; align-items:center; gap:10px; padding:11px 13px; border:1.5px solid var(--line); border-radius:12px; cursor:pointer; transition:all .15s; font-weight:600; font-size:.92rem; }
+  .ind{ display:flex; align-items:center; gap:10px; padding:11px 13px; background:#fff; color:var(--ink); text-align:left; font-family:var(--font-body); border:1.5px solid var(--line); border-radius:12px; cursor:pointer; transition:all .15s; font-weight:600; font-size:.92rem; }
   .ind:hover{ border-color:var(--accent); }
   .ind.on{ background:var(--accent-soft); border-color:var(--accent); color:var(--accent-strong); }
   .ind .box{ width:20px; height:20px; flex:0 0 auto; border-radius:6px; border:1.5px solid var(--line); display:grid; place-items:center; color:#fff; transition:all .15s; }
@@ -169,7 +170,7 @@
   <main class="wrap">
     <p class="eyebrow">Descarga de datos</p>
     <h1 class="page-title">Portales B2B</h1>
-    <p class="page-sub">Arma tu propia descarga: elige los indicadores, el horizonte de tiempo y los atributos de locales y productos que quieres incluir. Guarda tus configuraciones como favoritos para reutilizarlas.</p>
+    <p class="page-sub">Arma tu propia descarga, elige los indicadores, el horizonte de tiempo y los atributos de locales y productos a incluir.<br>Puedes también guardar tus configuraciones como “Favoritos” para reutilizarlas en futuras descargas.</p>
 
     <!-- Favoritos -->
     <section class="favs">
@@ -205,8 +206,17 @@
           <div class="date-field"><label for="d-start">Fecha de inicio</label><input type="date" id="d-start" /></div>
           <div class="date-field"><label for="d-end">Fecha de término</label><input type="date" id="d-end" /></div>
         </div>
-        <div class="date-quick" id="dateQuick"></div>
         <p class="date-note" id="dateNote">Sin rango seleccionado.</p>
+        <div class="date-field" style="margin-top:16px">
+          <label>Apertura período</label>
+          <div class="fmt-seg" id="aperturaSeg" style="flex-wrap:wrap;align-self:flex-start">
+            <button type="button" data-ap="consolidado" class="on">Consolidado</button>
+            <button type="button" data-ap="diario">Diario</button>
+            <button type="button" data-ap="semanal">Semanal</button>
+            <button type="button" data-ap="mensual">Mensual</button>
+            <button type="button" data-ap="anual">Anual</button>
+          </div>
+        </div>
       </section>
 
       <!-- 3. Atributo de Locales -->
@@ -323,36 +333,42 @@
     }
 
     var INDICADORES = [
-      {key:'venta_pesos', label:'Venta pesos'},
-      {key:'venta_costo', label:'Venta costo'},
-      {key:'venta_unidades', label:'Venta unidades'},
-      {key:'stock', label:'Stock'},
-      {key:'stock_transito', label:'Stock en tránsito'},
-      {key:'stock_cd', label:'Stock en CD'}
+      {key:'venta_pesos', label:'Venta pesos', group:'Comerciales'},
+      {key:'venta_costo', label:'Venta costo', group:'Comerciales'},
+      {key:'venta_unidades', label:'Venta unidades', group:'Comerciales'},
+      {key:'precio_promedio', label:'Precio promedio', group:'Comerciales', tipo:'precio'},
+      {key:'osa', label:'OSA', group:'Operacionales', tipo:'avg'},
+      {key:'instock', label:'Instock', group:'Operacionales', tipo:'avg'},
+      {key:'doh', label:'DOH', group:'Operacionales', tipo:'avg'},
+      {key:'quiebre', label:'Quiebre', group:'Operacionales', tipo:'avg'},
+      {key:'stock', label:'Stock en Sala', group:'Stocks'},
+      {key:'stock_transito', label:'Stock en Tránsito', group:'Stocks'},
+      {key:'stock_cd', label:'Stock en CD', group:'Stocks'}
     ];
     var LOC_ATTRS = [
-      {key:'cadena', label:'Cadena', opt:'cadenas'},
-      {key:'formato', label:'Formato', opt:'formatos'},
+      {key:'cadena', label:'Cadena', opt:'cadenas', param:'cadena'},
+      {key:'formato', label:'Formato', opt:'formatos', param:'formato'},
+      {key:'region', label:'Región', opt:'regiones', param:'region'},
       {key:'codigo', label:'Código Local', opt:'codigos_local', param:'codigo_local'},
       {key:'nombre', label:'Nombre Local', opt:'nombres_local', param:'nombre_local'},
-      {key:'region', label:'Región', opt:'regiones'},
       {key:'direccion', label:'Dirección'}
     ];
     var PROD_ATTRS = [
-      {key:'codigo', label:'Código Producto', opt:'codigos_producto', param:'codigo_producto'},
-      {key:'nombre', label:'Nombre Producto', opt:'nombres_producto', param:'nombre_producto'},
-      {key:'ean', label:'EAN'},
-      {key:'unidadCaja', label:'Unidad x caja'},
+      {key:'catProv', label:'Categoría Proveedor', opt:'categorias_proveedor', param:'categoria_proveedor'},
+      {key:'cat1c', label:'Categoría I Cadena', opt:'categorias1_cadena', param:'categoria1_cadena'},
+      {key:'cat2c', label:'Categoría II Cadena', opt:'categorias2_cadena', param:'categoria2_cadena'},
       {key:'marca', label:'Marca', opt:'marcas'},
-      {key:'cat1', label:'Categoría I', opt:'categorias', param:'categoria'},
-      {key:'cat2', label:'Categoría II'},
-      {key:'catRE', label:'Categoría RE', opt:'categorias_re', param:'categoria_re'},
-      {key:'estado', label:'Estado', opt:'estados'}
+      {key:'nombreProv', label:'Nombre Producto Proveedor', opt:'nombres_producto_proveedor', param:'nombre_producto_proveedor'},
+      {key:'nombre', label:'Nombre Producto Cadena', opt:'nombres_producto', param:'nombre_producto'},
+      {key:'codigo', label:'Código Producto', opt:'codigos_producto', param:'codigo_producto'},
+      {key:'ean', label:'EAN'},
+      {key:'unidadCaja', label:'Unidad x Caja'},
+      {key:'estado', label:'Estado', opt:'estados', param:'estado'}
     ];
 
     // Mapa fila-real (venta_historica) -> claves usadas por la UI
     var LOC_FIELD = {cadena:'cadena', formato:'formato', codigo:'codigo_local', nombre:'nombre_local', region:'region', direccion:'direccion'};
-    var PROD_FIELD = {codigo:'codigo_producto', nombre:'nombre_producto', ean:'ean', unidadCaja:'un_x_caja', marca:'marca', cat1:'categoria', cat2:'categoria2', catRE:'categoria_re', estado:'estado'};
+    var PROD_FIELD = {codigo:'codigo_producto', nombre:'nombre_producto', nombreProv:'nombre_producto_proveedor', ean:'ean', unidadCaja:'un_x_caja', marca:'marca', catProv:'categoria_proveedor', cat1c:'categoria1_cadena', cat2c:'categoria2_cadena', estado:'estado'};
 
     // Estado de la configuración
     var state = {
@@ -360,6 +376,7 @@
       fStart:'', fEnd:'',
       locIncl:{}, locFilters:{}, // key -> true ; key -> [values]
       prodIncl:{}, prodFilters:{},
+      apertura:'consolidado',
       formato:'xlsx'
     };
 
@@ -371,7 +388,9 @@
 
     /* ---------- Indicadores ---------- */
     var indGrid=document.getElementById('indGrid');
+    var _lastGroup=null;
     INDICADORES.forEach(function(it){
+      if(it.group && it.group!==_lastGroup){ _lastGroup=it.group; var gh=document.createElement('div'); gh.textContent=it.group; gh.style.cssText='grid-column:1/-1;font-family:var(--font-display);font-weight:800;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:6px 0 -2px;'; indGrid.appendChild(gh); }
       var el=document.createElement('button'); el.type='button'; el.className='ind'; el.setAttribute('data-key',it.key);
       el.innerHTML='<span class="box"><svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>'+it.label+(it.disabled?' <small style="opacity:.6">(sin datos aún)</small>':'')+'</span>';
       if(it.disabled){ el.disabled=true; el.style.opacity='.45'; el.style.cursor='not-allowed'; }
@@ -382,27 +401,13 @@
     /* ---------- Horizonte ---------- */
     var dStart=document.getElementById('d-start'), dEnd=document.getElementById('d-end'), dateNote=document.getElementById('dateNote');
     function fmtFechaTxt(iso){ if(!iso) return '…'; var p=iso.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+    function fmtFechaGuion(iso){ if(!iso) return '…'; var p=iso.split('-'); return p[2]+'-'+p[1]+'-'+p[0]; }
     function updateDateNote(){
       if(state.fStart||state.fEnd){ dateNote.innerHTML='Período: <b>'+fmtFechaTxt(state.fStart)+'</b> a <b>'+fmtFechaTxt(state.fEnd)+'</b>'; }
       else dateNote.textContent='Sin rango seleccionado.';
     }
     dStart.addEventListener('change', function(){ state.fStart=dStart.value; if(dStart.value) dEnd.min=dStart.value; updateDateNote(); updateSummary(); });
     dEnd.addEventListener('change', function(){ state.fEnd=dEnd.value; updateDateNote(); updateSummary(); });
-    // quick ranges
-    var QUICKS=[['7 días',7],['30 días',30],['90 días',90],['Año actual',-1]];
-    var dq=document.getElementById('dateQuick');
-    QUICKS.forEach(function(q){
-      var b=document.createElement('button'); b.type='button'; b.className='qbtn'; b.textContent=q[1]===-1?'Año actual':'Últimos '+q[0];
-      b.addEventListener('click', function(){
-        var end=new Date(); var start;
-        if(q[1]===-1){ start=new Date(end.getFullYear(),0,1); }
-        else { start=new Date(end.getTime()-(q[1]-1)*86400000); }
-        function iso(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
-        dStart.value=iso(start); dEnd.value=iso(end); state.fStart=iso(start); state.fEnd=iso(end); dEnd.min=iso(start); updateDateNote(); updateSummary();
-      });
-      dq.appendChild(b);
-    });
-
     /* ---------- Attribute rows (locales / productos) ---------- */
     function buildAttrRows(container, attrs, inclState, filterState){
       attrs.forEach(function(at){
@@ -460,6 +465,7 @@
 
     /* ---------- Formato ---------- */
     document.getElementById('fmtSeg').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; state.formato=b.getAttribute('data-fmt'); this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); }); });
+    document.getElementById('aperturaSeg').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; state.apertura=b.getAttribute('data-ap'); this.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x===b); }); updateSummary(); });
 
     /* ---------- Summary + validación ---------- */
     var downloadBtn=document.getElementById('downloadBtn');
@@ -484,6 +490,7 @@
 
     function buildVentasQuery(){
       var params={ limit:20000 };
+      if(state.apertura && state.apertura!=='consolidado') params.gran=state.apertura;
       if(state.fStart) params.fecha_desde=state.fStart;
       if(state.fEnd) params.fecha_hasta=state.fEnd;
       LOC_ATTRS.forEach(function(a){ var vals=state.locFilters[a.key]; if(a.param && vals && vals.length) params[a.param]=vals; });
@@ -493,24 +500,56 @@
     function fetchVentas(){
       return window.RetailAPI.requestJson('/web/b2b/ventas'+window.RetailAPI.buildQuery(buildVentasQuery()));
     }
+    function bucketOf(iso, fallbackLabel){
+      if(!iso || state.apertura==='consolidado') return {k:'__all__', label:fallbackLabel||'Consolidado'};
+      var p=iso.split('-'); var y=p[0], m=p[1], d=p[2];
+      if(state.apertura==='diario') return {k:iso, label:d+'-'+m+'-'+y};
+      if(state.apertura==='semanal'){
+        var dt=new Date(Date.UTC(+y, +m-1, +d));
+        var dow=(dt.getUTCDay()+6)%7;
+        dt.setUTCDate(dt.getUTCDate()-dow+3); // jueves de la semana (ISO 8601)
+        var week1=new Date(Date.UTC(dt.getUTCFullYear(),0,4));
+        var wn=1+Math.round(((dt-week1)/86400000-3+((week1.getUTCDay()+6)%7))/7);
+        return {k:dt.getUTCFullYear()+'-W'+('0'+wn).slice(-2), label:'Semana '+wn, anio:dt.getUTCFullYear()};
+      }
+      if(state.apertura==='mensual'){
+        var MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        return {k:y+'-'+m, label:MESES[+m-1], anio:+y};
+      }
+      return {k:y, label:y};
+    }
     function buildRows(payload){
       var filas=payload.filas||[];
       var locCols=LOC_ATTRS.filter(function(a){ return state.locIncl[a.key]; });
       var prodCols=PROD_ATTRS.filter(function(a){ return state.prodIncl[a.key]; });
       var indCols=INDICADORES.filter(function(it){ return state.indicadores[it.key] && !it.disabled; });
-      var headers=['Período'];
+      var APN={consolidado:'Consolidado',diario:'Fecha',semanal:'Semana',mensual:'Mes',anual:'Año'};
+      var headers=[APN[state.apertura]||'Período'];
+      var hasAnio=(state.apertura==='semanal'||state.apertura==='mensual');
+      if(hasAnio) headers.push('Año');
       locCols.forEach(function(a){ headers.push(a.label); });
       prodCols.forEach(function(a){ headers.push(a.label); });
       indCols.forEach(function(it){ headers.push(it.label); });
-      var period=fmtFechaTxt(payload.fecha_desde)+' a '+fmtFechaTxt(payload.fecha_hasta);
-      var rows=filas.map(function(row){
-        var out=[period];
-        locCols.forEach(function(a){ out.push(row[LOC_FIELD[a.key]]); });
-        prodCols.forEach(function(a){ out.push(row[PROD_FIELD[a.key]]); });
-        indCols.forEach(function(it){ out.push(Number(row[it.key]||0)); });
+      var period=fmtFechaGuion(payload.fecha_desde)+' - '+fmtFechaGuion(payload.fecha_hasta);
+      // Agrupar por período (según apertura) + combinación de atributos, sumando indicadores
+      var map={}, order=[];
+      filas.forEach(function(row){
+        var b=bucketOf(row.fecha, period);
+        var attrs=[];
+        locCols.forEach(function(a){ attrs.push(row[LOC_FIELD[a.key]]); });
+        prodCols.forEach(function(a){ attrs.push(row[PROD_FIELD[a.key]]); });
+        var key=b.k+'\u0001'+attrs.join('\u0001');
+        if(!map[key]){ map[key]={b:b, attrs:attrs, sums:{}}; order.push(key); }
+        var g=map[key]; g._vp=(g._vp||0)+Number(row.venta_pesos||0); g._vu=(g._vu||0)+Number(row.venta_unidades||0); g._n=(g._n||0)+1;
+        indCols.forEach(function(it){ g.sums[it.key]=(g.sums[it.key]||0)+Number(row[it.key]||0); });
+      });
+      order.sort(function(a,b2){ return map[a].b.k<map[b2].b.k?-1:(map[a].b.k>map[b2].b.k?1:(a<b2?-1:1)); });
+      var rows=order.map(function(key){
+        var g=map[key]; var out=[g.b.label]; if(hasAnio) out.push(g.b.anio||''); out=out.concat(g.attrs);
+        indCols.forEach(function(it){ if(it.tipo==='precio'){ out.push(g._vu?Math.round(g._vp/g._vu):0); } else if(it.tipo==='avg'){ out.push(g._n?Math.round((g.sums[it.key]||0)/g._n*10)/10:0); } else { out.push(g.sums[it.key]||0); } });
         return out;
       });
-      return { headers:headers, rows:rows, truncated:(payload.total||0)>filas.length, indCount:indCols.length };
+      return { headers:headers, rows:rows, truncated:(payload.total||0)>filas.length, indCount:indCols.length, indKeys:indCols.map(function(it){return it.key;}) };
     }
 
     function download(){
@@ -541,10 +580,31 @@
       var indStart=built.headers.length-built.indCount;
       var xml='<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n';
       xml+='<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
-      xml+='<Styles><Style ss:ID="hdr"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#6D1FA8" ss:Pattern="Solid"/></Style><Style ss:ID="c"/></Styles>';
+      var BORD='<Borders><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/></Borders>';
+      var ALIGN='<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>';
+      xml+='<Styles>'
+        +'<Style ss:ID="hdr"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#A54199" ss:Pattern="Solid"/>'+ALIGN+BORD+'</Style>'
+        +'<Style ss:ID="c">'+ALIGN+BORD+'</Style>'
+        +'<Style ss:ID="clp">'+ALIGN+BORD+'<NumberFormat ss:Format="&quot;$&quot;#,##0"/></Style>'
+        +'<Style ss:ID="mil">'+ALIGN+BORD+'<NumberFormat ss:Format="#,##0"/></Style>'
+        +'<Style ss:ID="pctS">'+ALIGN+BORD+'<NumberFormat ss:Format="0.0%"/></Style>'
+        +'<Style ss:ID="dec1">'+ALIGN+BORD+'<NumberFormat ss:Format="0.0"/></Style>'
+        +'</Styles>';
+      var STYLE_BY_KEY={venta_pesos:'clp',venta_costo:'clp',precio_promedio:'clp',venta_unidades:'mil',stock:'mil',stock_transito:'mil',stock_cd:'mil',osa:'pctS',instock:'pctS',quiebre:'pctS',doh:'dec1'};
+      var PCT_KEYS={osa:1,instock:1,quiebre:1};
+      // Anchos: ajustar cada columna al contenido más largo
+      var widths=built.headers.map(function(h,ci){
+        var mx=String(h).length;
+        built.rows.forEach(function(r){ var L=String(r[ci]).length; if(L>mx) mx=L; });
+        return Math.min(280, Math.max(85, mx*7.2+18));
+      });
       xml+='<Worksheet ss:Name="Datos"><Table>';
+      widths.forEach(function(w){ xml+='<Column ss:AutoFitWidth="0" ss:Width="'+Math.round(w)+'"/>'; });
       xml+='<Row ss:Height="22">'; built.headers.forEach(function(h){ xml+='<Cell ss:StyleID="hdr"><Data ss:Type="String">'+esc(h)+'</Data></Cell>'; }); xml+='</Row>';
-      built.rows.forEach(function(r){ xml+='<Row>'; r.forEach(function(v,ci){ var t=(ci>=indStart)?'Number':'String'; xml+='<Cell ss:StyleID="c"><Data ss:Type="'+t+'">'+esc(v)+'</Data></Cell>'; }); xml+='</Row>'; });
+      built.rows.forEach(function(r){ xml+='<Row>'; r.forEach(function(v,ci){
+        if(ci>=indStart){ var k=built.indKeys[ci-indStart]; var st=STYLE_BY_KEY[k]||'mil'; var val=PCT_KEYS[k]?Number(v)/100:Number(v); xml+='<Cell ss:StyleID="'+st+'"><Data ss:Type="Number">'+val+'</Data></Cell>'; }
+        else { var t=(typeof v==='number')?'Number':'String'; xml+='<Cell ss:StyleID="c"><Data ss:Type="'+t+'">'+esc(v)+'</Data></Cell>'; }
+      }); xml+='</Row>'; });
       xml+='</Table></Worksheet></Workbook>';
       var blob=new Blob([xml], {type:'application/vnd.ms-excel'});
       triggerDownload(blob, 'descarga-b2b-'+stamp+'.xls');
@@ -560,7 +620,7 @@
     var favsList=document.getElementById('favsList');
     function persistFavs(){ try{ localStorage.setItem(FAV_KEY, JSON.stringify(favs)); }catch(e){} }
     function snapshot(){
-      return JSON.parse(JSON.stringify({ indicadores:state.indicadores, fStart:state.fStart, fEnd:state.fEnd, locIncl:state.locIncl, locFilters:state.locFilters, prodIncl:state.prodIncl, prodFilters:state.prodFilters, formato:state.formato }));
+      return JSON.parse(JSON.stringify({ indicadores:state.indicadores, fStart:state.fStart, fEnd:state.fEnd, locIncl:state.locIncl, locFilters:state.locFilters, prodIncl:state.prodIncl, prodFilters:state.prodFilters, apertura:state.apertura, formato:state.formato }));
     }
     function renderFavs(){
       if(!favs.length){ favsList.innerHTML='<span class="favs-empty">Aún no tienes configuraciones guardadas. Arma tu descarga y pulsa “Guardar favorito”.</span>'; return; }
@@ -580,6 +640,8 @@
       state.locIncl=JSON.parse(JSON.stringify(cfg.locIncl||{})); state.locFilters=JSON.parse(JSON.stringify(cfg.locFilters||{}));
       state.prodIncl=JSON.parse(JSON.stringify(cfg.prodIncl||{})); state.prodFilters=JSON.parse(JSON.stringify(cfg.prodFilters||{}));
       state.formato=cfg.formato||'xlsx';
+      state.apertura=cfg.apertura||'consolidado';
+      document.querySelectorAll('#aperturaSeg button').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-ap')===state.apertura); });
       // reflect UI
       document.querySelectorAll('#indGrid .ind').forEach(function(el){ el.classList.toggle('on', !!state.indicadores[el.getAttribute('data-key')]); });
       dStart.value=state.fStart; dEnd.value=state.fEnd; updateDateNote();
