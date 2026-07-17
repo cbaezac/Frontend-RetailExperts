@@ -559,6 +559,9 @@
       fetchVentas().then(function(payload){
         var built=buildRows(payload);
         if(built.rows.length===0){ toast('Los filtros no devuelven datos'); reset(); return; }
+        // Backend antiguo: sin columna fecha no se puede abrir el período.
+        if(state.apertura!=='consolidado' && (payload.filas||[]).length && !('fecha' in payload.filas[0])){
+          toast('El backend no soporta apertura de período aún: descarga consolidada'); }
         var dt=new Date(); var stamp=dt.getFullYear()+('0'+(dt.getMonth()+1)).slice(-2)+('0'+dt.getDate()).slice(-2);
         if(state.formato==='csv') downloadCSV(built, stamp); else downloadXLS(built, stamp);
         var msg='Descarga generada';
