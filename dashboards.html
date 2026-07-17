@@ -990,7 +990,7 @@
     // Preferimos el precio REAL que mande el backend en v.precio (columna
     // indicadores_abastecimiento_diario.precio_promedio, array por semana);
     // si no viene, lo derivamos como pesos/unidades (venta_historica).
-    function precioWeekly(v){ if(Array.isArray(v.precio)) return v.precio; return v.pesos.map(function(p,i){return v.unidades[i]?p/v.unidades[i]:0;}); }
+    function precioWeekly(v){ v=v||{}; if(Array.isArray(v.precio)) return v.precio; if(!Array.isArray(v.pesos)) return []; return v.pesos.map(function(p,i){return (v.unidades&&v.unidades[i])?p/v.unidades[i]:0;}); }
     function precioTotal(v){ if(v&&v.precio_promedio!=null) return Number(v.precio_promedio)||0; if(v&&v.precio_total!=null) return Number(v.precio_total)||0; return avgArr(precioWeekly(v||{})); }
     function precioCount(v){ return Number((v&&(v.precio_count||v.precio_n))||0); }
     function precioLyTotal(v){ if(v&&v.precio_promedio_ly!=null) return Number(v.precio_promedio_ly)||0; if(v&&v.precio_ly_total!=null) return Number(v.precio_ly_total)||0; if(v&&Array.isArray(v.precio_ly)) return avgArr(v.precio_ly); var p=sumArr((v&&v.pesos)||[]),u=sumArr((v&&v.unidades)||[]); return p&&u?p/u:0; }
