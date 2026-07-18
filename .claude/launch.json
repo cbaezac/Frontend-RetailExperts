@@ -10,7 +10,7 @@
     {
       "name": "backend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "/Users/conibaeza/Desktop/analytics-platform/backend", "run", "start:dev"],
+      "runtimeArgs": ["--prefix", "/Users/user/Desktop/analytics-platform/backend", "run", "start:dev"],
       "port": 3000
     }
   ]

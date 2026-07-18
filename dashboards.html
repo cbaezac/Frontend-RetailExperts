@@ -612,32 +612,112 @@
     }
     /* Opciones de filtro dinámicas a partir de los datos cargados */
     function refreshFilterOptionsFromResumen(){
+      if(ATTR_SCOPED) return; // ya hay listas acotadas al cliente (12 meses); el MTD sería un subconjunto
       if(!RES||!RES.locales||!RES.locales.length) return;
       function uniq(get){ var m={}; RES.locales.forEach(function(l){ var v=get(l); if(v) m[v]=1; }); return Object.keys(m).sort(); }
       FILTER_DEFS.locales=[['Cadena',uniq(function(l){return l.cad;})],['Formato',uniq(function(l){return l.fmt;})],['Región',uniq(function(l){return l.region;})],['Código Local',uniq(function(l){return l.cod;})],['Nombre Local',uniq(function(l){return l.nom;})]];
       buildMultiFilters();
     }
     function refreshFilterOptionsFromCom(ap, vals0){
+      if(ATTR_PROD_REAL) return; // las listas de producto del cliente son estables; no se reducen por el período/filtros en pantalla
       var mfd=AP_FILTER[ap]; if(!mfd||mfd[0]!=='productos') return;
       var vals=(vals0||(((COM.aperturas||{})[ap]||{}).values||[])).map(function(v){return v.label;});
       if(!vals.length) return;
       FILTER_DEFS.productos=FILTER_DEFS.productos.map(function(d){ return d[0]===mfd[1]?[mfd[1],vals]:d; });
       buildMultiFilters();
     }
-    /* Opciones de TODOS los filtros desde la DB real (SELECT DISTINCT de local/producto). */
+    /* Opciones de TODOS los filtros desde la DB real (/web/dashboard/atributos).
+       El backend ya acota los PRODUCTOS al cliente (producto.id_cliente) y, si
+       responde locales_por_venta, también los LOCALES (cruce venta×local en una
+       sola consulta cacheada). Con un backend anterior (sin locales_por_venta),
+       los locales se acotan desde el front con loadAtributosCliente. */
     function loadAtributos(){
       if(!window.RetailAPI) return Promise.resolve();
+      loadAtributosCliente(true); // aplica el caché local al tiro si existe (sin red)
       return window.RetailAPI.requestJson('/web/dashboard/atributos'+window.RetailAPI.buildQuery(withCliente({}))).then(function(a){
         a=a||{}; function arr(x){ return Array.isArray(x)?x:[]; }
-        if(arr(a.cadenas).length||arr(a.formatos).length){
-          FILTER_DEFS.locales=[['Cadena',arr(a.cadenas)],['Formato',arr(a.formatos)],['Región',arr(a.regiones)],['Código Local',arr(a.codigos_local)],['Nombre Local',arr(a.nombres_local)]];
-        }
         // Estado normalizado a minúsculas (la DB tiene variantes "activo"/"Activo");
         // el backend filtra case-insensitive, así que un solo valor por estado basta.
         var estados=arr(a.estados).map(function(s){return String(s).trim().toLowerCase();}).filter(function(s,i,xs){return s&&xs.indexOf(s)===i;}).sort();
-        FILTER_DEFS.productos=[['Categoría',arr(a.categorias)],['Marca',arr(a.marcas)],['Código Producto',arr(a.codigos_producto)],['Descriptor Producto',arr(a.descriptores)],['Estado',estados.length?estados:['activo','inactivo']]];
+        if(!estados.length) estados=['activo','inactivo'];
+        if(arr(a.categorias).length||arr(a.marcas).length||arr(a.codigos_producto).length){
+          FILTER_DEFS.productos=[['Categoría',arr(a.categorias)],['Marca',arr(a.marcas)],['Código Producto',arr(a.codigos_producto)],['Descriptor Producto',arr(a.descriptores)],['Estado',estados]];
+          ATTR_PROD_REAL=true;
+        }else{
+          FILTER_DEFS.productos=FILTER_DEFS.productos.map(function(d){ return d[0]==='Estado'?['Estado',estados]:d; });
+        }
+        var hayLocales=arr(a.cadenas).length||arr(a.formatos).length;
+        if(a.locales_por_venta&&hayLocales){
+          // Backend nuevo: los locales ya vienen del cruce venta×local del cliente.
+          FILTER_DEFS.locales=[['Cadena',arr(a.cadenas)],['Formato',arr(a.formatos)],['Región',arr(a.regiones)],['Código Local',arr(a.codigos_local)],['Nombre Local',arr(a.nombres_local)]];
+          ATTR_SCOPED=true;
+        }else if(!ATTR_SCOPED&&hayLocales){
+          // Backend anterior: universo completo como provisional mientras el
+          // cargador por venta obtiene las listas del cliente.
+          FILTER_DEFS.locales=[['Cadena',arr(a.cadenas)],['Formato',arr(a.formatos)],['Región',arr(a.regiones)],['Código Local',arr(a.codigos_local)],['Nombre Local',arr(a.nombres_local)]];
+        }
         buildMultiFilters();
-      }).catch(function(){ /* deja las opciones que haya (resumen/demo) */ });
+        if(!a.locales_por_venta) loadAtributosCliente();
+      }).catch(function(){ loadAtributosCliente(); });
+    }
+
+    /* ---------- Filtros de LOCAL acotados al cliente (respaldo front) ----------
+       Solo se usa si el backend aún no envía locales_por_venta en /atributos.
+       El cruce venta×local lo resuelve /web/dashboard/comercial (ya acotado por
+       cliente) agrupando por cada dimensión de local sobre los últimos 12 meses,
+       con granularidad anual (payload mínimo), en paralelo y con caché local por
+       usuario+cliente para que las visitas siguientes no paguen el costo. */
+    var ATTR_SCOPED=false;    // listas de locales acotadas al cliente
+    var ATTR_PROD_REAL=false; // listas de producto reales del cliente (atributos)
+    var ATTR_SCOPE_TTL=6*60*60*1000; // 6 horas
+    var ATTR_SCOPE_DIMS=[['cadena','locales','Cadena'],['formato','locales','Formato'],['region','locales','Región'],['codlocal','locales','Código Local'],['nomlocal','locales','Nombre Local']];
+    function attrScopeKey(){
+      var u=(CURRENT_USER&&(CURRENT_USER.email||CURRENT_USER.id))||'anon';
+      return 're_dash_attr_scope:'+u+':'+(CLIENTE_ID||'self');
+    }
+    function applyScopedOptions(byAp){
+      // Dimensiones sin datos (sin venta o request fallido) conservan su lista actual.
+      var found=false;
+      ATTR_SCOPE_DIMS.forEach(function(d){
+        var ap=d[0], grp=d[1], label=d[2], vals=byAp[ap]||[];
+        if(!vals.length) return;
+        found=true;
+        FILTER_DEFS[grp]=FILTER_DEFS[grp].map(function(def){ return def[0]===label?[label,vals]:def; });
+      });
+      if(!found) return;
+      ATTR_SCOPED=true;
+      buildMultiFilters();
+    }
+    var ATTR_SCOPE_STARTED=false;
+    function loadAtributosCliente(soloCache){
+      if(!window.RetailAPI||ATTR_SCOPE_STARTED||ATTR_SCOPED) return;
+      var key=attrScopeKey();
+      try{
+        var c=JSON.parse(localStorage.getItem(key)||'null');
+        if(c&&c.byAp&&(Date.now()-(c.t||0))<ATTR_SCOPE_TTL){ ATTR_SCOPE_STARTED=true; applyScopedOptions(c.byAp); return; }
+      }catch(_){ }
+      if(soloCache) return; // sin caché fresco: la carga por red se decide tras /atributos
+      ATTR_SCOPE_STARTED=true;
+      var desde=isoDate(addDays(YESTERDAY,-364)), hasta=isoDate(YESTERDAY);
+      var byAp={};
+      Promise.all(ATTR_SCOPE_DIMS.map(function(d){
+        var ap=d[0];
+        // Sin fbFilterParams: las opciones son el universo del cliente, no la selección en pantalla.
+        var params=withCliente({apertura:ap, desde:desde, hasta:hasta, gran:'anual'});
+        return window.RetailAPI.requestJson('/web/dashboard/comercial'+window.RetailAPI.buildQuery(params)).then(function(r){
+          var seen={};
+          byAp[ap]=((r&&r.values)||[]).map(function(v){
+            var raw=(v.rawLabel!=null?v.rawLabel:v.label);
+            return String(raw==null?'':raw).trim();
+          }).filter(function(s){ if(!s||seen[s]) return false; seen[s]=1; return true; })
+            .sort(function(a,b){ return a.localeCompare(b,'es'); });
+        }).catch(function(){ byAp[ap]=[]; });
+      })).then(function(){
+        var any=ATTR_SCOPE_DIMS.some(function(d){ return (byAp[d[0]]||[]).length; });
+        if(!any) return; // API caída o cliente sin venta: se mantiene el respaldo actual
+        try{ localStorage.setItem(key, JSON.stringify({t:Date.now(), byAp:byAp})); }catch(_){ }
+        applyScopedOptions(byAp);
+      });
     }
 
     /* ---------- Sparkline (inline SVG) ---------- */
