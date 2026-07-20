@@ -653,9 +653,9 @@
       FILTER_DEFS.locales=[['Cadena',uniq(function(l){return l.cad;})],['Formato',uniq(function(l){return l.fmt;})],['Región',uniq(function(l){return l.region;})],['Código Local',uniq(function(l){return l.cod;})],['Nombre Local',uniq(function(l){return l.nom;})]];
       buildMultiFilters();
     }
-    function refreshFilterOptionsFromCom(ap){
+    function refreshFilterOptionsFromCom(ap, vals0){
       var mfd=AP_FILTER[ap]; if(!mfd||mfd[0]!=='productos') return;
-      var vals=(((COM.aperturas||{})[ap]||{}).values||[]).map(function(v){return v.label;});
+      var vals=(vals0||((COM.aperturas||{})[ap]||{}).values||[]).map(function(v){return v.label;});
       if(!vals.length) return;
       FILTER_DEFS.productos=FILTER_DEFS.productos.map(function(d){ return d[0]===mfd[1]?[mfd[1],vals]:d; });
       buildMultiFilters();
@@ -2159,13 +2159,14 @@
       ]).then(function(rs){
         CMP.ana[key] = { values: normalizeAperturaValues(apertura, rs[0].values) };
         CMP.comp[key] = { values: normalizeAperturaValues(apertura, rs[1].values) };
-        COM.aperturas[apertura] = CMP.ana[key];
+        // NO compartir con COM.aperturas (Evolutivo): el Comparativo usa su propio
+        // período (cmpAnaPeriod), con distinto nº de buckets que Evolutivo, y no
+        // toca D.weeks. Compartirlo desalineaba columnas y datos -> celdas $NaN.
         COM_REAL = true;
-        refreshFilterOptionsFromCom(apertura);
+        refreshFilterOptionsFromCom(apertura, CMP.ana[key].values);
       }).catch(function(){
         CMP.ana[key] = { values: cmpFallbackValues(apertura, 'ana') };
         CMP.comp[key] = { values: cmpFallbackValues(apertura, 'comp') };
-        COM.aperturas[apertura] = CMP.ana[key];
       });
     }
     function cmpVals(side, apertura){
