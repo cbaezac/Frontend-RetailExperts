@@ -37,6 +37,35 @@
   .topbar .spacer{ margin-left:auto; }
   .back-btn{ display:inline-flex; align-items:center; gap:7px; padding:9px 16px; background:transparent; color:var(--accent); border:1.5px solid rgba(224,86,28,.3); border-radius:999px; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none; transition:all .2s; }
   .back-btn:hover{ background:var(--accent); color:#fff; border-color:var(--accent); }
+  /* Botón Menú central + panel desplegable */
+  .menu-btn{ position:absolute; left:50%; transform:translateX(-50%); display:inline-flex; align-items:center; gap:8px; padding:9px 22px; background:var(--purple); color:#fff; border:none; border-radius:999px; font-family:var(--font-display); font-weight:700; font-size:.88rem; letter-spacing:.02em; cursor:pointer; box-shadow:0 4px 14px rgba(90,13,116,.25); }
+  .menu-btn:hover{ filter:brightness(1.12); }
+  .menu-btn svg{ width:15px; height:15px; }
+  .menu-btn .caret{ width:12px; height:12px; transition:transform .18s ease; }
+  .menu-btn.open .caret{ transform:rotate(180deg); }
+  .menu-drop{ display:none; position:fixed; left:50%; transform:translateX(-50%); top:72px; z-index:400; background:#fff; border:1px solid var(--line); border-radius:20px; box-shadow:0 22px 56px rgba(42,20,8,.22); padding:20px 22px; width:max-content; max-width:min(1280px,95vw); }
+  .menu-drop.open{ display:block; }
+  .menu-drop .tabs-head{ margin-bottom:0; flex-wrap:wrap; align-items:stretch; gap:13px; }
+  .menu-drop .tabs{ flex-wrap:wrap; flex:0 1 auto; }
+  .menu-drop .tab-group{ flex:0 0 auto; background:#fff; min-width:170px; padding:13px 15px 15px; }
+  .menu-drop .tab-group-title{ font-size:.72rem; }
+  .menu-drop .fav-bar{ display:flex; flex-direction:column; align-items:stretch; gap:5px; margin-top:6px; padding-top:8px; border-top:1px dashed var(--line); }
+  .menu-drop .fav-save, .menu-drop .fav-manage{ justify-content:center; padding:6px 12px; font-size:.72rem; }
+  .menu-drop .fav-empty{ text-align:center; font-size:.76rem; }
+  .menu-drop .tab-group-btns{ flex-direction:column; align-items:stretch; gap:4px; }
+  .menu-drop .tab{ flex:0 0 auto; justify-content:flex-start; background:transparent; border:none; border-radius:9px; padding:7px 11px; font-size:.9rem; overflow:visible; }
+  .menu-drop .tab::before{ content:'–'; margin-right:8px; color:var(--muted); font-weight:400; }
+  .menu-drop .tab:hover{ background:var(--purple-soft); color:var(--purple); }
+  .menu-drop .tab.on{ background:var(--purple-soft); color:var(--purple); }
+  .menu-drop .tab.on::before{ color:var(--purple); }
+  .menu-drop .tab.tab-soon{ color:var(--muted); cursor:default; }
+  .menu-drop .tab.tab-soon:hover{ background:transparent; color:var(--muted); }
+  .menu-drop .tab.tab-locked{ position:relative; color:rgba(42,20,8,.34); cursor:default; }
+  .menu-drop .tab.tab-locked::before{ color:rgba(42,20,8,.28); }
+  .menu-drop .tab.tab-locked:hover{ background:transparent; color:rgba(42,20,8,.34); }
+  .lock-tip{ display:none; position:absolute; left:50%; bottom:calc(100% + 7px); transform:translateX(-50%); white-space:nowrap; background:var(--ink); color:#fff; font-size:.74rem; font-weight:600; padding:6px 11px; border-radius:8px; box-shadow:0 6px 18px rgba(42,20,8,.28); z-index:500; pointer-events:none; }
+  .lock-tip::before{ content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:5px solid transparent; border-top-color:var(--ink); }
+  .menu-drop .tab.tab-locked:hover .lock-tip{ display:block; }
   .back-btn svg{ width:15px; height:15px; }
   .demo-badge{ display:inline-flex; align-items:center; gap:7px; font-family:var(--font-display); font-weight:600; font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); background:var(--accent-soft); border:1px dashed rgba(224,86,28,.4); border-radius:999px; padding:6px 13px; }
   .demo-badge .dot{ width:7px; height:7px; border-radius:50%; background:var(--accent); }
@@ -354,13 +383,14 @@
     <a class="back-btn" href="landing.html"><svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Volver</a>
     <div class="divider"></div>
     <a href="index.html"><img class="logo-img" src="logo-retail-experts.png" alt="Retail Experts"></a>
-    <h1>Dashboards</h1>
     <div class="spacer"></div>
-    <span class="demo-badge" id="dataBadge"><span class="dot"></span> Cargando datos…</span>
+    <button class="menu-btn" id="menuBtn" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg> Menú <svg class="caret" viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <span class="demo-badge" id="dataBadge" style="display:none"><span class="dot"></span> Cargando datos…</span>
   </header>
 
   <main class="wrap">
-    <!-- Area tabs + Favoritos (a la derecha, en el espacio libre) -->
+    <!-- Menú desplegable: áreas + Favoritos -->
+    <div class="menu-drop" id="menuDrop">
     <div class="tabs-head">
     <div class="tabs" id="tabs">
       <div class="tab-group">
@@ -368,6 +398,7 @@
         <div class="tab-group-btns">
           <button class="tab on" data-area="resumen" type="button">Negocio</button>
           <button class="tab" data-area="mapa" type="button">Mapa</button>
+          <button class="tab" data-area="local" type="button">Local</button>
         </div>
       </div>
       <div class="tab-group">
@@ -375,29 +406,34 @@
         <div class="tab-group-btns">
           <button class="tab" data-area="comercial" type="button">Evolutivo</button>
           <button class="tab" data-area="comparativo" type="button">Comparativo</button>
-          <button class="tab" data-area="forecast" type="button">Venta Perdida</button>
+          <button class="tab tab-locked" type="button">Forecast<span class="lock-tip">Servicio no contratado</span></button>
         </div>
       </div>
       <div class="tab-group">
         <span class="tab-group-title">Operacional</span>
         <div class="tab-group-btns">
-          <button class="tab" data-area="abastecimiento" type="button">Abastecimiento</button>
+          <button class="tab" data-area="forecast" type="button">Venta Perdida</button>
           <button class="tab" data-area="osa" type="button">OSA</button>
           <button class="tab" data-area="promociones" type="button">Promociones</button>
+        </div>
+      </div>
+      <div class="tab-group">
+        <span class="tab-group-title">Supply</span>
+        <div class="tab-group-btns">
+          <button class="tab" data-area="abastecimiento" type="button">Abastecimiento</button>
+          <button class="tab tab-locked" type="button">Próximos Quiebres<span class="lock-tip">Servicio no contratado</span></button>
+          <button class="tab tab-locked" type="button">Entregable CPFR<span class="lock-tip">Servicio no contratado</span></button>
         </div>
       </div>
       <div class="tab-group">
         <span class="tab-group-title">Personalizado</span>
         <div class="tab-group-btns">
           <button class="tab" data-area="personalizado" type="button">Personalizado</button>
+          <div id="favBar" class="fav-bar"></div>
         </div>
       </div>
     </div>
-      <!-- Favoritos -->
-      <div class="tab-group tab-group-fav">
-        <span class="tab-group-title"><svg viewBox="0 0 24 24" fill="none"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 17.8 6.8 19.6l1-5.8-4.3-4.1 5.9-.9z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg> Favoritos</span>
-        <div id="favBar" class="fav-bar"></div>
-      </div>
+    </div>
     </div>
 
     <!-- Filter bar -->
@@ -617,9 +653,9 @@
       FILTER_DEFS.locales=[['Cadena',uniq(function(l){return l.cad;})],['Formato',uniq(function(l){return l.fmt;})],['Región',uniq(function(l){return l.region;})],['Código Local',uniq(function(l){return l.cod;})],['Nombre Local',uniq(function(l){return l.nom;})]];
       buildMultiFilters();
     }
-    function refreshFilterOptionsFromCom(ap, vals0){
+    function refreshFilterOptionsFromCom(ap){
       var mfd=AP_FILTER[ap]; if(!mfd||mfd[0]!=='productos') return;
-      var vals=(vals0||(((COM.aperturas||{})[ap]||{}).values||[])).map(function(v){return v.label;});
+      var vals=(((COM.aperturas||{})[ap]||{}).values||[]).map(function(v){return v.label;});
       if(!vals.length) return;
       FILTER_DEFS.productos=FILTER_DEFS.productos.map(function(d){ return d[0]===mfd[1]?[mfd[1],vals]:d; });
       buildMultiFilters();
@@ -864,9 +900,11 @@
       for(var i=0;i<n;i++){ var x=(0.7+0.5*i/n)*(0.85+(hashN(key+'g'+g+i)%30)/100); w.push(x); sw+=x; }
       return w.map(function(x){return total*x/sw;});
     }
-    // Serie temporal por bucket: los datos ya vienen agrupados por la granularidad
-    // desde el backend (día/semana/mes/año), así que se usan directamente.
-    function comSeries(v,key){ return metricWeekly(v,key); }
+    function comSeries(v,key){
+      if(comGran==='semanal') return metricWeekly(v,key);
+      if(key==='precio'){ var p=granSplit(sumArr(v.pesos),comGran,'sp:'+v.label), u=granSplit(sumArr(v.unidades),comGran,'su:'+v.label); return p.map(function(x,i){return u[i]?x/u[i]:0;}); }
+      return granSplit(metricTotal(v,key),comGran,key+':'+v.label);
+    }
 
     /* ---------- Enlace a Galería con filtros (cámara) ---------- */
     var GAL_PARAM={cadena:'cadena',formato:'formato',region:'region',codlocal:'codigo_local',nomlocal:'nombre_local'};
@@ -985,24 +1023,21 @@
     var comCurAp='cadena', comUsedAps=[], comRowsByKey={};
     var comMetrics={pesos:true,costo:false,unidades:false,precio:false};
     function sumArr(a){return a.reduce(function(x,y){return x+y;},0);}
-    function avgArr(a){ var s=0,n=0; (a||[]).forEach(function(v){ v=Number(v); if(Number.isFinite(v)&&v>0){ s+=v; n++; } }); return n?s/n:0; }
     // Precio promedio por semana para un valor de apertura.
     // Preferimos el precio REAL que mande el backend en v.precio (columna
     // indicadores_abastecimiento_diario.precio_promedio, array por semana);
     // si no viene, lo derivamos como pesos/unidades (venta_historica).
     function precioWeekly(v){ v=v||{}; if(Array.isArray(v.precio)) return v.precio; if(!Array.isArray(v.pesos)) return []; return v.pesos.map(function(p,i){return (v.unidades&&v.unidades[i])?p/v.unidades[i]:0;}); }
     function precioTotal(v){ if(v&&v.precio_promedio!=null) return Number(v.precio_promedio)||0; if(v&&v.precio_total!=null) return Number(v.precio_total)||0; return avgArr(precioWeekly(v||{})); }
-    function precioCount(v){ return Number((v&&(v.precio_count||v.precio_n))||0); }
-    function precioLyTotal(v){ if(v&&v.precio_promedio_ly!=null) return Number(v.precio_promedio_ly)||0; if(v&&v.precio_ly_total!=null) return Number(v.precio_ly_total)||0; if(v&&Array.isArray(v.precio_ly)) return avgArr(v.precio_ly); var p=sumArr((v&&v.pesos)||[]),u=sumArr((v&&v.unidades)||[]); return p&&u?p/u:0; }
     function metricWeekly(v,key){ if(key==='pesos')return v.pesos; if(key==='costo')return v.costo; if(key==='unidades')return v.unidades; return precioWeekly(v); }
-    function metricTotal(v,key){ if(key==='precio') return precioTotal(v); return sumArr(metricWeekly(v,key)); }
+    function metricTotal(v,key){ if(key==='precio'){var p=sumArr(v.pesos),u=sumArr(v.unidades);return u?p/u:0;} return sumArr(metricWeekly(v,key)); }
     function metricFmt(key){ return key==='unidades'?numShort:(key==='precio'?clp:clpShort); }
     function activeMetrics(){ return METRIC_KEYS.filter(function(k){return comMetrics[k];}); }
     function primaryMetric(){ var a=activeMetrics(); return a.length?a[0]:'pesos'; }
     function apColor(i,label){ return chartColor(i); }
     function dimValues(){ return filterDimValues(comApertura, COM.aperturas[comApertura].values); }
     function grandWeekly(key){ var vals=dimValues(), W=D.weeks.length, out=[]; for(var w=0;w<W;w++){ if(key==='precio'){var ps=0,pn=0;vals.forEach(function(v){var pv=Number(precioWeekly(v)[w]); if(Number.isFinite(pv)&&pv>0){ps+=pv;pn++;}});out.push(pn?ps/pn:0);} else {var s=0;vals.forEach(function(v){s+=metricWeekly(v,key)[w];});out.push(s);} } return out; }
-    function comKpis(){ var vals=dimValues(); var tP=0,tC=0,tU=0,tMeta=0,lyP=0,lyC=0,lyU=0,priceS=0,priceN=0,lyPriceS=0,lyPriceN=0; vals.forEach(function(v){ var p=sumArr(v.pesos),c=sumArr(v.costo),u=sumArr(v.unidades),pr=precioTotal(v),lyPr=precioLyTotal(v),pw=precioCount(v)||1; tP+=p;tC+=c;tU+=u;tMeta+=v.meta||0; lyP+=v.ly; lyC+=p&&c?v.ly*(c/p):0; lyU+=p&&u?v.ly/(p/u):0; if(pr){priceS+=pr*pw;priceN+=pw;} if(lyPr){lyPriceS+=lyPr;lyPriceN++;} }); var price=priceN?priceS/priceN:0, lyPrice=lyPriceN?lyPriceS/lyPriceN:0; function d(n,o){return o?(n/o-1)*100:0;} return { pesos:{v:tP,d:d(tP,lyP)}, costo:{v:tC,d:d(tC,lyC)}, unidades:{v:tU,d:d(tU,lyU)}, precio:{v:price,d:d(price,lyPrice)}, meta:{v:tMeta,avance:tMeta?tP/tMeta*100:0,d:d(tP,lyP)} }; }
+    function comKpis(){ var vals=dimValues(); var tP=0,tC=0,tU=0,tMeta=0,lyP=0,lyC=0,lyU=0; vals.forEach(function(v){ var p=sumArr(v.pesos),c=sumArr(v.costo),u=sumArr(v.unidades); tP+=p;tC+=c;tU+=u;tMeta+=v.meta||0; lyP+=v.ly; lyC+=p&&c?v.ly*(c/p):0; lyU+=p&&u?v.ly/(p/u):0; }); var price=tU?tP/tU:0, lyPrice=lyU?lyP/lyU:0; function d(n,o){return o?(n/o-1)*100:0;} return { pesos:{v:tP,d:d(tP,lyP)}, costo:{v:tC,d:d(tC,lyC)}, unidades:{v:tU,d:d(tU,lyU)}, precio:{v:price,d:d(price,lyPrice)}, meta:{v:tMeta,avance:tMeta?tP/tMeta*100:0,d:d(tP,lyP)} }; }
 
     var COM_DEMO_APERTURAS = COM.aperturas;
     var COM_REAL = false;
@@ -1018,9 +1053,7 @@
       return window.RetailAPI.requestJson('/web/dashboard/comercial'+window.RetailAPI.buildQuery(params));
     }
     function fetchComercial(apertura, extra){
-      // La evolución comercial manda la granularidad; el backend agrupa el
-      // período por día/semana/mes/año con datos reales (no reparte sintético).
-      return fetchComercialPeriod(apertura, comPeriod, Object.assign({gran:comGran}, extra||{}));
+      return fetchComercialPeriod(apertura, comPeriod, extra);
     }
     function loadComercial(apertura){
       return fetchComercial(apertura).then(function(r){
@@ -1071,17 +1104,7 @@
     function isoDay(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
     function mesActualRange(){ var ayer=new Date(Date.now()-86400000); return { start: isoDay(new Date(ayer.getFullYear(), ayer.getMonth(), 1)), end: isoDay(ayer) }; }
     function shiftYearISO(iso){ var p=iso.split('-'); return (Number(p[0])-1)+'-'+p[1]+'-'+p[2]; }
-    // Inicio de la ventana según la granularidad: N buckets terminando en endIso
-    // (diario=14 días, semanal=13 semanas, mensual=6 meses, anual=3 años). El
-    // backend agrupa [desde,hasta] por esa unidad; así el eje temporal es real.
-    function comWindowStart(gran, endIso){
-      var e=parseIsoDate(endIso);
-      if(gran==='diario') return isoDay(addDays(e,-13));
-      if(gran==='mensual') return isoDay(new Date(e.getFullYear(), e.getMonth()-5, 1));
-      if(gran==='anual') return isoDay(new Date(e.getFullYear()-2, 0, 1));
-      return isoDay(addDays(e,-7*12)); // semanal: 13 semanas
-    }
-    var comPeriod=(function(){ var e=mesActualRange().end; return {start:comWindowStart('semanal', e), end:e}; })();
+    var comPeriod=mesActualRange();
     var cmpPeriod=(function(){ var r=mesActualRange(); return {a1:r.start, a2:r.end, b1:shiftYearISO(r.start), b2:shiftYearISO(r.end)}; })();
     function panelComercial(){
       if(!comDrill._keep) comDrill=[];
@@ -1120,7 +1143,7 @@
 
     function renderComEvo(){
       var key=comSalesMetric; var precioOn=!!comMetrics.precio;
-      var labels=D.weeks;
+      var labels=granLabels(comGran);
       var title=document.getElementById('lineTitle'), sub=document.getElementById('lineSub');
       var apLabel=APERTURAS.filter(function(a){return a[0]===comApertura;})[0][1];
       var leftFmt=(key==='unidades')?numShort:clpShort;
@@ -1168,7 +1191,7 @@
     var COM_PROD_NAMES=['Aceite 1L','Detergente 3kg','Café 250g','Shampoo 400ml','Galletas 140g','Atún 170g','Arroz 1kg','Jugo 1.5L'];
     function comHashN(s){ var h=2166136261; for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619);} return h>>>0; }
     function comDimRows(m){
-      return dimValues().map(function(v,idx){ var val=metricTotal(v,m.k); var ratioCV=sumArr(v.costo)/(sumArr(v.pesos)||1); var price=precioTotal(v)||1; var ly=(m.k==='pesos')?v.ly:(m.k==='costo'?v.ly*ratioCV:(m.k==='unidades'?v.ly/price:precioLyTotal(v))); var meta=(m.k==='pesos')?v.meta:(m.k==='costo'?v.meta*ratioCV:(m.k==='unidades'?v.meta/price:0)); return {label:v.label, rawLabel:v.rawLabel||v.label, val:val, ly:ly, meta:meta, weekly:metricWeekly(v,m.k), idx:idx}; });
+      return dimValues().map(function(v,idx){ var val=metricTotal(v,m.k); var ratioCV=sumArr(v.costo)/(sumArr(v.pesos)||1); var price=(sumArr(v.pesos)/(sumArr(v.unidades)||1))||1; var ly=(m.k==='pesos')?v.ly:(m.k==='costo'?v.ly*ratioCV:v.ly/price); var meta=(m.k==='pesos')?v.meta:(m.k==='costo'?v.meta*ratioCV:v.meta/price); return {label:v.label, rawLabel:v.rawLabel||v.label, val:val, ly:ly, meta:meta, weekly:metricWeekly(v,m.k), idx:idx}; });
     }
     function comLocalesFor(label, val, meta){
       var n=4+(comHashN(label)%5); var arr=[]; for(var i=0;i<n;i++){ var h=comHashN(label+'L'+i); arr.push({h:h, w:0.5+(h%100)/100}); }
@@ -1208,10 +1231,8 @@
       }
       comRowsByKey={}; rows.forEach(function(r){ comRowsByKey[r.key]=r; });
       var t={val:0}; rows.forEach(function(r){t.val+=r.val;});
-      var labs=D.weeks;
-      // Buckets reales por fila (r.weekly viene del backend según la granularidad).
-      // Fallback (solo si el backend falló y no hay serie): reparto uniforme.
-      function rowB(r){ if(r.weekly && r.weekly.length) return r.weekly; var n=D.weeks.length||1, out=[]; for(var i=0;i<n;i++) out.push(r.val/n); return out; }
+      var labs=granLabels(comGran);
+      function rowB(r){ if(!r._bk||r._bkg!==comGran+m.k){ r._bk=(comGran==='semanal'&&r.weekly)?r.weekly:granSplit(r.val,comGran,'mx:'+m.k+':'+r.key); r._bkg=comGran+m.k; } return r._bk; }
       var cols=[ firstCol ];
       labs.forEach(function(lab,i){ cols.push({key:'b'+i,label:lab,type:'num',get:function(r){return rowB(r)[i];},cell:function(r){return '<td>'+m.fmt(rowB(r)[i])+'</td>';}}); });
       cols.push({key:'val',label:'Total',type:'num',get:function(r){return r.val;},cell:function(r){return '<td style="font-weight:700">'+m.fmt(r.val)+'</td>';}});
@@ -1252,13 +1273,7 @@
         var stock=20000+(h%80000);
         var transito=Math.round(stock*(0.08+(h%12)/100));
         var cd=Math.round(stock*(0.30+(h%20)/100));
-        // Instock/DOH/Quiebre sintéticos (demo): la vista de Abastecimiento usa
-        // datos demostrativos, así que no dependen del RES real (que trae 0 en
-        // modo venta real).
-        var ins=Math.min(99.5, 88+((h>>3)%1150)/100);
-        var doh=12+((h>>5)%160)/10;
-        var qb=2+((h>>7)%600)/100;
-        return {cad:l.cad,fmt:l.fmt,cod:l.cod,nom:l.nom,stock:stock,transito:transito,cd:cd,ins:ins,doh:doh,qb:qb,fr:86+((h>>2)%1300)/100};
+        return {cad:l.cad,fmt:l.fmt,cod:l.cod,nom:l.nom,stock:stock,transito:transito,cd:cd,ins:l.ins,doh:l.doh,qb:l.qb,fr:86+((h>>2)%1300)/100};
       });
     }
     function abaFmtDay(iso){ var p=iso.split('-'); var ms=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']; return parseInt(p[2],10)+' '+ms[parseInt(p[1],10)-1]; }
@@ -1287,14 +1302,8 @@
     }
     function fetchAbastecimiento(apertura, extra){
       var p=abaCurPeriod();
-      var params=Object.assign({apertura:apertura}, fbFilterParams(), extra||{});
-      // Con el período por defecto (= ayer, sin tocar) NO se manda desde/hasta:
-      // el backend usa el último día con datos en la tabla (la carga diaria
-      // puede venir con desfase y "ayer" quedaría vacío). Si el usuario fijó
-      // un período, se respeta tal cual.
-      var d=DEFAULT_PERIODS.yesterday;
-      if(!(p.start===d.start && p.end===d.end)){ params.desde=p.start; params.hasta=p.end; }
-      return window.RetailAPI.requestJson('/web/dashboard/abastecimiento'+window.RetailAPI.buildQuery(withCliente(params)));
+      var params=withCliente(Object.assign({apertura:apertura, desde:p.start, hasta:p.end}, fbFilterParams(), extra||{}));
+      return window.RetailAPI.requestJson('/web/dashboard/abastecimiento'+window.RetailAPI.buildQuery(params));
     }
     function loadAbastecimiento(){
       return fetchAbastecimiento(abaApertura).then(function(r){
@@ -1303,14 +1312,6 @@
         // solo como respaldo si la API falla (p.ej. backend sin actualizar).
         ABA={ totales:(r&&r.totales)||{}, values:normalizeAperturaValues(abaApertura,(r&&r.values)||[]), dias:(r&&r.dias)||[] };
         ABA_REAL = true;
-        // Reflejar en la barra el período que realmente se usó (p.ej. el último
-        // día con datos cuando el backend aplicó su default).
-        if(r && r.periodo && r.periodo.desde && r.periodo.hasta){
-          abaPeriod={start:r.periodo.desde, end:r.periodo.hasta};
-          var de=document.getElementById('f-desde'), ha=document.getElementById('f-hasta');
-          if(de) de.value=abaPeriod.start;
-          if(ha) ha.value=abaPeriod.end;
-        }
       }).catch(function(){ ABA=false; ABA_REAL=false; });
     }
     function abaApLabel(){ return APERTURAS.filter(function(a){return a[0]===abaApertura;})[0][1]; }
@@ -1323,10 +1324,13 @@
       return vs[hashN(l.cod+':'+abaApertura)%vs.length].label;
     }
     function panelAbastecimiento(){
-      // La vista de Abastecimiento usa datos DEMO (sintéticos), como OSA /
-      // Promociones / Venta Perdida. El endpoint real /web/dashboard/abastecimiento
-      // queda intacto y sigue en uso por el Resumen (KPIs operacionales); esta
-      // vista simplemente no lo consume.
+      // Datos reales primero; demo sólo si el endpoint falla o no hay datos.
+      if(window.RetailAPI && ABA===null){
+        host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--muted)">Cargando abastecimiento…</div>';
+        loadAbastecimiento().then(panelAbastecimiento);
+        return;
+      }
+      if(ABA_REAL){ renderAbaReal(); return; }
       var abaNeedsCom = ['cadena','formato','codlocal','nomlocal'].indexOf(abaApertura)<0 ? abaApertura : null;
       if(needsData('abastecimiento', abaNeedsCom, panelAbastecimiento)) return;
       var L=abaLocals();
@@ -1538,6 +1542,13 @@
       var n=4+(fcHashN(d1.cod)%4);
       return fcSplit(d1.cod, d1.fcP, d1.ventaP, d1.perdP, 'P', n).map(function(s){ return Object.assign(s, {label:'SKU'+(1000+(s.h%9000))+' · '+COM_PROD_NAMES[s.h%COM_PROD_NAMES.length]}); });
     }
+    var FC_CAUSALES=['Sin datos de stock','Sin stock en cadena','Stock sin flujo','Stock en tránsito','Stock insuficiente','Stock desajustado','Problema en Sala','Venta Bajo Forecast'];
+    var fcCauMetric='pesos';
+    function fcCausales(totPerd){
+      var w=FC_CAUSALES.map(function(c,i){ return 0.6+((fcHashN('cau:'+c)>>2)%100)/80; });
+      var sw=w.reduce(function(a,b){return a+b;},0);
+      return FC_CAUSALES.map(function(c,i){ return {label:c, val:totPerd*w[i]/sw}; });
+    }
     var fcApertura='cadena';
     function fcApLabel(){ return APERTURAS.filter(function(a){return a[0]===fcApertura;})[0][1]; }
     function fcDimRows(){
@@ -1562,7 +1573,10 @@
         + kpiCard({label:'Venta perdida unidades', value:num(tot.perdU), icon:IC.lost, tone:'accent'})
         + '</div>';
       // Línea con toggle pesos/unidades
-      html += '<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Forecast, venta y venta perdida</div><div class="pc-sub">Forecast y venta en línea, venta perdida en barra · '+(isU?'unidades':'pesos')+' · últimas 13 semanas</div></div><div class="metric-switch" id="fcLineSw"><button type="button" data-m="pesos"'+(isU?'':' class="on"')+'>Pesos</button><button type="button" data-m="unidades"'+(isU?' class="on"':'')+'>Unidades</button></div></div><div class="chart-box h-line"><canvas id="fc-line"></canvas></div></div>';
+      html += '<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Venta y venta perdida</div><div class="pc-sub">Venta en línea, venta perdida en barra · '+(fcLineMetric==='pct'?'% de venta perdida':(isU?'unidades':'pesos'))+' · últimas 13 semanas</div></div><div class="metric-switch" id="fcLineSw"><button type="button" data-m="pesos"'+(fcLineMetric==='pesos'?' class="on"':'')+'>Pesos</button><button type="button" data-m="unidades"'+(fcLineMetric==='unidades'?' class="on"':'')+'>Unidades</button><button type="button" data-m="pct"'+(fcLineMetric==='pct'?' class="on"':'')+'>%</button></div></div><div class="chart-box h-line"><canvas id="fc-line"></canvas></div></div>';
+      // Cascada de causales de venta perdida
+      var isCU=fcCauMetric==='unidades';
+      html += '<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Venta perdida por causal</div><div class="pc-sub">Apertura escalonada de la venta perdida · '+(isCU?'unidades':'pesos')+'</div></div><div class="metric-switch" id="fcCauSw"><button type="button" data-m="pesos"'+(isCU?'':' class="on"')+'>Pesos</button><button type="button" data-m="unidades"'+(isCU?' class="on"':'')+'>Unidades</button></div></div><div class="chart-box h-line"><canvas id="fc-causales"></canvas></div></div>';
       // Dos tortas: venta perdida por cadena (pesos y unidades)
       html += '<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Venta perdida por '+fcApLabel().toLowerCase()+'</div><div class="pc-sub">Distribución en pesos y en unidades</div></div></div>'
         + '<div class="donut-pair">'
@@ -1572,18 +1586,37 @@
       html += '<div id="fcWrap"></div>';
       host.innerHTML = html;
       // Línea
+      var isPct=fcLineMetric==='pct';
       var convL=function(v){ return isU?fcUn(v):v; };
-      var lf=isU?numShort:clpShort, lfFull=isU?num:clp;
+      var lf=isPct?function(v){return v.toFixed(1)+'%';}:(isU?numShort:clpShort), lfFull=isPct?function(v){return v.toFixed(1)+'%';}:(isU?num:clp);
       var perdWeek=D.forecast.lineForecast.map(function(f,i){ return Math.max(0, f-D.forecast.lineReal[i]); });
-      var c1=new Chart(document.getElementById('fc-line'), { data:{ labels:D.weeks, datasets:[
-        { type:'bar', label:'Venta perdida', data:perdWeek.map(convL), backgroundColor:'rgba(192,57,43,0.5)', borderColor:'#C0392B', borderWidth:1, borderRadius:5, maxBarThickness:30, order:3 },
-        { type:'line', label:'Forecast', data:D.forecast.lineForecast.map(convL), borderColor:'#5A0D74', borderDash:[6,4], backgroundColor:'transparent', tension:0, borderWidth:2.5, pointRadius:0, pointHoverRadius:5, order:1 },
-        { type:'line', label:'Venta', data:D.forecast.lineReal.map(convL), borderColor:'#E0561C', backgroundColor:'transparent', tension:0, borderWidth:2.5, pointRadius:0, pointHoverRadius:5, order:2 } ] },
+      var perdData=isPct?perdWeek.map(function(p,i){ var base=D.forecast.lineReal[i]+p; return base?p/base*100:0; }):perdWeek.map(convL);
+      var dsets=[ { type:'bar', label:'Venta perdida', data:perdData, backgroundColor:'rgba(192,57,43,0.5)', borderColor:'#C0392B', borderWidth:1, borderRadius:5, maxBarThickness:30, order:3, yAxisID:isPct?'yR':'y' } ];
+      if(!isPct) dsets.push({ type:'line', label:'Venta', data:D.forecast.lineReal.map(convL), borderColor:'#E0561C', backgroundColor:'transparent', tension:0, borderWidth:2.5, pointRadius:0, pointHoverRadius:5, order:2 });
+      else dsets.push({ type:'line', label:'Venta', data:D.forecast.lineReal.map(function(v){return isU?fcUn(v):v;}), borderColor:'#E0561C', backgroundColor:'transparent', tension:0, borderWidth:2.5, pointRadius:0, pointHoverRadius:5, order:2, yAxisID:'y' });
+      var scalesCfg={ x:{grid:{display:false}}, y:{grid:{color:'rgba(42,20,8,0.07)'},ticks:{callback:function(v){return (isU?numShort:clpShort)(v);}}} };
+      if(isPct) scalesCfg.yR={ position:'right', grid:{display:false}, ticks:{callback:function(v){return v.toFixed(0)+'%';}}, suggestedMax:15 };
+      var c1=new Chart(document.getElementById('fc-line'), { data:{ labels:D.weeks, datasets:dsets },
         options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
-          plugins:{ legend:{display:true,position:'top',align:'end',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8,padding:14,font:{weight:'600'}}}, tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+lfFull(ctx.parsed.y);}}} },
-          scales:{ x:{grid:{display:false}}, y:{grid:{color:'rgba(42,20,8,0.07)'},ticks:{callback:function(v){return lf(v);}}} } } });
+          plugins:{ legend:{display:true,position:'top',align:'end',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8,padding:14,font:{weight:'600'}}}, tooltip:{callbacks:{label:function(ctx){ var v=ctx.parsed.y; if(ctx.dataset.label==='Venta perdida'&&isPct) return 'Venta perdida: '+v.toFixed(1)+'%'; return ctx.dataset.label+': '+(isU?num:clp)(v); }}} },
+          scales:scalesCfg } });
       charts.push(c1);
       document.getElementById('fcLineSw').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; fcLineMetric=b.getAttribute('data-m'); destroyCharts(); panelForecast(); });
+      // Cascada (waterfall) de causales: barras flotantes [inicio, fin] + barra total
+      var cauTot=isCU?tot.perdU:tot.perdP;
+      var caus=fcCausales(cauTot);
+      var cfFmt=isCU?num:clp, cfShort=isCU?numShort:clpShort;
+      var acc=0, cData=[], cCols=[];
+      caus.forEach(function(c,i){ cData.push([acc, acc+c.val]); acc+=c.val; cCols.push(chartColor(i)); });
+      cData.push([0, acc]); cCols.push('#C0392B');
+      var cLabels=caus.map(function(c){return c.label;}).concat(['Total venta perdida']);
+      var cw=new Chart(document.getElementById('fc-causales'), { type:'bar', data:{ labels:cLabels, datasets:[{ data:cData, backgroundColor:cCols.map(function(c,i){ return i<caus.length?c+'CC':'rgba(192,57,43,0.55)'; }), borderColor:cCols, borderWidth:1.2, borderRadius:5, borderSkipped:false, maxBarThickness:64 }] },
+        options:{ responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{display:false}, tooltip:{callbacks:{label:function(ctx){ var v=ctx.raw[1]-ctx.raw[0]; return cfFmt(v)+' ('+(acc?(v/acc*100).toFixed(1):0)+'%)'; }}},
+            datalabels:false },
+          scales:{ x:{grid:{display:false},ticks:{autoSkip:false,maxRotation:30,minRotation:0,font:{size:11}}}, y:{grid:{color:'rgba(42,20,8,0.07)'},ticks:{callback:function(v){return cfShort(v);}}} } } });
+      charts.push(cw);
+      document.getElementById('fcCauSw').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; fcCauMetric=b.getAttribute('data-m'); destroyCharts(); panelForecast(); });
       // Tortas círculo completo
       var byP=cad.slice().sort(function(a,b){return b.perdP-a.perdP;});
       pieChart(document.getElementById('fc-pie-p'), byP.map(function(o){return o.label;}), byP.map(function(o){return o.perdP;}), byP.map(function(o){return chartColor(fcColorIdx[o.label]);}), clp);
@@ -1692,6 +1725,31 @@
         .then(function(){ return opsP; })
         .catch(function(){ RES = RES_DEMO; VENTA_REAL = false; setDataBadge(true); refreshFilterOptionsFromResumen(); });
     }
+    var localAp='categoria';
+    var LOCAL_DIMS={
+      categoria:{label:'Categoría', vals:['Alimentos','Bebidas','Limpieza','Cuidado Personal','Hogar']},
+      marca:{label:'Marca', vals:['Adclean','Bekys','Café Haití','Kuna Foods','Olisur','Prater']},
+      codprod:{label:'Código Producto', vals:['SKU1001','SKU1002','SKU1003','SKU1004','SKU1005','SKU1006','SKU1007','SKU1008']},
+      producto:{label:'Producto', vals:['Aceite Oliva 1L','Detergente 3kg','Café Grano 250g','Shampoo 400ml','Arroz Grado 1 1kg','Galletas Avena 180g','Lavalozas 750ml','Té Verde 20u']}
+    };
+    function localDimRows(){
+      var t=resTotals(); var dim=LOCAL_DIMS[localAp];
+      var w=dim.vals.map(function(v){ return 0.6+((hashN('locDim:'+localAp+':'+v)>>2)%100)/70; });
+      var sw=w.reduce(function(a,b){return a+b;},0);
+      return dim.vals.map(function(v,i){
+        var f=w[i]/sw; var h=hashN('locDimV:'+localAp+':'+v);
+        return { label:v, vp:t.vp*f, vc:t.vc*f, vu:t.vu*f, varp:-6+((h>>3)%160)/10, osa:90+((h>>5)%90)/10, ins:91+((h>>7)%80)/10, doh:8+((h>>9)%140)/10, qb:1+((h>>11)%60)/10 };
+      });
+    }
+    function renderLocalDonuts(){
+      var rows=localDimRows();
+      var colorIdx={}; rows.forEach(function(o,i){ colorIdx[o.label]=i; });
+      [['vp',clp,'res-donut-vp'],['vu',num,'res-donut-vu']].forEach(function(cfg){
+        var key=cfg[0], fmt=cfg[1];
+        var rs=rows.map(function(o){ return {label:o.label, val:o[key]}; }).sort(function(a,b){return b.val-a.val;});
+        pieChart(document.getElementById(cfg[2]), rs.map(function(o){return o.label;}), rs.map(function(o){return o.val;}), rs.map(function(o){return chartColor(colorIdx[o.label]);}), fmt);
+      });
+    }
     function panelResumen(){
       if(!RES){
         host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--muted)">Cargando indicadores…</div>';
@@ -1700,9 +1758,12 @@
       }
       var t=resTotals();
       var avMetas = HAS_METAS ? (t.vp/(t.mVp||1)*100) : null;
+      var isLocalArea=(_currentArea==='local');
       var html='';
-      // Indicadores de Venta + nota a la derecha
-      html+='<div class="sec-row">'+secTitle('Indicadores de Venta', IC.money, 'var(--accent-soft)', 'var(--accent)', true)
+      // Indicadores de Venta + nota a la derecha (+ acceso a Galería en Local)
+      var selLoc=isLocalArea?((gFilters.locales['Código Local']||[]).concat(gFilters.locales['Nombre Local']||[])):[];
+      html+='<div class="sec-row" style="position:relative">'+secTitle('Indicadores de Venta', IC.money, 'var(--accent-soft)', 'var(--accent)', true)
+        + (isLocalArea?'<button type="button" id="localGalBtn" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:7px;padding:7px 16px;background:rgba(90,13,116,.09);color:var(--purple);border:1.3px solid rgba(90,13,116,.25);border-radius:999px;font-family:var(--font-display);font-weight:700;font-size:.78rem;cursor:pointer"><svg viewBox="0 0 24 24" fill="none" style="width:14px;height:14px"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.6l1.2-1.7c.28-.4.74-.63 1.23-.63h2.94c.49 0 .95.24 1.23.63L16 6h1.5A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="12.5" r="3.2" stroke="currentColor" stroke-width="1.7"/></svg> Ver en Galería</button>':'')
         + '<span class="sec-note">la variación porcentual es contra el mismo período del año anterior</span></div>';
       html+='<div class="kpis">'
         + kpiCard({label:'Venta pesos', value:clp(t.vp), delta:pctDelta(t.vp,t.vpLy), icon:IC.money, tone:'accent'})
@@ -1725,16 +1786,21 @@
         + '</div>';
       // Barras venta pesos + línea venta unidades (12 meses móviles)
       html+='<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Evolución de venta</div><div class="pc-sub">Venta en pesos (barra) y venta en unidades (línea) · '+(VENTA_REAL?'mes en curso, día a día (month to date)':'últimos 12 meses móviles')+'</div></div></div><div class="chart-box h-line"><canvas id="res-line"></canvas></div></div>';
-      // Venta por cadena: dos tortas (pesos y unidades)
-      html+='<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Venta por cadena</div><div class="pc-sub">Distribución por cadena en pesos y en unidades</div></div></div>'
+      // Venta por cadena / por apertura (Local): dos tortas (pesos y unidades)
+      if(isLocalArea){
+        html+='<div class="com-controls"><div class="ctl-group"><label>Nivel de apertura</label><div class="seg" id="localApSeg">'
+          + Object.keys(LOCAL_DIMS).map(function(k){ return '<button type="button" data-ap="'+k+'"'+(k===localAp?' class="on"':'')+'>'+LOCAL_DIMS[k].label+'</button>'; }).join('')
+          + '</div></div></div>';
+      }
+      html+='<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">'+(isLocalArea?'Distribución de venta':'Venta por cadena')+'</div><div class="pc-sub">Distribución por '+(isLocalArea?LOCAL_DIMS[localAp].label.toLowerCase():'cadena')+' en pesos y en unidades</div></div></div>'
         + '<div class="donut-pair">'
         + '<div class="donut-mini"><div class="pc-sub" style="text-align:center;margin-bottom:6px;font-weight:600">Venta pesos</div><div class="chart-box"><canvas id="res-donut-vp"></canvas></div></div>'
         + '<div class="donut-mini"><div class="pc-sub" style="text-align:center;margin-bottom:6px;font-weight:600">Venta unidades</div><div class="chart-box"><canvas id="res-donut-vu"></canvas></div></div>'
         + '</div></div>';
       // Selector de indicador (aplica a matriz por cadena y a Top 50)
       html+='<div class="com-controls"><div class="ctl-group"><label>Indicador</label><div class="metric-switch" id="resSwitch"><button type="button" data-m="vp" class="on">Venta pesos</button><button type="button" data-m="vc">Venta costo</button><button type="button" data-m="vu">Venta unidades</button></div></div></div>';
-      html+='<div id="cadWrap"></div>';
-      html+='<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Top 50 locales</div><div class="pc-sub" id="topSub"></div></div></div><div class="table-scroll" id="topWrap"></div></div>';
+      if(!isLocalArea) html+='<div id="cadWrap"></div>';
+      html+='<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">'+(isLocalArea?'Venta por '+LOCAL_DIMS[localAp].label.toLowerCase():'Top 50 locales')+'</div><div class="pc-sub" id="topSub"></div></div></div><div class="table-scroll" id="topWrap"></div></div>';
       host.innerHTML=html;
       // Bar (pesos) + line (unidades), 12 meses móviles
       // La serie temporal viene agregada (sin detalle por local); con filtros activos se escala por la fracción filtrada
@@ -1758,10 +1824,14 @@
             yPesos:{position:'left',grid:{color:'rgba(42,20,8,0.07)'},ticks:{callback:function(v){return clpShort(v);}}},
             yU:{position:'right',grid:{display:false},ticks:{callback:function(v){return numShort(v);}}} } } });
       charts.push(c1);
-      renderCadenaDonuts();
-      renderCadenaMatrix();
+      if(isLocalArea) renderLocalDonuts(); else renderCadenaDonuts();
+      if(!isLocalArea) renderCadenaMatrix();
       renderTopLocales();
-      document.getElementById('resSwitch').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; resMetric=b.getAttribute('data-m'); this.querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b);}); renderCadenaMatrix(); renderTopLocales(); });
+      var lseg=document.getElementById('localApSeg');
+      if(lseg) lseg.addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; localAp=b.getAttribute('data-ap'); destroyCharts(); panelResumen(); });
+      var lgal=document.getElementById('localGalBtn');
+      if(lgal) lgal.addEventListener('click', function(){ var v=selLoc[0]||''; galAsk(gFilters.locales['Código Local']&&gFilters.locales['Código Local'].length?'codlocal':'nomlocal', v); });
+      document.getElementById('resSwitch').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; resMetric=b.getAttribute('data-m'); this.querySelectorAll('button').forEach(function(x){x.classList.toggle('on',x===b);}); if(document.getElementById('cadWrap')) renderCadenaMatrix(); renderTopLocales(); });
     }
 
     function pieLabelsPlugin(fmt){
@@ -1953,8 +2023,26 @@
       return arr.map(function(p){ var frac=p.w/sw; var val=l[resMetric]*frac; var ly=l[RES_MET[resMetric].ly]*frac*(0.9+(p.h%20)/100); var meta=l[RES_MET[resMetric].meta]*frac; var osa=Math.min(99.5, l.osa+((p.h%70)/10-3.5)); var ins=Math.min(99.5, l.ins+((p.h%50)/10-2.5)); var doh=Math.max(2, l.doh+((p.h%90)/10-4.5)); var qb=Math.max(0, l.qb+((p.h%40)/10-2)); return {name:p.name, code:'SKU'+(1000+(p.h%9000)), val:val, ly:ly, meta:meta, osa:osa, ins:ins, doh:doh, qb:qb}; }).sort(function(a,b){return b.val-a.val;});
     }
     var topDrill=null, topSort={key:'val',dir:-1};
+    function renderTopCategorias(m){
+      var rows=localDimRows().map(function(r){ return { cat:r.label, val:r[resMetric], varp:r.varp, osa:r.osa, ins:r.ins, doh:r.doh, qb:r.qb }; }).sort(function(a,b){return b.val-a.val;});
+      document.getElementById('topSub').textContent='Venta por '+LOCAL_DIMS[localAp].label.toLowerCase()+' · '+m.label.toLowerCase()+' · ordena por cualquier columna';
+      var cols=[
+        {key:'cat',label:LOCAL_DIMS[localAp].label,type:'text',get:function(r){return r.cat;},cell:function(r){return '<td>'+r.cat+'</td>';}},
+        {key:'val',label:m.label,type:'num',get:function(r){return r.val;},cell:function(r){return '<td>'+m.fmtFull(r.val)+'</td>';}},
+        {key:'varp',label:'Variación',type:'num',get:function(r){return r.varp;},cell:function(r){return '<td class="'+(r.varp>=0?'pos':'neg')+'">'+(r.varp>=0?'+':'')+r.varp.toFixed(1)+'%</td>';}},
+        {key:'osa',label:'OSA',type:'num',get:function(r){return r.osa;},cell:function(r){return '<td class="'+clsOSA(r.osa)+'">'+r.osa.toFixed(1)+'%</td>';}},
+        {key:'ins',label:'Instock',type:'num',get:function(r){return r.ins;},cell:function(r){return '<td class="'+clsIns(r.ins)+'">'+r.ins.toFixed(1)+'%</td>';}},
+        {key:'doh',label:'DOH',type:'num',get:function(r){return r.doh;},cell:function(r){return '<td>'+r.doh.toFixed(1)+'</td>';}},
+        {key:'qb',label:'Quiebres',type:'num',get:function(r){return r.qb;},cell:function(r){return '<td class="'+clsQb(r.qb)+'">'+r.qb.toFixed(1)+'%</td>';}}
+      ];
+      var sorted=smSortRows(cols, rows, topSort);
+      var body=sorted.map(function(r){ return '<tr>'+cols.map(function(c){return c.cell(r);}).join('')+'</tr>'; }).join('');
+      document.getElementById('topWrap').innerHTML='<table class="matrix matrix-left"><thead>'+smThead(cols,topSort)+'</thead><tbody>'+body+'</tbody></table>';
+      smWire('#topWrap', cols, topSort, renderTopLocales);
+    }
     function renderTopLocales(){
       var m=RES_MET[resMetric];
+      if(_currentArea==='local'){ renderTopCategorias(m); return; }
       if(topDrill){ renderLocalProductos(m); return; }
       var rows=FL().map(function(l){ var val=l[resMetric], ly=l[m.ly], meta=l[m.meta]; return { l:l, rank:l, cad:l.cad, fmt:l.fmt, cod:l.cod, nom:l.nom, val:val, varp:ly?(val/ly-1)*100:0, av:meta?val/meta*100:0, osa:l.osa, ins:l.ins, doh:l.doh, qb:l.qb }; }).sort(function(a,b){return b.val-a.val;}).slice(0,50);
       document.getElementById('topSub').textContent='Top 50 por '+m.label.toLowerCase()+' · ordena por cualquier columna';
@@ -2044,7 +2132,7 @@
     var cmpSort={key:'ana',dir:-1};
     function cmpAnaPeriod(){ return {start:cmpPeriod.a1, end:cmpPeriod.a2}; }
     function cmpCompPeriod(){ return {start:cmpPeriod.b1, end:cmpPeriod.b2}; }
-    function cloneValue(v){ return Object.assign({}, v, {pesos:(v.pesos||[]).slice(), costo:(v.costo||[]).slice(), unidades:(v.unidades||[]).slice(), precio:Array.isArray(v.precio)?v.precio.slice():v.precio}); }
+    function cloneValue(v){ return Object.assign({}, v, {pesos:(v.pesos||[]).slice(), costo:(v.costo||[]).slice(), unidades:(v.unidades||[]).slice()}); }
     function scaledValue(v, factor){
       var out=cloneValue(v);
       out.pesos=out.pesos.map(function(x){return x*factor;});
@@ -2070,14 +2158,13 @@
       ]).then(function(rs){
         CMP.ana[key] = { values: normalizeAperturaValues(apertura, rs[0].values) };
         CMP.comp[key] = { values: normalizeAperturaValues(apertura, rs[1].values) };
-        // OJO: no pisar COM.aperturas[apertura] (lo consume Evolutivo con su propia
-        // ventana temporal / D.weeks). El comparativo trae otro período (mes en curso),
-        // con distinto nº de buckets; compartir la caché desalinea el Evolutivo → NaN.
+        COM.aperturas[apertura] = CMP.ana[key];
         COM_REAL = true;
-        refreshFilterOptionsFromCom(apertura, CMP.ana[key].values);
+        refreshFilterOptionsFromCom(apertura);
       }).catch(function(){
         CMP.ana[key] = { values: cmpFallbackValues(apertura, 'ana') };
         CMP.comp[key] = { values: cmpFallbackValues(apertura, 'comp') };
+        COM.aperturas[apertura] = CMP.ana[key];
       });
     }
     function cmpVals(side, apertura){
@@ -2130,8 +2217,8 @@
       var tA=0,tB=0; vals.forEach(function(o){tA+=o.ana;tB+=o.cmp;});
       // KPIs resumen comparativo
       var totVar=tB?(tA/tB-1)*100:0;
-      // Precio promedio análisis / comparativo: AVG(precio_promedio) real si viene del backend.
-      var ppA=0,ppB=0;(function(){var aS=0,aN=0,cS=0,cN=0;cmpPairs.forEach(function(p){var av=precioTotal(p.a),cv=precioTotal(p.b),aw=precioCount(p.a)||1,cw=precioCount(p.b)||1;if(av){aS+=av*aw;aN+=aw;}if(cv){cS+=cv*cw;cN+=cw;}});ppA=aN?aS/aN:0;ppB=cN?cS/cN:0;})();
+      // Precio promedio análisis / comparativo (totales ponderados)
+      var ppA=0,ppB=0;(function(){var aP=0,aU=0,cP=0,cU=0;cmpPairs.forEach(function(p){aP+=sumArr(p.a.pesos||[]);aU+=sumArr(p.a.unidades||[]);if(p.b){cP+=sumArr(p.b.pesos||[]);cU+=sumArr(p.b.unidades||[]);}});ppA=aU?aP/aU:0;ppB=cU?cP/cU:0;})();
       var ppVar=ppB?(ppA/ppB-1)*100:0;
       html+='<div class="kpis">'
         + kpiCard({label:m.label+' · Análisis', value:m.fmt(tA), icon:IC.money, tone:'accent'})
@@ -2677,7 +2764,7 @@
         var insW=promoWeeklyPct('promo-ins:'+v.label, 88+((h>>4)%1050)/100, 80, 99.5);
         return { label:v.label, impl:impl,
           osa:osaW[osaW.length-1], instock:insW[insW.length-1], osaW:osaW, insW:insW,
-          pesos:p, costo:c, unidades:u, precio:precioTotal(v), precio_count:precioCount(v),
+          pesos:p, costo:c, unidades:u, precio:u?p/u:0,
           wkPesos:v.pesos.slice(), wkCosto:v.costo.slice(), wkUnidades:v.unidades.slice() };
       });
     }
@@ -2692,7 +2779,7 @@
         var insW=promoWeeklyPct('promo-ins:'+parent.label+prefix+i, Math.min(99, parent.instock+((o.h%400)/100-2)), 78, 99.5);
         return { h:o.h, impl:Math.min(99, Math.max(60, parent.impl+((o.h%700)/100-3.5))),
           osa:osaW[osaW.length-1], instock:insW[insW.length-1], osaW:osaW, insW:insW,
-          pesos:p, costo:c, unidades:u, precio:parent.precio, precio_count:parent.precio_count, wkPesos:wkP, wkCosto:wkC, wkUnidades:wkU };
+          pesos:p, costo:c, unidades:u, precio:u?p/u:0, wkPesos:wkP, wkCosto:wkC, wkUnidades:wkU };
       });
     }
     function promoLocalesFor(d0){
@@ -2709,7 +2796,7 @@
       var rows=promoRows();
       var tot={pesos:0,costo:0,unidades:0,implW:0,osaW:0,insW:0};
       rows.forEach(function(r){ tot.pesos+=r.pesos; tot.costo+=r.costo; tot.unidades+=r.unidades; tot.implW+=r.impl*r.pesos; tot.osaW+=r.osa*r.pesos; tot.insW+=r.instock*r.pesos; });
-      var implTot=tot.pesos?tot.implW/tot.pesos:0, osaTot=tot.pesos?tot.osaW/tot.pesos:0, insTot=tot.pesos?tot.insW/tot.pesos:0, precioTot=(function(){var s=0,n=0;rows.forEach(function(r){var w=Number(r.precio_count)||1;if(r.precio){s+=r.precio*w;n+=w;}});return n?s/n:0;})();
+      var implTot=tot.pesos?tot.implW/tot.pesos:0, osaTot=tot.pesos?tot.osaW/tot.pesos:0, insTot=tot.pesos?tot.insW/tot.pesos:0, precioTot=tot.unidades?tot.pesos/tot.unidades:0;
       var m=promoMetric;
       var M_LABEL={pesos:'Venta pesos',costo:'Venta costo',unidades:'Venta unidades'};
       var M_FMT={pesos:clpShort,costo:clpShort,unidades:numShort};
@@ -2783,7 +2870,7 @@
           var costo=last.row.costo*o.frac*(0.9+((o.h>>3)%20)/100);
           var unidades=Math.max(1, Math.round(last.row.unidades*o.frac*(0.9+((o.h>>5)%20)/100)));
           var jit=function(base,sh){ return Math.min(99.5, Math.max(55, base+(((o.h>>sh)%600)/100-3))); };
-          return {key:o.cod||o.label, label:o.label, cod:o.cod, impl:jit(last.row.impl,2), osa:jit(last.row.osa,4), instock:jit(last.row.instock,6), pesos:pesos, costo:costo, unidades:unidades, precio:last.row.precio, precio_count:last.row.precio_count, drill:!terminal};
+          return {key:o.cod||o.label, label:o.label, cod:o.cod, impl:jit(last.row.impl,2), osa:jit(last.row.osa,4), instock:jit(last.row.instock,6), pesos:pesos, costo:costo, unidades:unidades, precio:unidades?pesos/unidades:0, drill:!terminal};
         });
         firstCol={key:'label',label:drillName(curAp),type:'text',thLeft:true,get:function(r){return r.label;},cell:function(r){return '<td>'+r.label+(r.drill?drillCueHtml(r.key):'')+'</td>';}};
         sub=last.label+' · apertura por '+drillName(curAp).toLowerCase();
@@ -2792,7 +2879,7 @@
       var promoByKey={}; rows.forEach(function(r){ promoByKey[r.key]=r; });
       var tot={pesos:0,costo:0,unidades:0,implW:0,osaW:0,insW:0};
       rows.forEach(function(r){ tot.pesos+=r.pesos; tot.costo+=r.costo; tot.unidades+=r.unidades; tot.implW+=r.impl*r.pesos; tot.osaW+=r.osa*r.pesos; tot.insW+=r.instock*r.pesos; });
-      var implT=tot.pesos?tot.implW/tot.pesos:0, osaT=tot.pesos?tot.osaW/tot.pesos:0, insT=tot.pesos?tot.insW/tot.pesos:0, precioT=(function(){var s=0,n=0;rows.forEach(function(r){var w=Number(r.precio_count)||1;if(r.precio){s+=r.precio*w;n+=w;}});return n?s/n:0;})();
+      var implT=tot.pesos?tot.implW/tot.pesos:0, osaT=tot.pesos?tot.osaW/tot.pesos:0, insT=tot.pesos?tot.insW/tot.pesos:0, precioT=tot.unidades?tot.pesos/tot.unidades:0;
       var cols=[ firstCol,
         {key:'impl',label:'% Implementación',type:'num',get:function(r){return r.impl;},cell:function(r){return '<td><span class="'+(r.impl>=90?'pos':'neg')+'">'+pct(r.impl)+'</span></td>';}},
         {key:'vp',label:'Venta pesos',type:'num',get:function(r){return r.pesos;},cell:function(r){return '<td>'+clp(r.pesos)+'</td>';}},
@@ -2812,8 +2899,28 @@
       wireDrillMenu('#promoMatrix', promoByKey, curAp, usedAps, function(ap,row){ promoDrill.push({ap:ap,label:row.label,row:row}); renderPromoMatrix(); });
     }
 
+    function panelSupply(){
+      destroyCharts();
+      host.innerHTML='<div class="panel-card full" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:70px 24px;text-align:center">'
+        +'<svg viewBox="0 0 24 24" fill="none" style="width:44px;height:44px;color:var(--purple)"><path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M3 7.5 12 12l9-4.5M12 12v9" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'
+        +'<div style="font-family:var(--font-display);font-weight:800;font-size:1.15rem;color:var(--ink)">Supply</div>'
+        +'<div style="font-size:.9rem;color:var(--muted);max-width:420px">Este dashboard está en construcción. Pronto encontrarás aquí los indicadores de supply.</div></div>';
+    }
+    function panelLocal(){
+      var selL=(gFilters.locales['Código Local']||[]).concat(gFilters.locales['Nombre Local']||[]);
+      if(!selL.length){
+        destroyCharts();
+        host.innerHTML='<div class="panel-card full" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:70px 24px;text-align:center">'
+          +'<svg viewBox="0 0 24 24" fill="none" style="width:44px;height:44px;color:var(--purple)"><path d="M4 9.5 5.2 4h13.6L20 9.5M4 9.5v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-10M4 9.5h16M9.5 20.5v-6h5v6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'
+          +'<div style="font-family:var(--font-display);font-weight:800;font-size:1.15rem;color:var(--ink)">Selecciona un local</div>'
+          +'<div style="font-size:.9rem;color:var(--muted);max-width:460px">Elige un local en los filtros de <strong>Código Local</strong> o <strong>Nombre Local</strong> y presiona “Aplicar filtros” para ver su información.</div></div>';
+        return;
+      }
+      panelResumen();
+    }
     var RENDER = {
       resumen:panelResumen,
+      local:panelLocal,
       mapa:function(){ if(window.__renderMapa){ window.__renderMapa(host); } },
       comercial:panelComercial,
       comparativo:panelComparativo,
@@ -2821,9 +2928,10 @@
       forecast:panelForecast,
       osa:panelOsa,
       promociones:panelPromociones,
+      supply:panelSupply,
       personalizado:panelPersonalizado
     };
-    var AREA_LOG={resumen:'Resumen de Negocio',mapa:'Mapa',comercial:'Venta · Evolutivo',comparativo:'Venta · Comparativo',abastecimiento:'Abastecimiento',osa:'OSA',forecast:'Venta Perdida',promociones:'Promociones',personalizado:'Personalizado'};
+    var AREA_LOG={resumen:'Resumen de Negocio',local:'Avance · Local',mapa:'Mapa',comercial:'Venta · Evolutivo',comparativo:'Venta · Comparativo',abastecimiento:'Abastecimiento',osa:'OSA',forecast:'Venta Perdida',promociones:'Promociones',supply:'Supply',personalizado:'Personalizado'};
     var _lastLoggedArea=null;
     var _currentArea=null;
     function periodForArea(area){
@@ -2902,13 +3010,7 @@
       function onPeriod(id, apply){ var el=document.getElementById(id); if(!el) return; el.addEventListener('change', function(){ apply(); markDirty(); }); }
       if(area==='comercial'){
         onSeg('apSeg', function(v){ comApertura=v; });
-        onSeg('comGranSeg', function(v){
-          comGran=v;
-          // Al cambiar la granularidad, la ventana se ajusta a esa unidad
-          // (ej. Mensual = últimos 6 meses) y se refleja en el input de período.
-          comPeriod.start=comWindowStart(v, comPeriod.end);
-          var d=document.getElementById('evo-desde'); if(d) d.value=comPeriod.start;
-        });
+        onSeg('comGranSeg', function(v){ comGran=v; });
         onChips('mChips', function(){return comSalesMetric;}, function(v){ comSalesMetric=v; });
         var pp=document.getElementById('ppChip'); if(pp) pp.addEventListener('click', function(e){ var b=e.target.closest('.metric-chip'); if(!b)return; comMetrics.precio=!comMetrics.precio; b.classList.toggle('sel', true); b.classList.toggle('on', false); markDirty(); });
         onPeriod('evo-desde', function(){ var d=document.getElementById('evo-desde'); if(d&&d.value) comPeriod.start=d.value; if(comPeriod.end<comPeriod.start) comPeriod.end=comPeriod.start; });
@@ -2925,12 +3027,15 @@
       else if(area==='forecast'){ onSeg('fcApSeg', function(v){ fcApertura=v; }); }
       else if(area==='promociones'){ onSeg('promoApSeg', function(v){ promoApertura=v; promoSort={key:null,dir:1}; }); onSeg('promoGranSeg', function(v){ promoGran=v; }); }
     }
+    var MAPA_FIELDS={'Cadena':1,'Formato':1,'Categoría':1,'Marca':1,'Descriptor Producto':1};
+    var LOCAL_LOC_FIELDS={'Código Local':1,'Nombre Local':1};
     function applyFieldVisibility(area){
-      // Todos los filtros disponibles en todas las áreas (incluido Mapa): el
-      // mapa consume los mismos filtros de la barra (cadena, formato, región,
-      // local, producto, etc.) vía window.fbFilterParams.
       document.querySelectorAll('#fgLocales .fb-field, #fgProductos .fb-field').forEach(function(f){
-        f.style.display='flex';
+        var lbl=((f.querySelector('label')||{}).textContent||'').trim();
+        var show=true;
+        if(area==='mapa') show=!!MAPA_FIELDS[lbl];
+        if(area==='local') show=!!f.closest('#fgProductos') || !!LOCAL_LOC_FIELDS[lbl];
+        f.style.display=show?'flex':'none';
       });
     }
     function showArea(area){
@@ -2941,12 +3046,12 @@
       // Período editable en todas las áreas EXCEPTO Resumen de Negocio (bloqueado)
       // Comercial-Evolutivo y Comparativo traen su propio período en el panel; ocultar solo el chip de período
       var ownPeriod = (area==='comercial' || area==='comparativo' || area==='personalizado' || area==='mapa');
-      var fb=document.querySelector('.filterbar'); if(fb) fb.style.display=(area==='personalizado')?'none':'flex';
+      var fb=document.querySelector('.filterbar'); if(fb) fb.style.display=(area==='personalizado'||area==='supply')?'none':'flex';
       applyFieldVisibility(area);
       var pc=document.querySelector('.period-chip'); if(pc) pc.style.display=ownPeriod?'none':'flex';
       var pd=document.querySelector('.fb-divider'); if(pd) pd.style.display=ownPeriod?'none':'block';
-      var locked = (area==='resumen');
-      if(area==='resumen'){ cadDrill=[]; topDrill=null; }
+      var locked = (area==='resumen' || area==='local');
+      if(area==='resumen' || area==='local'){ cadDrill=[]; topDrill=null; }
       if(area==='comercial') comDrill=[];
       if(area==='comparativo') cmpDrill=[];
       if(area==='abastecimiento'){ abaDrill=[]; if(changedArea) ABA=null; } // el período vuelve al default al entrar: refetch
@@ -2961,9 +3066,14 @@
     }
 
     /* ---------- Tabs ---------- */
+    var menuBtn=document.getElementById('menuBtn'), menuDrop=document.getElementById('menuDrop');
+    menuBtn.addEventListener('click', function(e){ e.stopPropagation(); var open=menuDrop.classList.toggle('open'); menuBtn.classList.toggle('open', open); });
+    document.addEventListener('click', function(e){ if(menuDrop.classList.contains('open') && !menuDrop.contains(e.target)){ menuDrop.classList.remove('open'); menuBtn.classList.remove('open'); } });
+    menuDrop.addEventListener('click', function(e){ if(e.target.closest('.fav-chip') && !e.target.closest('.fav-del')){ menuDrop.classList.remove('open'); menuBtn.classList.remove('open'); } });
     document.getElementById('tabs').addEventListener('click', function(e){
-      var t = e.target.closest('.tab'); if(!t) return;
+      var t = e.target.closest('.tab'); if(!t || t.classList.contains('tab-soon') || t.classList.contains('tab-locked') || !t.getAttribute('data-area')) return;
       this.querySelectorAll('.tab').forEach(function(x){ x.classList.toggle('on', x===t); });
+      menuDrop.classList.remove('open'); menuBtn.classList.remove('open');
       showArea(t.getAttribute('data-area'));
       renderFavs();
     });
@@ -2971,7 +3081,7 @@
       var active = document.querySelector('.tab.on').getAttribute('data-area');
       // Invalidar cachés para que los datos se refetcheen con los filtros aplicados
       if(active==='comercial' || active==='comparativo'){ COM.aperturas={}; drillCache={}; CMP={ana:{}, comp:{}}; cmpDrillCache={}; }
-      if(active==='resumen' || active==='mapa'){ RES=null; RES_OPS=null; cadDrill=[]; topDrill=null; topProdCache={}; if(window.__mapaInvalidate) window.__mapaInvalidate(); }
+      if(active==='resumen' || active==='local' || active==='mapa'){ RES=null; RES_OPS=null; cadDrill=[]; topDrill=null; topProdCache={}; if(window.__mapaInvalidate) window.__mapaInvalidate(); }
       if(active==='abastecimiento'){ ABA=null; abaDrill=[]; }
       showArea(active);
     });
