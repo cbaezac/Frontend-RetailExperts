@@ -341,9 +341,12 @@
       {key:'instock', label:'Instock', group:'Operacionales', tipo:'avg'},
       {key:'doh', label:'DOH', group:'Operacionales', tipo:'avg'},
       {key:'quiebre', label:'Quiebre', group:'Operacionales', tipo:'avg'},
-      {key:'stock', label:'Stock en Sala', group:'Stocks'},
-      {key:'stock_transito', label:'Stock en Tránsito', group:'Stocks'},
-      {key:'stock_cd', label:'Stock en CD', group:'Stocks'}
+      // TEMPORAL: los stocks todavía no están conectados a datos reales; se descargan
+      // en 0 (tipo:'cero'). Cuando exista la fuente real, quitar tipo:'cero' y sumarán
+      // row[key] como el resto. (Operacionales salen 0 porque el backend aún no los manda.)
+      {key:'stock', label:'Stock en Sala', group:'Stocks', tipo:'cero'},
+      {key:'stock_transito', label:'Stock en Tránsito', group:'Stocks', tipo:'cero'},
+      {key:'stock_cd', label:'Stock en CD', group:'Stocks', tipo:'cero'}
     ];
     var LOC_ATTRS = [
       {key:'cadena', label:'Cadena', opt:'cadenas', param:'cadena'},
@@ -546,7 +549,7 @@
       order.sort(function(a,b2){ return map[a].b.k<map[b2].b.k?-1:(map[a].b.k>map[b2].b.k?1:(a<b2?-1:1)); });
       var rows=order.map(function(key){
         var g=map[key]; var out=[g.b.label]; if(hasAnio) out.push(g.b.anio||''); out=out.concat(g.attrs);
-        indCols.forEach(function(it){ if(it.tipo==='precio'){ out.push(g._vu?Math.round(g._vp/g._vu):0); } else if(it.tipo==='avg'){ out.push(g._n?Math.round((g.sums[it.key]||0)/g._n*10)/10:0); } else { out.push(g.sums[it.key]||0); } });
+        indCols.forEach(function(it){ if(it.tipo==='precio'){ out.push(g._vu?Math.round(g._vp/g._vu):0); } else if(it.tipo==='avg'){ out.push(g._n?Math.round((g.sums[it.key]||0)/g._n*10)/10:0); } else if(it.tipo==='cero'){ out.push(0); } else { out.push(g.sums[it.key]||0); } });
         return out;
       });
       return { headers:headers, rows:rows, truncated:(payload.total||0)>filas.length, indCount:indCols.length, indKeys:indCols.map(function(it){return it.key;}) };
