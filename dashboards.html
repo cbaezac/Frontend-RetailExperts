@@ -2983,9 +2983,18 @@
     })();
 
     /* ---- Multi-select filtros (visual) ---- */
-    var FILTER_DEFS={
+    // Opciones de filtro. En prod/Netlify parten VACÍAS (excepto Estado, que es un
+    // enum del sistema, no data de cliente): así el cliente NUNCA ve valores de otro
+    // —ni por un instante mientras carga, ni si /web/dashboard/atributos falla—.
+    // loadAtributos() (y refreshFilterOptionsFromResumen()) las rellenan con las
+    // cadenas/categorías/marcas acotadas a su cliente. Los ejemplos solo se usan en
+    // el entorno de diseño (PREVIEW_MODE), donde la API está deshabilitada.
+    var FILTER_DEFS = PREVIEW_MODE ? {
       locales:[['Cadena',['Cencosud','Walmart','SMU','Tottus']],['Formato',['Jumbo','Santa Isabel','Hiper Líder','Líder Express','Unimarc','Hiper Tottus']],['Región',['R. Metropolitana','Valparaíso','Biobío','Maule','Coquimbo']],['Código Local',['J101','U101','L101','T101']],['Nombre Local',['Jumbo Peñalolén','Hiper Líder Ñuñoa','Unimarc Peñalolén']]],
       productos:[['Categoría',['Alimentos','Bebidas','Limpieza','Cuidado Personal','Hogar']],['Marca',['Adclean','Bekys','Café Haití','Kuna Foods','Olisur','Prater']],['Código Producto',['SKU1001','SKU1002','SKU1003']],['Descriptor Producto',['Aceite 1L','Detergente 3kg','Café 250g','Shampoo 400ml']],['Estado',['activo','inactivo']]]
+    } : {
+      locales:[['Cadena',[]],['Formato',[]],['Región',[]],['Código Local',[]],['Nombre Local',[]]],
+      productos:[['Categoría',[]],['Marca',[]],['Código Producto',[]],['Descriptor Producto',[]],['Estado',['activo','inactivo']]]
     };
     // Estado parte aplicado en "activo": todos los dashboards muestran solo productos
     // activos al entrar. El cliente puede destildarlo (queda "Todos") para ver también
