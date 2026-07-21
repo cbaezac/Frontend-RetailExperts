@@ -381,6 +381,25 @@
   .mini-chip.add { background: rgba(31,138,76,0.12); color: var(--visit); }
   .mini-chip.rem { background: rgba(194,58,43,0.10); color: #b5362a; text-decoration: line-through; }
 
+  /* ---- Reponedores (multi-asignación por local) ---- */
+  .rep-section { margin-top: 4px; }
+  .rep-list { display: flex; flex-direction: column; gap: 14px; }
+  .rep-card { border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; background: #fff; }
+  .rep-card.removed { opacity: .55; background: rgba(194,58,43,0.04); }
+  .rep-card.rep-new { border-style: dashed; border-color: var(--visit); }
+  .rep-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .rep-name { font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 1rem; }
+  .rep-rut { color: var(--muted); font-size: .85rem; }
+  .rep-tag { font-size: .72rem; padding: 2px 9px; border-radius: 999px; background: rgba(90,13,116,0.09); color: var(--purple); font-weight: 600; }
+  .rep-tag-new { background: rgba(31,138,76,0.12); color: var(--visit); }
+  .rep-remove, .rep-undo { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-family: 'Bricolage Grotesque', sans-serif; font-weight: 600; font-size: .82rem; cursor: pointer; border-radius: 999px; padding: 6px 13px; border: 1.5px solid rgba(194,58,43,0.3); color: #b5362a; background: transparent; transition: background .15s, color .15s; }
+  .rep-remove:hover { background: #b5362a; color: #fff; }
+  .rep-undo { border-color: rgba(31,138,76,0.35); color: var(--visit); }
+  .rep-undo:hover { background: var(--visit); color: #fff; }
+  .rep-empty { color: var(--muted); font-size: .92rem; padding: 6px 2px; }
+  .rep-add-row { margin-top: 14px; }
+  .rep-count { font-size: .8rem; font-weight: 600; color: var(--purple); background: rgba(90,13,116,0.09); padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+
   /* ---- Toast ---- */
   .toast {
     position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%) translateY(20px);
@@ -543,6 +562,6 @@
   <script src="assets/js/api.js"></script>
   <script src="assets/js/admin-guard.js"></script>
   <script src="assets/js/re-pager.js"></script>
-  <script src="assets/js/admin-rutas-clientes-api.js?v=20260707-1"></script>
+  <script src="assets/js/admin-rutas-clientes-api.js?v=20260717-1"></script>
 </body>
 </html>

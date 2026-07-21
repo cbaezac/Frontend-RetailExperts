@@ -76,7 +76,8 @@
     var pageSize = mode === 'localproducto' ? 5000 : 500;
     function loadAllPages() {
       return request(baseEndpoint + '?limit=' + pageSize + '&page=1').then(function (first) {
-        var pages = Math.ceil(Number(first.total || 0) / pageSize);
+        var effectiveLimit = Number(first.limit || pageSize) || pageSize;
+        var pages = Math.ceil(Number(first.total || 0) / effectiveLimit);
         var requests = [];
         for (var page = 2; page <= pages; page += 1) {
           requests.push(request(baseEndpoint + '?limit=' + pageSize + '&page=' + page));
@@ -95,6 +96,7 @@
     ]).then(function (result) {
       options = result[1] || {};
       sessionStorage.setItem('re_mant_backend_options', JSON.stringify(options));
+      populateSelectsFromOptions();
       var rows = mode === 'locales' ? (result[0].locales || []).map(mapLocal)
         : mode === 'productos' ? (result[0].productos || []).map(mapProduct)
         : (result[0].relaciones || []).map(mapLocalProduct);
@@ -124,6 +126,115 @@
   function value(key) {
     var el = document.getElementById('mf-' + key);
     return el ? String(el.value || '').trim() : '';
+  }
+
+  // --- Historial real (backend) ---
+  // El guardado real pasa por este script y el backend audita cada alta/edición/
+  // baja en web_mantenedor_cambios. El panel de Historial lee de ahí (no de
+  // localStorage), así cualquier admin ve las modificaciones reales desde
+  // cualquier equipo, con el usuario que las hizo.
+  var historialCache = null;
+  var ACCION_LABEL = { alta: 'Alta', edicion: 'Edición', baja: 'Baja' };
+  var ACCION_CLASS = { alta: 'add', edicion: 'edit', baja: 'del' };
+  function escHtml(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function fmtFecha(ts) {
+    try { return new Date(ts).toLocaleString('es-CL', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+    catch (_) { return String(ts || ''); }
+  }
+  function renderHistorial(body, cambios) {
+    if (!body) return;
+    if (!cambios || !cambios.length) { body.innerHTML = '<p class="log-empty">Aún no se han registrado cambios.</p>'; return; }
+    body.innerHTML = '<div class="log-list">' + cambios.map(function (e) {
+      var acc = ACCION_CLASS[e.accion] || 'edit';
+      var diffs = (e.cambios || []).map(function (c) {
+        return '<div class="diff-row"><span class="diff-field">' + escHtml(c.campo) + '</span><span class="diff-before">' + escHtml(c.antes) + '</span><span class="diff-arrow">→</span><span class="diff-after">' + escHtml(c.despues) + '</span></div>';
+      }).join('');
+      var meta = fmtFecha(e.creado_en) + (e.usuario_email ? ' · ' + e.usuario_email : '');
+      return '<div class="log-entry"><div class="log-top"><span class="l-id">' + escHtml(e.registro_id) + '</span><span class="l-act ' + acc + '">' + (ACCION_LABEL[e.accion] || e.accion) + '</span><span class="l-time">' + escHtml(meta) + '</span></div>' + diffs + '</div>';
+    }).join('') + '</div>';
+  }
+  function updateHistBadge() {
+    var badge = document.getElementById('histCount');
+    if (!badge) return;
+    if (historialCache && historialCache.length) { badge.style.display = 'inline-block'; badge.textContent = historialCache.length; }
+    else badge.style.display = 'none';
+  }
+  function loadHistorial() {
+    // Silencioso (API.requestJson directo, sin el toast del wrapper): el badge y
+    // el panel manejan el caso de error por su cuenta.
+    return API.requestJson('/web/admin/mantenedores/' + mode + '/historial?limit=200')
+      .then(function (resp) { historialCache = (resp && resp.cambios) || []; updateHistBadge(); return historialCache; })
+      .catch(function () { return historialCache || []; });
+  }
+  function wireHistorial() {
+    if (mode === 'localproducto') return;
+    var histBtn = document.getElementById('hist');
+    var overlay = document.getElementById('histOverlay');
+    var body = document.getElementById('h-body');
+    if (!histBtn || !overlay || !body) return;
+    histBtn.addEventListener('click', function (ev) {
+      ev.stopImmediatePropagation(); // gana sobre el handler legado (localStorage)
+      overlay.classList.add('open');
+      if (historialCache) renderHistorial(body, historialCache);
+      else body.innerHTML = '<p class="log-empty">Cargando historial…</p>';
+      loadHistorial().then(function (list) { renderHistorial(body, list); });
+    }, true);
+  }
+
+  // --- Poblar los selects del modal con el catálogo real del backend (/opciones) ---
+  function optionValues(list, prop) {
+    if (!Array.isArray(list)) return [];
+    return list.map(function (it) { return prop ? (it && it[prop]) : it; })
+      .filter(function (v) { return v != null && v !== ''; });
+  }
+  function fieldOptionMap() {
+    if (!options) {
+      // Si el fetch inicial de /opciones falló o aún no llega, usar el cache.
+      try { options = JSON.parse(sessionStorage.getItem('re_mant_backend_options') || 'null'); } catch (_) { options = null; }
+    }
+    if (!options) return {};
+    if (mode === 'productos') return {
+      cliente: optionValues(options.clientes, 'nombre'),
+      cadena: optionValues(options.cadenas),
+      marca: optionValues(options.rubros),
+      cat1: optionValues(options.categorias),
+      catre: optionValues(options.categorias_tareas),
+    };
+    if (mode === 'locales') return {
+      cadena: optionValues(options.cadenas),
+      formato: optionValues(options.formatos),
+      region: optionValues(options.regiones),
+    };
+    return {};
+  }
+  function populateSelectsFromOptions() {
+    var map = fieldOptionMap();
+    Object.keys(map).forEach(function (key) {
+      var el = document.getElementById('mf-' + key);
+      if (!el || el.tagName !== 'SELECT') return;
+      var vals = map[key];
+      if (!vals.length) return;
+      var current = el.value;
+      var placeholder = el.querySelector('option[value=""]');
+      el.innerHTML = '';
+      if (placeholder) el.appendChild(placeholder);
+      else { var ph = document.createElement('option'); ph.value = ''; ph.disabled = true; ph.textContent = 'Selecciona…'; el.appendChild(ph); }
+      vals.forEach(function (v) { var o = document.createElement('option'); o.value = v; o.textContent = v; el.appendChild(o); });
+      if (current) el.value = current;
+    });
+  }
+  // Además de al cargar, poblamos los selects al abrir el modal (captura, antes
+  // del openEdit/openAdd del motor). Es determinista y no depende de que el
+  // fetch inicial de /opciones haya llegado: usa el cache de sessionStorage.
+  function wireModalPopulate() {
+    if (mode === 'localproducto') return;
+    document.addEventListener('click', function (event) {
+      if (event.target.closest('[data-edit]') || event.target.closest('#add')) {
+        populateSelectsFromOptions();
+      }
+    }, true);
   }
 
   function findClientId(name, fallback) {
@@ -266,6 +377,12 @@
       saveButton.parentNode.insertBefore(automaticButton, saveButton);
     }
   }
+
+  // Historial real desde el backend: el panel lo lee de web_mantenedor_cambios,
+  // no de localStorage. Se cablea el botón y se precarga el conteo del badge.
+  wireHistorial();
+  wireModalPopulate();
+  if (mode !== 'localproducto') loadHistorial();
 
   // La API es siempre la fuente visible. localStorage solo permite que el
   // motor legado pinte la tabla mientras llega la respuesta actualizada.

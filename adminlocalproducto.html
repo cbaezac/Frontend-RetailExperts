@@ -177,6 +177,10 @@ table.mant tbody tr:last-child td{ border-bottom:0; }
     <p class="page-sub" id="page-sub"></p>
 
     <div class="toolbar-actions">
+      <button class="btn btn-hist" id="dl-data" type="button" style="background:var(--green,#1F8A4C);border-color:var(--green,#1F8A4C);color:#fff">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 19h16" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Descargar Excel
+      </button>
       <button class="btn btn-hist" id="hist" type="button">
         <svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Historial <span class="hist-count" id="histCount" style="display:none">0</span>
@@ -294,7 +298,7 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
     };
   })();
   </script>
-  <script src="assets/js/admin-mantenedores-backend.js?v=20260706-1"></script>
+  <script src="assets/js/admin-mantenedores-backend.js?v=20260721-1"></script>
   <script src="assets/js/admin-propuestas-api.js?v=20260706-1"></script>
   <script>
 /* Motor genérico de Mantenedores · Retail Experts
@@ -342,23 +346,34 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
   document.getElementById('search').addEventListener('input', function(){ sel.q=this.value.trim().toLowerCase(); pager.reset(); render(); });
 
   var filtersHost=document.getElementById('filters');
-  C.filters.forEach(function(f){
-    var wrap=document.createElement('div'); wrap.className='filter-wrap';
-    var btn=document.createElement('button'); btn.className='filter'; btn.type='button'; btn.setAttribute('aria-expanded','false');
-    btn.innerHTML='<span>'+f.label+'</span><span class="chev"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
-    var dd=document.createElement('div'); dd.className='dropdown';
-    var opts=uniq(f.key);
-    var searchable=opts.length>8;
-    dd.innerHTML=(searchable?'<input class="dd-search" type="text" placeholder="Buscar '+f.label.toLowerCase()+'…" />':'')+'<div class="dd-list"></div>';
-    var list=dd.querySelector('.dd-list');
-    opts.forEach(function(o){ var it=document.createElement('label'); it.className='dd-item'; it.innerHTML='<input type="checkbox" value="'+esc(o)+'" /><span>'+esc(o)+'</span>'; list.appendChild(it); });
-    wrap.appendChild(btn); wrap.appendChild(dd); filtersHost.appendChild(wrap);
-    btn.addEventListener('click', function(e){ e.stopPropagation(); var open=wrap.classList.contains('open'); closeAll(); if(!open){ wrap.classList.add('open'); btn.setAttribute('aria-expanded','true'); var s=dd.querySelector('.dd-search'); if(s)s.focus(); } });
-    dd.addEventListener('click', function(e){ e.stopPropagation(); });
-    var sb=dd.querySelector('.dd-search');
-    if(sb){ sb.addEventListener('input', function(){ var q=sb.value.toLowerCase().trim(); var any=false; list.querySelectorAll('.dd-item').forEach(function(it){ var m=it.textContent.toLowerCase().indexOf(q)!==-1; it.style.display=m?'flex':'none'; if(m)any=true; var cb=it.querySelector('input[type="checkbox"]'); if(cb){ if(q&&m&&!cb.checked){ cb.checked=true; cb.setAttribute('data-auto','1'); } else if(cb.getAttribute('data-auto')==='1'&&(!q||!m)){ cb.checked=false; cb.removeAttribute('data-auto'); } } }); dd.dispatchEvent(new Event('change')); var e=dd.querySelector('.dd-empty'); if(!any&&!e){ e=document.createElement('div'); e.className='dd-empty'; e.textContent='Sin resultados'; list.appendChild(e);} else if(any&&e){e.remove();} }); }
-    dd.addEventListener('change', function(){ sel.filters[f.key]=[].slice.call(dd.querySelectorAll('input:checked')).map(function(c){return c.value;}); var n=sel.filters[f.key].length; if(n){ btn.classList.add('has-selection'); var c=btn.querySelector('.count'); if(!c){c=document.createElement('span'); c.className='count'; btn.appendChild(c);} c.textContent=n; } else { btn.classList.remove('has-selection'); var c2=btn.querySelector('.count'); if(c2)c2.remove(); } pager.reset(); render(); });
-  });
+  function buildFilters(){
+    filtersHost.innerHTML='';
+    C.filters.forEach(function(f){
+      var selected={}; (sel.filters[f.key]||[]).forEach(function(value){ selected[String(value)]=true; });
+      var wrap=document.createElement('div'); wrap.className='filter-wrap';
+      var btn=document.createElement('button'); btn.className='filter'; btn.type='button'; btn.setAttribute('aria-expanded','false');
+      btn.innerHTML='<span>'+f.label+'</span><span class="chev"><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+      var dd=document.createElement('div'); dd.className='dropdown';
+      var opts=uniq(f.key);
+      var searchable=opts.length>8;
+      dd.innerHTML=(searchable?'<input class="dd-search" type="text" placeholder="Buscar '+f.label.toLowerCase()+'…" />':'')+'<div class="dd-list"></div>';
+      var list=dd.querySelector('.dd-list');
+      opts.forEach(function(o){ var checked=selected[String(o)]?' checked':''; var it=document.createElement('label'); it.className='dd-item'; it.innerHTML='<input type="checkbox" value="'+esc(o)+'"'+checked+' /><span>'+esc(o)+'</span>'; list.appendChild(it); });
+      wrap.appendChild(btn); wrap.appendChild(dd); filtersHost.appendChild(wrap);
+      btn.addEventListener('click', function(e){ e.stopPropagation(); var open=wrap.classList.contains('open'); closeAll(); if(!open){ wrap.classList.add('open'); btn.setAttribute('aria-expanded','true'); var s=dd.querySelector('.dd-search'); if(s)s.focus(); } });
+      dd.addEventListener('click', function(e){ e.stopPropagation(); });
+      var sb=dd.querySelector('.dd-search');
+      if(sb){ sb.addEventListener('input', function(){ var q=sb.value.toLowerCase().trim(); var any=false; list.querySelectorAll('.dd-item').forEach(function(it){ var m=it.textContent.toLowerCase().indexOf(q)!==-1; it.style.display=m?'flex':'none'; if(m)any=true; var cb=it.querySelector('input[type="checkbox"]'); if(cb){ if(q&&m&&!cb.checked){ cb.checked=true; cb.setAttribute('data-auto','1'); } else if(cb.getAttribute('data-auto')==='1'&&(!q||!m)){ cb.checked=false; cb.removeAttribute('data-auto'); } } }); dd.dispatchEvent(new Event('change')); var e=dd.querySelector('.dd-empty'); if(!any&&!e){ e=document.createElement('div'); e.className='dd-empty'; e.textContent='Sin resultados'; list.appendChild(e);} else if(any&&e){e.remove();} }); }
+      dd.addEventListener('change', function(){ sel.filters[f.key]=[].slice.call(dd.querySelectorAll('input:checked')).map(function(c){return c.value;}); refreshFilterButton(btn, f.key); pager.reset(); render(); });
+      refreshFilterButton(btn, f.key);
+    });
+  }
+  function refreshFilterButton(btn, key){
+    var n=(sel.filters[key]||[]).length;
+    if(n){ btn.classList.add('has-selection'); var c=btn.querySelector('.count'); if(!c){c=document.createElement('span'); c.className='count'; btn.appendChild(c);} c.textContent=n; }
+    else { btn.classList.remove('has-selection'); var c2=btn.querySelector('.count'); if(c2)c2.remove(); }
+  }
+  buildFilters();
   function closeAll(){ document.querySelectorAll('.filter-wrap.open').forEach(function(w){ w.classList.remove('open'); var b=w.querySelector('.filter'); if(b)b.setAttribute('aria-expanded','false'); }); }
   document.addEventListener('click', closeAll);
 
@@ -524,12 +539,28 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
     toast('Historial exportado');
   });
 
+
+  /* ---- Descargar data como Excel ---- */
+  document.getElementById('dl-data').addEventListener('click', function(){
+    var rows=data.filter(matchRow);
+    if(!rows.length){ toast('No hay registros para descargar'); return; }
+    var xml='<?xml version="1.0"?>\n<?mso-application progid="Excel.Sheet"?>\n<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">';
+    xml+='<Styles><Style ss:ID="hdr"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#5A0D74" ss:Pattern="Solid"/></Style></Styles><Worksheet ss:Name="Datos"><Table>';
+    xml+='<Row ss:Height="22">'+C.columns.map(function(c){return '<Cell ss:StyleID="hdr"><Data ss:Type="String">'+esc(c.label)+'</Data></Cell>';}).join('')+'</Row>';
+    rows.forEach(function(r){ xml+='<Row>'+C.columns.map(function(c){var v=r[c.key]; if(v==null)v=''; return '<Cell><Data ss:Type="String">'+esc(v)+'</Data></Cell>';}).join('')+'</Row>'; });
+    xml+='</Table></Worksheet></Workbook>';
+    var blob=new Blob([xml],{type:'application/vnd.ms-excel'}); var url=URL.createObjectURL(blob);
+    var d=new Date(); var stamp=d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2);
+    var a=document.createElement('a'); a.href=url; a.download='mantenedor-'+(C.key||'datos')+'-'+stamp+'.xls'; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){URL.revokeObjectURL(url);},500);
+  });
+
   document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeEdit(); histOverlay.classList.remove('open'); } });
 
   function installBackendRows(rows){
     if(!Array.isArray(rows)) return;
     data=rows;
-    currentPage=1;
+    pager.reset();
+    buildFilters();
     render();
   }
   window.addEventListener('mant:backend-data', function(e){ installBackendRows(e.detail); });

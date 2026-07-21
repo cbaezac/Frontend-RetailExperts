@@ -68,7 +68,7 @@ body {
 }
 .page-sub { font-size: 1.02rem; color: var(--muted); max-width: 60ch; line-height: 1.6; margin-bottom: clamp(34px, 5vh, 52px); }
 
-.cards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 18px; }
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
 .maint-card {
   position: relative; display: flex; flex-direction: column;
   background: var(--white); border: 1px solid var(--line); border-radius: 20px;
@@ -88,12 +88,14 @@ body {
 .c3 .maint-icon { background: linear-gradient(150deg, #2A0E5C, #4A1A8A); box-shadow: 0 12px 26px rgba(42,14,92,0.28); }
 .c4 .maint-icon { background: linear-gradient(150deg, #1F8A4C, #2BB36A); box-shadow: 0 12px 26px rgba(31,138,76,0.26); }
 .c5 .maint-icon { background: linear-gradient(150deg, #2A1408, #5A3A22); box-shadow: 0 12px 26px rgba(42,20,8,0.26); }
+.c6 .maint-icon { background: linear-gradient(150deg, #0E4A6B, #1E7FB2); box-shadow: 0 12px 26px rgba(14,74,107,0.26); }
 .maint-card h3 { font-family: var(--font-display); font-weight: 700; font-size: 1.3rem; letter-spacing: -0.01em; margin-bottom: 8px; }
 .maint-card p { font-size: 0.95rem; color: var(--muted); line-height: 1.55; margin-bottom: 22px; }
 .maint-foot { margin-top: auto; display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-display); font-weight: 600; font-size: 0.92rem; color: var(--purple); }
 .c2 .maint-foot { color: var(--orange); }
 .c4 .maint-foot { color: var(--green, #1F8A4C); }
 .c5 .maint-foot { color: #2A1408; }
+.c6 .maint-foot { color: #0E4A6B; }
 .maint-foot svg { width: 16px; height: 16px; transition: transform .2s ease; }
 .maint-card:hover .maint-foot svg { transform: translateX(4px); }
 .soon-tag {
@@ -193,6 +195,21 @@ body {
         </div>
         <h3>Mantenedor Logs</h3>
         <p>Registro de actividad: qué credencial entra a la plataforma y qué dashboards consulta.</p>
+        <span class="maint-foot">Abrir mantenedor
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m0 0-6-6m6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </a>
+
+      <a class="maint-card c6" href="admincpfr.html">
+        <div class="maint-icon">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 17l4-5 3.5 3L16 9l4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M4 21h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            <circle cx="16" cy="5" r="2" stroke="currentColor" stroke-width="1.7"/>
+          </svg>
+        </div>
+        <h3>Mantenedor CPFR</h3>
+        <p>Define los criterios de exigencia para próximos quiebres y elasticidad precio.</p>
         <span class="maint-foot">Abrir mantenedor
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m0 0-6-6m6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </span>
