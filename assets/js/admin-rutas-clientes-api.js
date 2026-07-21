@@ -325,12 +325,12 @@
   }
   function closeEdit() { editOverlay.classList.remove('open'); state.current = null; state.draft = null; }
 
-  /* Marcas por reponedor: [] en el backend significa "ve todas las habilitadas
-     del local". Si quedan todas (o ninguna) seleccionadas se envía [] para
-     mantener ese modo adaptativo; un subconjunto se envía explícito. */
+  /* Marcas por reponedor: se materializan explícitamente. La reconciliación de
+     maestra usa asignacion_visita_cliente como fuente, asi que lista vacia no
+     debe interpretarse como "todas" al guardar desde este mantenedor. */
   function repClientPayload(rep, enabledIds) {
     var selected = enabledIds.filter(function (id) { return rep.sel[id]; });
-    if (!selected.length || selected.length === enabledIds.length) return [];
+    if (!selected.length || selected.length === enabledIds.length) return enabledIds;
     return selected;
   }
   function repClientsChanged(rep, enabledIds, original) {
@@ -361,18 +361,10 @@
       var legacyChanged = routeChanged || currentDays !== nextDays || (nextDays && text(row.dias_visita) !== nextDays);
       if (legacyChanged) operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id), { method: 'PATCH', body: JSON.stringify({ ruta: draft.ruta || null, dias_visita: draft.ruta ? nextDays : null }) }); });
     } else {
-      if (routeChanged) {
-        // El PATCH clásico también escribe dias_visita sobre la asignación más
-        // reciente; se reenvían sus días actuales para no pisarlos.
-        var last = draft.reps.length ? draft.reps[draft.reps.length - 1] : null;
-        var keepDays = last ? daysString(last.days) : normalizedDaysString(row.dias_visita);
-        operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id), { method: 'PATCH', body: JSON.stringify({ ruta: draft.ruta || null, dias_visita: draft.ruta ? (keepDays || null) : null }) }); });
+      if (routeChanged && !draft.reps.length) {
+        operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id), { method: 'PATCH', body: JSON.stringify({ ruta: draft.ruta || null, dias_visita: null }) }); });
       }
       var enabledIds = newIds;
-      // Habilitar marcas nuevas del local ANTES de tocar reponedores: el backend
-      // valida las marcas del reponedor contra cliente_local.
-      added.forEach(function (id) { operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id) + '/clientes/aplicar', { method: 'POST', body: JSON.stringify({ id_cliente: id }) }); }); });
-      aplicarQueued = true;
       draft.reps.forEach(function (rep) {
         var original = asigsFor(row.id).find(function (asig) { return asig.id === rep.id; });
         if (rep.removed) {
@@ -381,23 +373,34 @@
           return;
         }
         var nextRepDays = daysString(rep.days);
-        if (original && nextRepDays !== normalizedDaysString(original.dias_visita)) {
+        if (original && (routeChanged || nextRepDays !== normalizedDaysString(original.dias_visita))) {
           summary.reps++;
-          operations.push(function () { return API.requestJson('/web/admin/asignaciones/' + rep.id, { method: 'PATCH', body: JSON.stringify({ dias_visita: nextRepDays || null }) }); });
+          operations.push(function () { return API.requestJson('/web/admin/asignaciones/' + rep.id, { method: 'PATCH', body: JSON.stringify({ ruta: draft.ruta || null, dias_visita: nextRepDays || null }) }); });
         }
+      });
+      draft.newReps.forEach(function (rep) {
+        summary.reps++;
+        operations.push(function () {
+          return API.requestJson('/web/admin/asignaciones', { method: 'POST', body: JSON.stringify({ id_local: row.id, rut: rep.rut, ruta: draft.ruta || null, dias_visita: daysString(rep.days) || null }) })
+            .then(function (created) { rep.createdId = created.id; return created; });
+        });
+      });
+      // Primero debe existir una asignacion activa; despues se habilitan marcas
+      // del local y al final se acota el alcance de cada reponedor.
+      added.forEach(function (id) { operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id) + '/clientes/aplicar', { method: 'POST', body: JSON.stringify({ id_cliente: id }) }); }); });
+      aplicarQueued = true;
+      draft.reps.forEach(function (rep) {
+        var original = asigsFor(row.id).find(function (asig) { return asig.id === rep.id; });
+        if (rep.removed) return;
         if (repClientsChanged(rep, enabledIds, original)) {
           summary.reps++;
           operations.push(function () { return API.requestJson('/web/admin/asignaciones/' + rep.id + '/clientes', { method: 'PUT', body: JSON.stringify({ id_clientes: repClientPayload(rep, enabledIds) }) }); });
         }
       });
       draft.newReps.forEach(function (rep) {
-        summary.reps++;
         operations.push(function () {
-          return API.requestJson('/web/admin/asignaciones', { method: 'POST', body: JSON.stringify({ id_local: row.id, rut: rep.rut, dias_visita: daysString(rep.days) || null }) })
-            .then(function (created) {
-              var payload = repClientPayload(rep, enabledIds);
-              return payload.length ? API.requestJson('/web/admin/asignaciones/' + created.id + '/clientes', { method: 'PUT', body: JSON.stringify({ id_clientes: payload }) }) : null;
-            });
+          var payload = repClientPayload(rep, enabledIds);
+          return payload.length && rep.createdId ? API.requestJson('/web/admin/asignaciones/' + rep.createdId + '/clientes', { method: 'PUT', body: JSON.stringify({ id_clientes: payload }) }) : null;
         });
       });
     }
@@ -424,8 +427,26 @@
   }
   function showHistory() {
     var host = document.getElementById('h-body');
-    host.innerHTML = state.history.length ? state.history.map(function (item) { return '<div class="log-entry"><b>' + esc(item.local) + '</b> · ' + esc(new Date(item.ts).toLocaleString('es-CL')) + '<br>Ruta: ' + esc(item.rutaAntes) + ' → ' + esc(item.rutaDespues) + ' · Clientes +' + item.added + ' / -' + item.removed + (item.reps ? ' · Reponedores: ' + item.reps + ' cambio(s)' : '') + '</div>'; }).join('') : '<p class="log-empty">No hay cambios realizados durante esta sesión.</p>';
+    host.innerHTML = '<p class="log-empty">Cargando historial...</p>';
     document.getElementById('histOverlay').classList.add('open');
+    API.requestJson('/web/admin/mantenedores/rutas/historial?limit=200').then(function (payload) {
+      var items = payload.cambios || [];
+      host.innerHTML = items.length ? items.map(renderHistoryItem).join('') : '<p class="log-empty">No hay cambios guardados en el historial permanente.</p>';
+      var count = document.getElementById('histCount');
+      if (count) { count.textContent = String(items.length); count.style.display = items.length ? '' : 'none'; }
+    }).catch(function (error) {
+      host.innerHTML = '<p class="log-empty">No fue posible cargar el historial: ' + esc(errorMessage(error)) + '</p>';
+    });
+  }
+
+  function renderHistoryItem(item) {
+    var cambios = Array.isArray(item.cambios) ? item.cambios : [];
+    var lines = cambios.map(function (change) {
+      return '<div><b>' + esc(change.campo || 'Cambio') + ':</b> ' + esc(change.antes || '—') + ' → ' + esc(change.despues || '—') + '</div>';
+    }).join('');
+    return '<div class="log-entry"><b>' + esc(item.registro_id) + '</b> · ' + esc(new Date(item.creado_en).toLocaleString('es-CL')) +
+      (item.usuario_email ? ' · ' + esc(item.usuario_email) : '') +
+      (lines ? '<br>' + lines : '') + '</div>';
   }
 
   var pickedLocal = null;
@@ -492,6 +513,12 @@
   document.getElementById('a-cancel').addEventListener('click', closeAddLocal);
   document.getElementById('a-tbody').addEventListener('click', function (event) {
     var row = event.target.closest('[data-add-local]'); if (!row) return;
+    if (pickedLocal === row.dataset.addLocal) {
+      pickedLocal = null;
+      row.classList.remove('sel');
+      document.getElementById('a-next').disabled = true;
+      return;
+    }
     pickedLocal = row.dataset.addLocal;
     this.querySelectorAll('tr').forEach(function (item) { item.classList.toggle('sel', item === row); });
     document.getElementById('a-next').disabled = false;

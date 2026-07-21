@@ -284,10 +284,10 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
       fields:[
         {key:'llave',label:'Código Local Llave',type:'readonly',hint:'No editable · identificador llave del local.'},
         {key:'codigo',label:'Código Local',type:'readonly',hint:'No editable · código del local.'},
-        {key:'cadena',label:'Cadena',type:'select',options:D.meta.cadenas,required:true},
-        {key:'formato',label:'Formato',type:'select',options:D.meta.formatos,required:true},
+        {key:'cadena',label:'Cadena',type:'select',required:true},
+        {key:'formato',label:'Formato',type:'select',required:true},
         {key:'nombre',label:'Nombre Local',type:'text',required:true},
-        {key:'region',label:'Región',type:'select',options:D.meta.regiones,required:true},
+        {key:'region',label:'Región',type:'select',required:true},
         {key:'direccion',label:'Dirección',type:'text',required:true},
         {key:'estado',label:'Estado',type:'select',options:['Activo','Inactivo'],required:true,default:'Activo'}
       ],
@@ -298,7 +298,7 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
     };
   })();
   </script>
-  <script src="assets/js/admin-mantenedores-backend.js?v=20260630-4"></script>
+  <script src="assets/js/admin-mantenedores-backend.js?v=20260721-1"></script>
   <script src="assets/js/admin-propuestas-api.js?v=20260630-1"></script>
   <script>
 /* Motor genérico de Mantenedores · Retail Experts
@@ -431,9 +431,26 @@ window.MANT_DATA={"locales":[{"llave":"J403","codigo":"40000","nombre":"Darkstor
     document.getElementById('modal-title').textContent='Editar registro';
     document.getElementById('modal-sub').textContent='Modifica los datos del registro.';
     var addEditable=C.addEditable||[];
-    C.fields.forEach(function(f){ fieldEls[f.key].value=(r[f.key]!=null?r[f.key]:''); if(addEditable.indexOf(f.key)>=0 || f.type==='readonly') setFieldReadonly(f,true); else setFieldReadonly(f,false); });
+    C.fields.forEach(function(f){ setFieldValue(f, r[f.key]); if(addEditable.indexOf(f.key)>=0 || f.type==='readonly') setFieldReadonly(f,true); else setFieldReadonly(f,false); });
     document.getElementById('e-delete').style.display='';
     overlay.classList.add('open');
+  }
+  // Pone el valor del registro en el campo. Para <select>, si el valor real no
+  // está entre las opciones (p.ej. distinta capitalización o valor no visto en
+  // los datos base) lo inyecta como opción, para que NO quede vacío y no se
+  // guarde en blanco al presionar Guardar.
+  function setFieldValue(f, val){
+    var el=fieldEls[f.key]; if(!el) return;
+    val = (val==null?'':String(val));
+    if(el.tagName==='SELECT'){
+      var opt=null, i;
+      for(i=0;i<el.options.length;i++){ if(el.options[i].value===val){ opt=el.options[i]; break; } }
+      if(!opt){ var lv=val.toLowerCase(); for(i=0;i<el.options.length;i++){ if(el.options[i].value.toLowerCase()===lv){ opt=el.options[i]; break; } } }
+      if(!opt && val!==''){ opt=document.createElement('option'); opt.value=val; opt.textContent=val; el.appendChild(opt); }
+      el.value = opt?opt.value:'';
+    } else {
+      el.value=val;
+    }
   }
   function setFieldReadonly(f, ro){ var el=fieldEls[f.key]; if(!el) return; if(el.tagName==='INPUT'){ el.readOnly=ro; } el.disabled = (ro && el.tagName==='SELECT'); }
   function openAdd(){
