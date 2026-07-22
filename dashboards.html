@@ -791,6 +791,13 @@
       yesterday:{start:isoDate(YESTERDAY), end:isoDate(YESTERDAY)},
       last28:{start:isoDate(addDays(YESTERDAY,-27)), end:isoDate(YESTERDAY)}
     };
+    /* ---------- Supply (Abastecimiento): piso de fecha ----------
+       La data de abastecimiento anterior a esta fecha está sucia; el cliente no debe
+       poder consultar hacia atrás. Punto ÚNICO de configuración: cambiar aquí el día
+       (o poblarlo a futuro desde el backend) reconfigura min de los inputs y el clamp.
+       No está "regado" por el código: todo pasa por ABA_MIN_DATE/abaClampStart. */
+    var ABA_MIN_DATE='2026-07-19';
+    function abaClampStart(iso){ return (iso && iso<ABA_MIN_DATE) ? ABA_MIN_DATE : iso; }
 
     /* ---------- KPI card ---------- */
     function kpiCard(k){
@@ -1360,8 +1367,10 @@
     function abaFmtDay(iso){ var p=iso.split('-'); var ms=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']; return parseInt(p[2],10)+' '+ms[parseInt(p[1],10)-1]; }
     function abaHorizon(){
       var de=document.getElementById('f-desde'), ha=document.getElementById('f-hasta');
-      var s=(de&&de.value)||abaPeriod.start, e=(ha&&ha.value)||abaPeriod.end;
+      var s=abaClampStart((de&&de.value)||abaPeriod.start), e=abaClampStart((ha&&ha.value)||abaPeriod.end);
       if(e<s){ e=s; }
+      if(de&&de.value!==s) de.value=s;
+      if(ha&&ha.value!==e) ha.value=e;
       abaPeriod.start=s; abaPeriod.end=e;
       if(s===e) return {labels:[abaFmtDay(e)], idx:[12]};
       var days=Math.round((new Date(e)-new Date(s))/86400000)+1;
@@ -1376,8 +1385,10 @@
     var ABA=null, ABA_REAL=false;
     function abaCurPeriod(){
       var de=document.getElementById('f-desde'), ha=document.getElementById('f-hasta');
-      var s=(de&&de.value)||abaPeriod.start, e=(ha&&ha.value)||abaPeriod.end;
+      var s=abaClampStart((de&&de.value)||abaPeriod.start), e=abaClampStart((ha&&ha.value)||abaPeriod.end);
       if(e<s) e=s;
+      if(de&&de.value!==s) de.value=s;
+      if(ha&&ha.value!==e) ha.value=e;
       abaPeriod={start:s,end:e};
       return abaPeriod;
     }
@@ -1822,7 +1833,8 @@
       return window.RetailAPI.requestJson('/web/dashboard/resumen-apertura'+window.RetailAPI.buildQuery(params))
         .then(function(r){
           LOCAL_AP_DATA[nivel]=((r&&r.rows)||[]).map(function(x){
-            return { label:x.label,
+            // nombre propio para categoría/marca/producto (codprod queda como código)
+            return { label:displayAperturaLabel(nivel, x.label),
               vp:Number(x.venta_pesos)||0, vc:Number(x.venta_costo)||0, vu:Number(x.venta_unidades)||0,
               vpLy:Number(x.venta_pesos_ly)||0, vcLy:Number(x.venta_costo_ly)||0, vuLy:Number(x.venta_unidades_ly)||0,
               ins:x.instock==null?null:Number(x.instock), doh:x.doh==null?null:Number(x.doh), qb:x.quiebre==null?null:Number(x.quiebre) };
@@ -2188,7 +2200,7 @@
     function fetchLocalProductos(cod){
       return window.RetailAPI.requestJson('/web/dashboard/mapa/productos'+window.RetailAPI.buildQuery(withCliente(Object.assign(fbFilterParams(), {codigo_local:cod}))))
         .then(function(r){ return (r.productos||[]).map(function(p){ return {
-          code:p.codigo_producto, name:p.nombre||p.codigo_producto,
+          code:p.codigo_producto, name:p.nombre?displayAperturaLabel('descriptor', p.nombre):(p.codigo_producto||''),
           venta_pesos:Number(p.venta_pesos)||0, venta_costo:Number(p.venta_costo)||0, venta_unidades:Number(p.venta_unidades)||0,
           venta_pesos_ly:Number(p.venta_pesos_ly)||0, venta_costo_ly:Number(p.venta_costo_ly)||0, venta_unidades_ly:Number(p.venta_unidades_ly)||0 }; }); });
     }
@@ -2554,7 +2566,7 @@
         }
         html+='</div></div>';
         html+='<div class="pz-step"><div class="pz-step-h"><span class="pz-num">2</span> Qu\u00e9 filtros realizar</div><div class="pz-step-b"><div class="pz-filters" id="pzFilters">'
-          + PZ_FILTERS.map(function(f){ var sel=d.filters[f[0]]||[]; return '<div class="pz-filter"><label>'+f[1]+'</label><div class="ms2"><button type="button" class="ms2-btn" data-f="'+f[0]+'"><span class="ms2-txt">Todos</span><span class="ms2-cv"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5 5 6.5 8 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button><div class="ms2-pop"><div class="ms2-list">'+pzFilterOpts(f[0]).map(function(o){return '<label class="ms2-item"><input type="checkbox" value="'+o+'"'+(sel.indexOf(o)>=0?' checked':'')+' />'+o+'</label>';}).join('')+'</div></div></div></div>'; }).join('')
+          + PZ_FILTERS.map(function(f){ var sel=d.filters[f[0]]||[]; return '<div class="pz-filter"><label>'+f[1]+'</label><div class="ms2"><button type="button" class="ms2-btn" data-f="'+f[0]+'"><span class="ms2-txt">Todos</span><span class="ms2-cv"><svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 3.5 5 6.5 8 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button><div class="ms2-pop"><div class="ms2-list">'+canonicalFilterOptionsAp(f[0], pzFilterOpts(f[0])).map(function(o){return '<label class="ms2-item"><input type="checkbox" value="'+ms2Esc(o.value)+'"'+(sel.indexOf(o.value)>=0?' checked':'')+' />'+ms2Esc(o.text)+'</label>';}).join('')+'</div></div></div></div>'; }).join('')
           + '</div></div></div>';
         html+='<div class="pz-step"><div class="pz-step-h"><span class="pz-num">3</span> Qu\u00e9 indicadores ver'+(d.type==='torta'?' <span style="font-weight:600;color:var(--muted);font-size:12px;margin-left:6px">(uno para la torta)</span>':'')+'</div><div class="pz-step-b"><div class="metric-chips" id="pzIndChips">'
           + PZ_INDS.map(function(x){ var on=d.inds.indexOf(x.k)>=0; return '<button type="button" class="metric-chip'+(on?' on':'')+'" data-k="'+x.k+'" style="color:var(--purple)"><span class="mdot" style="background:var(--purple)"></span><span style="color:var(--ink)">'+x.label+'</span></button>';}).join('')
@@ -2589,7 +2601,8 @@
           panelPersonalizado(); });
         document.querySelectorAll('#pzFilters .ms2').forEach(function(box){
           var btn=box.querySelector('.ms2-btn'), pop=box.querySelector('.ms2-pop'), txt=box.querySelector('.ms2-txt'), f=btn.getAttribute('data-f');
-          function syncTxt(){ var sel=d.filters[f]||[]; txt.textContent=sel.length===0?'Todos':(sel.length===1?sel[0]:sel.length+' seleccionados'); }
+          var pzV2T={}; canonicalFilterOptionsAp(f, pzFilterOpts(f)).forEach(function(o){ pzV2T[o.value]=o.text; });
+          function syncTxt(){ var sel=d.filters[f]||[]; txt.textContent=sel.length===0?'Todos':(sel.length===1?(pzV2T[sel[0]]||sel[0]):sel.length+' seleccionados'); }
           syncTxt();
           btn.addEventListener('click', function(e){ e.stopPropagation(); var open=pop.classList.contains('open'); document.querySelectorAll('.ms2-pop.open').forEach(function(p){p.classList.remove('open');}); if(!open) pop.classList.add('open'); });
           pop.addEventListener('click', function(e){ e.stopPropagation(); });
@@ -2796,7 +2809,7 @@
         + kpiCard({label:'OSA', value:pct(osaTot), icon:IC.check, tone:'green', valueColor:osaTot>=95?'var(--green)':'var(--amber)'})
         + kpiCard({label:'Instock', value:pct(insTot), icon:IC.cd, tone:'green', valueColor:insTot>=95?'var(--green)':'var(--amber)'})
         + kpiCard({label:'DOH (días)', value:dohTot.toFixed(1), icon:IC.clock, tone:'accent'})
-        + kpiCard({label:'Fill-Rate', value:pct(frTot), icon:IC.check, tone:'green', valueColor:frTot>=95?'var(--green)':'var(--amber)'})
+        + kpiCard({label:'Quiebre', value:pct(frTot), icon:IC.check, tone:'green', valueColor:frTot>=95?'var(--green)':'var(--amber)'})
         + '</div>';
       html+='<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Evolución OSA por '+osaApLabel().toLowerCase()+'</div><div class="pc-sub">On-Shelf Availability · apertura '+osaGran+'</div></div></div><div class="chart-box h-line"><canvas id="osa-line"></canvas></div></div>';
       html+='<div id="osaWrap"></div>';
@@ -3051,7 +3064,16 @@
       if(de) de.value=p.start;
       if(ha) ha.value=p.end;
       if(el) el.textContent=periodLabel(p);
-      if(area==='abastecimiento') abaPeriod={start:p.start,end:p.end};
+      // Supply: el input no deja elegir antes del piso; otras áreas comparten estos
+      // inputs con períodos más antiguos (last28/mtd), por eso se limpia el min.
+      if(area==='abastecimiento'){
+        if(de){ de.min=ABA_MIN_DATE; de.value=abaClampStart(de.value); }
+        if(ha){ ha.min=ABA_MIN_DATE; ha.value=abaClampStart(ha.value); }
+        abaPeriod={start:(de&&de.value)||p.start, end:(ha&&ha.value)||p.end};
+      } else {
+        if(de) de.removeAttribute('min');
+        if(ha) ha.removeAttribute('min');
+      }
     }
     /* ---------- Apertura · métrica · período del área, integrados en la barra de filtros ----------
        Diferido: al togglear NO se re-renderiza; solo se actualiza el estado y el resaltado.
@@ -3219,18 +3241,43 @@
     // los inactivos; el backend filtra case-insensitive sobre producto.estado.
     var gFilters={ locales:{}, productos:{ 'Estado':['activo'] } };
     function ms2Esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+    /* ---------- Opciones de filtro: canónicas (dedup + nombre propio) ----------
+       RAÍZ de la duplicación: las tablas/matrices ya normalizan sus etiquetas con
+       displayAperturaLabel()/nomPropio(), pero los combos de filtro se construían con
+       los strings CRUDOS de la DB (/atributos). La misma cadena viene con distintas
+       grafías ("JUMBO", "Jumbo ", "jumbo") y cada variante cruda se volvía una opción
+       distinta → aparecía repetida y sin nombre propio.
+       Solución en un solo punto: se colapsan por clave canónica (minúsculas + espacios
+       normalizados) y se muestran en nombre propio. Se conserva un valor CRUDO
+       representativo como `value` para que el parámetro que va al backend siga siendo
+       un valor real de la DB (el match ya es case-insensitive vía eqCI). */
+    var FILTER_LABEL_AP={}; Object.keys(AP_FILTER).forEach(function(ap){ FILTER_LABEL_AP[AP_FILTER[ap][1]]=ap; });
+    function canonFilterKey(s){ return String(s==null?'':s).trim().toLowerCase().replace(/\s+/g,' '); }
+    /* ap = apertura ('cadena','categoria','codprod'…) para decidir el formato del texto
+       (los códigos NO se pasan a nombre propio). rawOpts = strings crudos de la DB. */
+    function canonicalFilterOptionsAp(ap, rawOpts){
+      var seen={}, out=[];
+      (rawOpts||[]).forEach(function(raw){
+        var key=canonFilterKey(raw); if(!key||seen[key]) return; seen[key]=1;
+        out.push({ value:String(raw==null?'':raw).trim(), text:(ap?displayAperturaLabel(ap,raw):nomPropio(raw)) });
+      });
+      out.sort(function(a,b){ return a.text.localeCompare(b.text,'es'); });
+      return out;
+    }
+    function canonicalFilterOptions(label, rawOpts){ return canonicalFilterOptionsAp(FILTER_LABEL_AP[label], rawOpts); }
     function buildMultiFilters(){
       ['locales','productos'].forEach(function(grp){
         var host2=document.getElementById(grp==='locales'?'fgLocales':'fgProductos'); if(!host2) return; host2.innerHTML='';
         FILTER_DEFS[grp].forEach(function(def){
-          var label=def[0], opts=def[1];
+          var label=def[0], opts=canonicalFilterOptions(label, def[1]);
+          var val2txt={}; opts.forEach(function(o){ val2txt[o.value]=o.text; });
           if(!gFilters[grp][label]) gFilters[grp][label]=[];
           var f=document.createElement('div'); f.className='fb-field';
           var ph='Todos';
-          f.innerHTML='<label>'+label+'</label><div class="ms2"><button type="button" class="ms2-btn"><span class="ms2-txt">'+ph+'</span><span class="ms2-cv"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button><div class="ms2-pop"><input type="search" class="ms2-search" placeholder="Buscar" autocomplete="off" /><div class="ms2-list">'+opts.map(function(o){return '<label class="ms2-item" data-text="'+ms2Esc(o).toLowerCase()+'"><input type="checkbox" value="'+ms2Esc(o)+'"><span>'+ms2Esc(o)+'</span></label>';}).join('')+'</div><div class="ms2-empty">Sin coincidencias</div></div></div>';
+          f.innerHTML='<label>'+label+'</label><div class="ms2"><button type="button" class="ms2-btn"><span class="ms2-txt">'+ph+'</span><span class="ms2-cv"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button><div class="ms2-pop"><input type="search" class="ms2-search" placeholder="Buscar" autocomplete="off" /><div class="ms2-list">'+opts.map(function(o){return '<label class="ms2-item" data-text="'+ms2Esc(o.text).toLowerCase()+'"><input type="checkbox" value="'+ms2Esc(o.value)+'"><span>'+ms2Esc(o.text)+'</span></label>';}).join('')+'</div><div class="ms2-empty">Sin coincidencias</div></div></div>';
           host2.appendChild(f);
           var btn=f.querySelector('.ms2-btn'), pop=f.querySelector('.ms2-pop'), txt=f.querySelector('.ms2-txt'), search=f.querySelector('.ms2-search'), empty=f.querySelector('.ms2-empty');
-          function syncTxt(){ var sel=gFilters[grp][label]; txt.textContent = sel.length===0?ph:(sel.length===1?sel[0]:sel.length+' seleccionados'); }
+          function syncTxt(){ var sel=gFilters[grp][label]; txt.textContent = sel.length===0?ph:(sel.length===1?(val2txt[sel[0]]||sel[0]):sel.length+' seleccionados'); }
           function syncItems(){
             var q=(search.value||'').trim().toLowerCase();
             var shown=0;
