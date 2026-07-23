@@ -1479,7 +1479,7 @@
       var html='<div class="kpis">'
         + kpiCard({label:'Stock (unidades)', value:num(T.stock||0), icon:IC.box, tone:'purple'})
         + kpiCard({label:'Stock en tránsito', value:num(T.transito||0), icon:IC.truck, tone:'accent'})
-        + kpiCard({label:'Stock en CD', value:num(T.cd||0), icon:IC.cd, tone:'purple'})
+        + kpiCard({label:'Stock en CD', value:T.cd==null?'-':num(T.cd), valueColor:T.cd==null?'var(--muted)':null, icon:IC.cd, tone:'purple'})
         + kpiCard({label:'Instock', value:T.instock==null?'-':pct(T.instock), valueColor:T.instock==null?'var(--muted)':COLVAR[clsIns(T.instock)], icon:IC.check, tone:'green'})
         + kpiCard({label:'DOH (días)', value:T.doh==null?'-':T.doh.toFixed(1), icon:IC.clock, tone:'accent'})
         + kpiCard({label:'Quiebre', value:T.quiebre==null?'-':pct(T.quiebre), valueColor:T.quiebre==null?'var(--muted)':COLVAR[clsQb(T.quiebre)], icon:IC.lost, tone:'accent'})
@@ -1532,7 +1532,7 @@
         {key:'label',label:drillName(curAp),type:'text',thLeft:true,get:function(r){return r.label;},cell:function(r){ var cam=DRILL_LOCAL[curAp]?galCam(curAp==='nomlocal'&&r.cod?'codlocal':curAp, r.cod||r.rawLabel||r.label):''; return '<td>'+r.label+(r.drill?drillCueHtml(r.key):'')+cam+'</td>'; }},
         {key:'stock',label:'Stock',type:'num',get:function(r){return r.stock||0;},cell:function(r){return '<td>'+num(r.stock||0)+'</td>';}},
         {key:'transito',label:'Tránsito',type:'num',get:function(r){return r.transito||0;},cell:function(r){return '<td>'+num(r.transito||0)+'</td>';}},
-        {key:'cd',label:'CD',type:'num',get:function(r){return r.cd||0;},cell:function(r){return '<td>'+num(r.cd||0)+'</td>';}},
+        {key:'cd',label:'CD',type:'num',get:function(r){return r.cd==null?-1:r.cd;},cell:function(r){return r.cd==null?'<td style="color:var(--muted)">-</td>':'<td>'+num(r.cd)+'</td>';}},
         {key:'instock',label:'Instock',type:'num',get:function(r){return r.instock==null?-1:r.instock;},cell:function(r){return pcell(r.instock, clsIns);}},
         {key:'doh',label:'DOH',type:'num',get:function(r){return r.doh==null?-1:r.doh;},cell:function(r){return r.doh==null?'<td style="color:var(--muted)">-</td>':'<td>'+r.doh.toFixed(1)+'</td>';}},
         {key:'quiebre',label:'Quiebre',type:'num',get:function(r){return r.quiebre==null?-1:r.quiebre;},cell:function(r){return pcell(r.quiebre, clsQb);}}
