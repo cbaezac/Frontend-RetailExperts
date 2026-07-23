@@ -43,24 +43,20 @@
   }
 
   function installTabs() {
-    var operational = [].slice.call(document.querySelectorAll('.tab-group')).find(function (group) {
-      var title = group.querySelector('.tab-group-title');
-      return title && title.textContent.trim() === 'Operacional';
+    // El rediseño ya trae los botones "Próximos Quiebres" y "Entregable CPFR"
+    // en el grupo Supply, pero bloqueados (.tab-locked, sin data-area). Aquí los
+    // desbloqueamos y les asignamos su área demo, sin crear duplicados.
+    var AREAS = {'Próximos Quiebres': 'proxq', 'Entregable CPFR': 'cpfr'};
+    [].slice.call(document.querySelectorAll('.tab.tab-locked')).forEach(function (btn) {
+      var label = (btn.textContent || '').replace('Servicio no contratado', '').trim();
+      var area = AREAS[label];
+      if (!area || btn.getAttribute('data-area')) return;
+      var tip = btn.querySelector('.lock-tip');
+      if (tip) tip.parentNode.removeChild(tip);
+      btn.classList.remove('tab-locked');
+      btn.setAttribute('data-area', area);
+      btn.textContent = label;
     });
-    var buttons = operational && operational.querySelector('.tab-group-btns');
-    if (!buttons || buttons.querySelector('[data-area="proxq"]')) return;
-    var prox = document.createElement('button');
-    prox.className = 'tab';
-    prox.type = 'button';
-    prox.setAttribute('data-area', 'proxq');
-    prox.textContent = 'Próximos Quiebres';
-    var cpfr = document.createElement('button');
-    cpfr.className = 'tab';
-    cpfr.type = 'button';
-    cpfr.setAttribute('data-area', 'cpfr');
-    cpfr.textContent = 'Entregable CPFR';
-    buttons.appendChild(prox);
-    buttons.appendChild(cpfr);
   }
 
   function projectedRows() {
