@@ -341,12 +341,15 @@
       {key:'instock', label:'Instock', group:'Operacionales', tipo:'avg'},
       {key:'doh', label:'DOH', group:'Operacionales', tipo:'avg'},
       {key:'quiebre', label:'Quiebre', group:'Operacionales', tipo:'avg'},
-      // TEMPORAL: los stocks todavía no están conectados a datos reales; se descargan
-      // en 0 (tipo:'cero'). Cuando exista la fuente real, quitar tipo:'cero' y sumarán
-      // row[key] como el resto. (Operacionales salen 0 porque el backend aún no los manda.)
-      {key:'stock', label:'Stock en Sala', group:'Stocks', tipo:'cero'},
-      {key:'stock_transito', label:'Stock en Tránsito', group:'Stocks', tipo:'cero'},
-      {key:'stock_cd', label:'Stock en CD', group:'Stocks', tipo:'cero'}
+      // Stocks reales desde el backend (stock_historico / stock_cd_historico).
+      // Sala y tránsito suman como el resto (son a nivel local×producto). El CD es a nivel
+      // (cadena, producto), NO por local: solo trae dato cuando la apertura es exactamente a
+      // ese grano (Cadena + Código/Nombre Producto, sin atributos de local); en cualquier
+      // otro caso la celda sale VACÍA (ni 0), para no sobre-contar ni mostrar un número
+      // engañoso. La lógica del grano está en buildRows (cdGrainOk).
+      {key:'stock', label:'Stock en Sala', group:'Stocks'},
+      {key:'stock_transito', label:'Stock en Tránsito', group:'Stocks'},
+      {key:'stock_cd', label:'Stock en CD', group:'Stocks', tipo:'cd'}
     ];
     var LOC_ATTRS = [
       {key:'cadena', label:'Cadena', opt:'cadenas', param:'cadena'},
@@ -525,6 +528,14 @@
       var filas=payload.filas||[];
       var locCols=LOC_ATTRS.filter(function(a){ return state.locIncl[a.key]; });
       var prodCols=PROD_ATTRS.filter(function(a){ return state.prodIncl[a.key]; });
+      // El Stock en CD es a nivel (cadena, producto): solo tiene sentido cuando la apertura
+      // es EXACTAMENTE a ese grano — Cadena + identidad de producto (código/nombre/EAN) y
+      // NINGÚN atributo de local (formato/región/código local/nombre local/dirección), que
+      // partirían la cadena y repetirían/sobre-contarían el CD. Si no, la celda va vacía.
+      var li=state.locIncl, pi=state.prodIncl;
+      var cdGrainOk = !!li.cadena
+        && !li.formato && !li.region && !li.codigo && !li.nombre && !li.direccion
+        && !!(pi.codigo || pi.nombre || pi.ean);
       var indCols=INDICADORES.filter(function(it){ return state.indicadores[it.key] && !it.disabled; });
       var APN={consolidado:'Consolidado',diario:'Fecha',semanal:'Semana',mensual:'Mes',anual:'Año'};
       var headers=[APN[state.apertura]||'Período'];
@@ -549,7 +560,7 @@
       order.sort(function(a,b2){ return map[a].b.k<map[b2].b.k?-1:(map[a].b.k>map[b2].b.k?1:(a<b2?-1:1)); });
       var rows=order.map(function(key){
         var g=map[key]; var out=[g.b.label]; if(hasAnio) out.push(g.b.anio||''); out=out.concat(g.attrs);
-        indCols.forEach(function(it){ if(it.tipo==='precio'){ out.push(g._vu?Math.round(g._vp/g._vu):0); } else if(it.tipo==='avg'){ out.push(g._n?Math.round((g.sums[it.key]||0)/g._n*10)/10:0); } else if(it.tipo==='cero'){ out.push(0); } else { out.push(g.sums[it.key]||0); } });
+        indCols.forEach(function(it){ if(it.tipo==='precio'){ out.push(g._vu?Math.round(g._vp/g._vu):0); } else if(it.tipo==='avg'){ out.push(g._n?Math.round((g.sums[it.key]||0)/g._n*10)/10:0); } else if(it.tipo==='cd'){ out.push(cdGrainOk ? (g._n?Math.round((g.sums[it.key]||0)/g._n):0) : ''); } else { out.push(g.sums[it.key]||0); } });
         return out;
       });
       return { headers:headers, rows:rows, truncated:(payload.total||0)>filas.length, indCount:indCols.length, indKeys:indCols.map(function(it){return it.key;}) };
@@ -608,7 +619,7 @@
       widths.forEach(function(w){ xml+='<Column ss:AutoFitWidth="0" ss:Width="'+Math.round(w)+'"/>'; });
       xml+='<Row ss:Height="22">'; built.headers.forEach(function(h){ xml+='<Cell ss:StyleID="hdr"><Data ss:Type="String">'+esc(h)+'</Data></Cell>'; }); xml+='</Row>';
       built.rows.forEach(function(r){ xml+='<Row>'; r.forEach(function(v,ci){
-        if(ci>=indStart){ var k=built.indKeys[ci-indStart]; var st=STYLE_BY_KEY[k]||'mil'; var val=PCT_KEYS[k]?Number(v)/100:Number(v); xml+='<Cell ss:StyleID="'+st+'"><Data ss:Type="Number">'+val+'</Data></Cell>'; }
+        if(ci>=indStart){ if(v===''||v==null){ xml+='<Cell ss:StyleID="c"></Cell>'; } else { var k=built.indKeys[ci-indStart]; var st=STYLE_BY_KEY[k]||'mil'; var val=PCT_KEYS[k]?Number(v)/100:Number(v); xml+='<Cell ss:StyleID="'+st+'"><Data ss:Type="Number">'+val+'</Data></Cell>'; } }
         else { var t=(typeof v==='number')?'Number':'String'; xml+='<Cell ss:StyleID="c"><Data ss:Type="'+t+'">'+esc(v)+'</Data></Cell>'; }
       }); xml+='</Row>'; });
       xml+='</Table></Worksheet></Workbook>';
