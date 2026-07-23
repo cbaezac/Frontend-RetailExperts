@@ -31,7 +31,7 @@
   function daysString(days) { return DAY_ORDER.filter(function (day) { return days[day]; }).map(function (day) { return DAY_NUMBERS[day]; }).join(','); }
   function normalizedDaysString(value) { return daysString(daysObject(value)); }
   function clientIds(row) { return (row.clientes || []).map(function (client) { return Number(client.id); }); }
-  function activeRows() { return state.rows.filter(function (row) { return clientIds(row).length > 0; }); }
+  function activeRows() { return state.rows.filter(function (row) { return unionClientIds(row).length > 0; }); }
   function toast(message, isError) {
     toastNode.textContent = message;
     toastNode.style.background = isError ? '#9f2d20' : '';
@@ -67,7 +67,7 @@
 
   function cloneDraft(row) {
     var selected = {};
-    clientIds(row).forEach(function (id) { selected[id] = true; });
+    unionClientIds(row).forEach(function (id) { selected[id] = true; });
     var reps = asigsFor(row.id).map(function (asig) {
       var sel = {};
       asigClientIds(asig).forEach(function (id) { sel[id] = true; });
@@ -345,7 +345,7 @@
   function saveEdit() {
     var row = state.current, draft = state.draft;
     if (!row || !draft) return;
-    var oldIds = clientIds(row), newIds = state.clients.filter(function (client) { return draft.clients[client.id]; }).map(function (client) { return Number(client.id); });
+    var oldIds = unionClientIds(row), newIds = state.clients.filter(function (client) { return draft.clients[client.id]; }).map(function (client) { return Number(client.id); });
     var added = newIds.filter(function (id) { return oldIds.indexOf(id) < 0; });
     var removed = oldIds.filter(function (id) { return newIds.indexOf(id) < 0; });
     var routeChanged = text(row.ruta) !== draft.ruta;
@@ -365,6 +365,15 @@
         operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id), { method: 'PATCH', body: JSON.stringify({ ruta: draft.ruta || null, dias_visita: null }) }); });
       }
       var enabledIds = newIds;
+      var covered = {};
+      draft.reps.filter(function (rep) { return !rep.removed; }).concat(draft.newReps).forEach(function (rep) {
+        repClientPayload(rep, enabledIds).forEach(function (id) { covered[id] = true; });
+      });
+      var sinReponedor = enabledIds.filter(function (id) { return !covered[id]; });
+      if (sinReponedor.length) {
+        toast('Cada marca habilitada debe quedar asociada al menos a un reponedor', true);
+        return;
+      }
       draft.reps.forEach(function (rep) {
         var original = asigsFor(row.id).find(function (asig) { return asig.id === rep.id; });
         if (rep.removed) {
@@ -381,13 +390,12 @@
       draft.newReps.forEach(function (rep) {
         summary.reps++;
         operations.push(function () {
-          return API.requestJson('/web/admin/asignaciones', { method: 'POST', body: JSON.stringify({ id_local: row.id, rut: rep.rut, ruta: draft.ruta || null, dias_visita: daysString(rep.days) || null }) })
+          return API.requestJson('/web/admin/asignaciones', { method: 'POST', body: JSON.stringify({ id_local: row.id, rut: rep.rut, ruta: draft.ruta || null, dias_visita: daysString(rep.days) || null, id_clientes: repClientPayload(rep, enabledIds) }) })
             .then(function (created) { rep.createdId = created.id; return created; });
         });
       });
-      // Primero debe existir una asignacion activa; despues se habilitan marcas
-      // del local y al final se acota el alcance de cada reponedor.
-      added.forEach(function (id) { operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id) + '/clientes/aplicar', { method: 'POST', body: JSON.stringify({ id_cliente: id }) }); }); });
+      // En modo multi-reponedor la fuente de verdad son exclusivamente los
+      // clientes materializados en cada asignacion.
       aplicarQueued = true;
       draft.reps.forEach(function (rep) {
         var original = asigsFor(row.id).find(function (asig) { return asig.id === rep.id; });
@@ -397,18 +405,12 @@
           operations.push(function () { return API.requestJson('/web/admin/asignaciones/' + rep.id + '/clientes', { method: 'PUT', body: JSON.stringify({ id_clientes: repClientPayload(rep, enabledIds) }) }); });
         }
       });
-      draft.newReps.forEach(function (rep) {
-        operations.push(function () {
-          var payload = repClientPayload(rep, enabledIds);
-          return payload.length && rep.createdId ? API.requestJson('/web/admin/asignaciones/' + rep.createdId + '/clientes', { method: 'PUT', body: JSON.stringify({ id_clientes: payload }) }) : null;
-        });
-      });
     }
 
     // Habilitación de marcas a nivel local (cliente_local). En modo multi las
     // altas ya se encolaron antes de los reponedores; las bajas van al final.
     if (!aplicarQueued) added.forEach(function (id) { operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id) + '/clientes/aplicar', { method: 'POST', body: JSON.stringify({ id_cliente: id }) }); }); });
-    removed.forEach(function (id) { operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id) + '/clientes/quitar', { method: 'POST', body: JSON.stringify({ id_cliente: id }) }); }); });
+    if (!state.asigByLocal) removed.forEach(function (id) { operations.push(function () { return API.requestJson('/web/admin/mantenedores/rutas/' + encodeURIComponent(row.id) + '/clientes/quitar', { method: 'POST', body: JSON.stringify({ id_cliente: id }) }); }); });
 
     if (!operations.length) { closeEdit(); toast('No había diferencias para guardar'); return; }
     var button = document.getElementById('m-save'); button.disabled = true;
