@@ -74,8 +74,16 @@
     });
   }
 
+  function fechaChilena(value) {
+    if (value == null || value === '') return '';
+    var match = /^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/.exec(String(value).trim());
+    if (!match) return String(value);
+    return match[3] + '-' + match[2] + '-' + match[1];
+  }
+
   function displayValue(key, value) {
     if (key === 'disponible' || key === 'implementado') return formatBoolean(value);
+    if (key === 'fecha_levantamiento') return fechaChilena(value);
     if (key === 'cadena' || key === 'formato' || key === 'nombre_local' || key === 'cliente' || key === 'producto' || key === 'categoria_tareas' || key === 'nombre_ciclo' || key === 'mueble' || key === 'observacion') {
       return nomPropio(value);
     }
