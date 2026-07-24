@@ -495,7 +495,8 @@
     function toast(msg){ var el=document.getElementById('toast'); el.innerHTML='<svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>'+msg+'</span>'; el.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(function(){ el.classList.remove('show'); }, 2800); }
 
     function buildVentasQuery(){
-      var params={ limit:20000 };
+      // limit:0 => sin tope en el backend: trae exactamente lo que calce con los filtros.
+      var params={ limit:0 };
       if(state.apertura && state.apertura!=='consolidado') params.gran=state.apertura;
       if(state.fStart) params.fecha_desde=state.fStart;
       if(state.fEnd) params.fecha_hasta=state.fEnd;
