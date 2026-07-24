@@ -3126,6 +3126,7 @@
       else if(area==='osa'){ h=acGran('osaGranSeg',osaGran)+acSeg('osaApSeg',osaApertura); }
       else if(area==='forecast'){ h=acSeg('fcApSeg',fcApertura); }
       else if(area==='promociones'){ h=acGran('promoGranSeg',promoGran)+'<div style="margin-left:24px">'+acSeg('promoApSeg',promoApertura)+'</div>'; }
+      else if(area==='cpfr'){ h = window.__cpfrAreaControls ? window.__cpfrAreaControls() : ''; }
       else { slot.innerHTML=''; slot.style.display='none'; return; }
       slot.innerHTML=h; slot.style.display='flex';
       var ab=document.getElementById('applyBtn'); if(ab) ab.classList.remove('fb-apply-dirty'); // recién aplicado: sin pendientes
@@ -3154,6 +3155,7 @@
       else if(area==='osa'){ onSeg('osaApSeg', function(v){ osaApertura=v; }); onSeg('osaGranSeg', function(v){ osaGran=v; }); }
       else if(area==='forecast'){ onSeg('fcApSeg', function(v){ fcApertura=v; }); }
       else if(area==='promociones'){ onSeg('promoApSeg', function(v){ promoApertura=v; promoSort={key:null,dir:1}; }); onSeg('promoGranSeg', function(v){ promoGran=v; }); }
+      else if(area==='cpfr'){ if(window.__cpfrWireControls) window.__cpfrWireControls(); }
     }
     var MAPA_FIELDS={'Cadena':1,'Formato':1,'Categoría':1,'Marca':1,'Descriptor Producto':1};
     var LOCAL_LOC_FIELDS={'Código Local':1,'Nombre Local':1};
@@ -3213,6 +3215,7 @@
       if(active==='comercial' || active==='comparativo'){ COM.aperturas={}; drillCache={}; CMP={ana:{}, comp:{}}; cmpDrillCache={}; }
       if(active==='resumen' || active==='local' || active==='mapa'){ RES=null; RES_OPS=null; LOCAL_AP_DATA={}; cadDrill=[]; topDrill=null; topProdCache={}; if(window.__mapaInvalidate) window.__mapaInvalidate(); }
       if(active==='abastecimiento'){ ABA=null; abaDrill=[]; }
+      if(active==='cpfr'){ if(window.__cpfrInvalidate) window.__cpfrInvalidate(); }
       showArea(active);
     });
 
