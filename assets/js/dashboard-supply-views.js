@@ -153,6 +153,36 @@
     charts.push(ch);
   }
 
+  // Controles de la barra de filtros para Próximos Quiebres (apertura · ver por +
+  // horizonte instock), expuestos como hooks que dashboards.html invoca desde
+  // buildAreaControls/wireAreaControls (mismo patrón que __cpfrAreaControls). El
+  // estado (pqApertura/pqHorizon) vive acá, por eso el markup se arma en este
+  // archivo. Aplican al toque (datos DEMO, sin fetch): actualizan estado, resetean
+  // el drill y re-renderizan vía panelProxQuiebres (que corre el guard de datos).
+  window.__proxqAreaControls = function () {
+    var seg = APERTURAS.map(function (a) {
+      return '<button type="button" data-ap="' + a[0] + '"' + (a[0] === pqApertura ? ' class="on"' : '') + '>' + a[1] + '</button>';
+    }).join('');
+    return '<div class="ctl-group"><label>Apertura · ver por</label><div class="seg" id="pqApSeg">' + seg + '</div></div>'
+      + '<div class="ctl-group"><label>Horizonte instock (días)</label><input type="number" id="pqHz" min="1" step="1" value="' + pqHorizon + '" style="width:86px;font-family:var(--font-body);font-size:.82rem;color:var(--ink);background:#fff;border:1.2px solid var(--line);border-radius:8px;padding:7px 10px;outline:none" /></div>';
+  };
+  window.__proxqWireControls = function () {
+    var seg = document.getElementById('pqApSeg');
+    if (seg) seg.addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      var v = b.getAttribute('data-ap'); if (v === pqApertura) return;
+      pqApertura = v; pqDrill = [];
+      seg.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      panelProxQuiebres();
+    });
+    var hz = document.getElementById('pqHz');
+    if (hz) hz.addEventListener('change', function () {
+      var n = parseInt(this.value, 10); if (!isFinite(n) || n < 1) n = 1;
+      this.value = n; pqHorizon = n; pqDrill = [];
+      panelProxQuiebres();
+    });
+  };
+
   /* ---- Entregable CPFR (rediseño + datos REALES /web/dashboard/cpfr/detalle) ----
      Regla de negocio (main, confirmada 2026-07-23): el usuario ve 3 estados —
      Abierto (recién detectado, duración 0), Persiste (sigue abierto, >0 días) y
@@ -232,20 +262,22 @@
       + '<div class="kpi" style="background:#F2E7F7;border:1px solid #E4CFEE;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center"><button type="button" id="cpfrDl" title="Descargar reporte" style="cursor:pointer;width:44px;height:44px;border-radius:50%;border:0;background:var(--purple);color:#fff;display:grid;place-items:center"><span style="width:22px;height:22px;display:block">' + DL_ICON + '</span></button><span style="font-family:var(--font-display);font-weight:800;font-size:.82rem;line-height:1.15;color:var(--purple)">Descargar reporte</span><span style="font-style:italic;font-size:.72rem;color:var(--purple);opacity:.8">datos al ' + hasta + '</span></div>'
       + '</div>';
     html += '<div class="grid-charts">'
-      + '<div class="panel-card"><div class="pc-head"><div><div class="pc-title">Estatus de casos</div><div class="pc-sub">Abierto · Persiste · Resuelto</div></div></div><div class="chart-box h-mid"><canvas id="cpfr-pie"></canvas></div></div>'
+      + '<div class="panel-card"><div class="pc-head"><div><div class="pc-title">Estatus de casos</div><div class="pc-sub">Persiste · Resuelto</div></div></div><div class="chart-box h-mid"><canvas id="cpfr-pie"></canvas></div></div>'
       + '<div class="panel-card"><div class="pc-head"><div><div class="pc-title">Casos por cadena</div><div class="pc-sub">Según estatus</div></div></div><div class="chart-box h-mid"><canvas id="cpfr-bar"></canvas></div></div>'
       + '</div>';
     html += '<div id="cpfrWrap"></div>';
     host.innerHTML = html;
 
-    var est = {Abierto: 0, Persiste: 0, Resuelto: 0};
-    casos.forEach(function (c) { est[cpfrDisplayEstatus(c)]++; });
-    pieChart(document.getElementById('cpfr-pie'), ['Abierto', 'Persiste', 'Resuelto'], [est.Abierto, est.Persiste, est.Resuelto], [CPFR_EST_COLOR.Abierto, CPFR_EST_COLOR.Persiste, CPFR_EST_COLOR.Resuelto], function (n) { return num(n) + ' casos'; });
+    // "Abierto" (no resuelto, duración 0) se cuenta como Persiste: así torta y
+    // barras suman el total y calzan con el KPI "Casos persisten" (= totales − resueltos).
+    var est = {Persiste: 0, Resuelto: 0};
+    casos.forEach(function (c) { est[c.estado === 'RESUELTO' ? 'Resuelto' : 'Persiste']++; });
+    pieChart(document.getElementById('cpfr-pie'), ['Persiste', 'Resuelto'], [est.Persiste, est.Resuelto], [CPFR_EST_COLOR.Persiste, CPFR_EST_COLOR.Resuelto], function (n) { return num(n) + ' casos'; });
 
     var byCad = {};
-    casos.forEach(function (c) { var e = cpfrDisplayEstatus(c); if (!byCad[c.cadena]) byCad[c.cadena] = {Abierto: 0, Persiste: 0, Resuelto: 0}; byCad[c.cadena][e]++; });
+    casos.forEach(function (c) { var e = c.estado === 'RESUELTO' ? 'Resuelto' : 'Persiste'; if (!byCad[c.cadena]) byCad[c.cadena] = {Persiste: 0, Resuelto: 0}; byCad[c.cadena][e]++; });
     var cads = Object.keys(byCad);
-    var cb = new Chart(document.getElementById('cpfr-bar'), {type: 'bar', data: {labels: cads, datasets: ['Abierto', 'Persiste', 'Resuelto'].map(function (e) {
+    var cb = new Chart(document.getElementById('cpfr-bar'), {type: 'bar', data: {labels: cads, datasets: ['Persiste', 'Resuelto'].map(function (e) {
       return {label: e, data: cads.map(function (c) { return byCad[c][e]; }), backgroundColor: CPFR_EST_COLOR[e], borderRadius: 5, maxBarThickness: 44};
     })},
       options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {display: true, position: 'top', align: 'end', labels: {usePointStyle: true, pointStyle: 'circle', boxWidth: 8, padding: 14, font: {weight: '600'}}}}, scales: {x: {grid: {display: false}, stacked: true}, y: {grid: {color: 'rgba(42,20,8,0.07)'}, stacked: true}}}});
@@ -276,7 +308,7 @@
     if (!rows.length) body = '<tr><td colspan="' + cols.length + '" style="text-align:center;color:var(--muted);padding:26px">Sin casos con este estatus</td></tr>';
     function swBtn(m, label) { return '<button type="button" data-m="' + m + '"' + (cpfrStatusFilter === m ? ' class="on"' : '') + '>' + label + '</button>'; }
     document.getElementById('cpfrWrap').innerHTML = '<div class="panel-card full" id="cpfrMatrix" style="text-align:center"><div class="pc-head" style="text-align:left"><div><div class="pc-title">Detalle de casos · Local / Producto</div><div class="pc-sub">Seguimiento de quiebres y próximos quiebres · datos reales</div></div>'
-      + '<div class="metric-switch" id="cpfrSw">' + swBtn('todos', 'Todos') + swBtn('abierto', 'Abierto') + swBtn('persiste', 'Persiste') + swBtn('resuelto', 'Resuelto') + '</div></div>'
+      + '<div class="metric-switch" id="cpfrSw">' + swBtn('todos', 'Todos') + swBtn('persiste', 'Persiste') + swBtn('resuelto', 'Resuelto') + '</div></div>'
       + '<div class="table-scroll"><table class="matrix" id="cpfrTable" style="font-size:.72rem;table-layout:fixed;width:100%;min-width:0"><colgroup><col style="width:11%"><col style="width:12%"><col style="width:17%"><col style="width:12%"><col style="width:15%"><col style="width:12%"><col style="width:10%"><col style="width:11%"></colgroup><thead>' + smThead(cols, cpfrSort) + '</thead><tbody>' + body + '</tbody></table></div></div>';
     smWire('#cpfrMatrix', cols, cpfrSort, renderCpfrMatrix);
     var sw = document.getElementById('cpfrSw'); if (sw) sw.addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; cpfrStatusFilter = b.getAttribute('data-m'); renderCpfrMatrix(); });
