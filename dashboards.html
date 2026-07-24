@@ -1787,13 +1787,22 @@
         vpLy:Number(l.venta_pesos_ly)||0, vcLy:Number(l.venta_costo_ly)||0, vuLy:Number(l.venta_unidades_ly)||0,
         mVp:0, mVc:0, mVu:0, osa:0, ins:0, doh:0, qb:0 };
     }
-    var RES_OPS = null; // instock/doh/quiebre reales (indicadores_abastecimiento_diario, MTD)
+    var RES_OPS = null; // instock/doh/quiebre reales del total (indicadores_abastecimiento_diario, MTD)
+    var RES_OPS_LOC = null; // mapa codigo_local -> {ins,doh,qb} para el Top 50 de Negocio (MTD)
     function loadResumenOps(){
       var p=DEFAULT_PERIODS.mtd;
-      var params=withCliente(Object.assign({apertura:'cadena', desde:p.start, hasta:p.end}, fbFilterParams()));
-      return window.RetailAPI.requestJson('/web/dashboard/abastecimiento'+window.RetailAPI.buildQuery(params))
+      var common=Object.assign({desde:p.start, hasta:p.end}, fbFilterParams());
+      // Total (KPIs operacionales) por cadena.
+      var totParams=withCliente(Object.assign({apertura:'cadena'}, common));
+      var totP=window.RetailAPI.requestJson('/web/dashboard/abastecimiento'+window.RetailAPI.buildQuery(totParams))
         .then(function(r){ RES_OPS=(r&&r.totales)||null; })
         .catch(function(){ RES_OPS=null; });
+      // Por local (Top 50 · Negocio): mismos indicadores que la vista Local, sin filtrar por local.
+      var locParams=withCliente(Object.assign({apertura:'codlocal'}, common));
+      var locP=window.RetailAPI.requestJson('/web/dashboard/abastecimiento'+window.RetailAPI.buildQuery(locParams))
+        .then(function(r){ var m={}; ((r&&r.values)||[]).forEach(function(v){ m[String(v.label)]={ins:v.instock, doh:v.doh, qb:v.quiebre}; }); RES_OPS_LOC=m; })
+        .catch(function(){ RES_OPS_LOC=null; });
+      return Promise.all([totP, locP]);
     }
     function loadResumen(){
       var opsP = loadResumenOps();
@@ -2161,7 +2170,7 @@
       var m=RES_MET[resMetric];
       if(_currentArea==='local'){ renderTopCategorias(m); return; }
       if(topDrill){ renderLocalProductos(m); return; }
-      var rows=FL().map(function(l){ var val=l[resMetric], ly=l[m.ly], meta=l[m.meta]; return { l:l, rank:l, cad:l.cad, fmt:l.fmt, cod:l.cod, nom:l.nom, val:val, varp:ly?(val/ly-1)*100:0, av:meta?val/meta*100:0, osa:l.osa, ins:l.ins, doh:l.doh, qb:l.qb }; }).sort(function(a,b){return b.val-a.val;}).slice(0,50);
+      var rows=FL().map(function(l){ var val=l[resMetric], ly=l[m.ly], meta=l[m.meta]; var op=(RES_OPS_LOC&&RES_OPS_LOC[l.cod])||(HAS_OPS?{ins:l.ins,doh:l.doh,qb:l.qb}:null); return { l:l, rank:l, cad:l.cad, fmt:l.fmt, cod:l.cod, nom:l.nom, val:val, varp:ly?(val/ly-1)*100:0, av:meta?val/meta*100:0, osa:l.osa, ins:op?op.ins:null, doh:op?op.doh:null, qb:op?op.qb:null }; }).sort(function(a,b){return b.val-a.val;}).slice(0,50);
       document.getElementById('topSub').textContent='Top 50 por '+m.label.toLowerCase()+' · ordena por cualquier columna';
       var cols=[
         {key:'cad',label:'Cadena',type:'text',get:function(r){return r.cad;},cell:function(r){return '<td>'+r.cad+'</td>';}},
@@ -2172,9 +2181,9 @@
         {key:'varp',label:'Variación',type:'num',get:function(r){return r.varp;},cell:function(r){return '<td class="'+(r.varp>=0?'pos':'neg')+'">'+(r.varp>=0?'+':'')+r.varp.toFixed(1)+'%</td>';}},
         {key:'av',label:'Avance meta',type:'num',get:function(r){return r.av;},cell:function(r){return avanceTd(r.av);}},
         {key:'osa',label:'OSA',type:'num',get:function(r){return r.osa;},cell:function(r){return HAS_OPS?('<td class="'+clsOSA(r.osa)+'">'+r.osa.toFixed(1)+'%</td>'):SIN_DATOS_TD;}},
-        {key:'ins',label:'Instock',type:'num',get:function(r){return r.ins;},cell:function(r){return HAS_OPS?('<td class="'+clsIns(r.ins)+'">'+r.ins.toFixed(1)+'%</td>'):SIN_DATOS_TD;}},
-        {key:'doh',label:'DOH',type:'num',get:function(r){return r.doh;},cell:function(r){return HAS_OPS?('<td>'+r.doh.toFixed(1)+'</td>'):SIN_DATOS_TD;}},
-        {key:'qb',label:'Quiebres',type:'num',get:function(r){return r.qb;},cell:function(r){return HAS_OPS?('<td class="'+clsQb(r.qb)+'">'+r.qb.toFixed(1)+'%</td>'):SIN_DATOS_TD;}}
+        {key:'ins',label:'Instock',type:'num',get:function(r){return r.ins==null?-1:r.ins;},cell:function(r){return r.ins==null?SIN_DATOS_TD:'<td class="'+clsIns(r.ins)+'">'+r.ins.toFixed(1)+'%</td>';}},
+        {key:'doh',label:'DOH',type:'num',get:function(r){return r.doh==null?-1:r.doh;},cell:function(r){return r.doh==null?SIN_DATOS_TD:'<td>'+r.doh.toFixed(1)+'</td>';}},
+        {key:'qb',label:'Quiebres',type:'num',get:function(r){return r.qb==null?-1:r.qb;},cell:function(r){return r.qb==null?SIN_DATOS_TD:'<td class="'+clsQb(r.qb)+'">'+r.qb.toFixed(1)+'%</td>';}}
       ];
       var sorted=smSortRows(cols, rows, topSort);
       var body=sorted.map(function(r){ return '<tr>'+cols.map(function(c){return c.cell(r);}).join('')+'</tr>'; }).join('');
@@ -3211,7 +3220,7 @@
       var active = document.querySelector('.tab.on').getAttribute('data-area');
       // Invalidar cachés para que los datos se refetcheen con los filtros aplicados
       if(active==='comercial' || active==='comparativo'){ COM.aperturas={}; drillCache={}; CMP={ana:{}, comp:{}}; cmpDrillCache={}; }
-      if(active==='resumen' || active==='local' || active==='mapa'){ RES=null; RES_OPS=null; LOCAL_AP_DATA={}; cadDrill=[]; topDrill=null; topProdCache={}; if(window.__mapaInvalidate) window.__mapaInvalidate(); }
+      if(active==='resumen' || active==='local' || active==='mapa'){ RES=null; RES_OPS=null; RES_OPS_LOC=null; LOCAL_AP_DATA={}; cadDrill=[]; topDrill=null; topProdCache={}; if(window.__mapaInvalidate) window.__mapaInvalidate(); }
       if(active==='abastecimiento'){ ABA=null; abaDrill=[]; }
       showArea(active);
     });
