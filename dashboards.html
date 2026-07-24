@@ -3135,6 +3135,7 @@
       else if(area==='osa'){ h=acGran('osaGranSeg',osaGran)+acSeg('osaApSeg',osaApertura); }
       else if(area==='forecast'){ h=acSeg('fcApSeg',fcApertura); }
       else if(area==='promociones'){ h=acGran('promoGranSeg',promoGran)+'<div style="margin-left:24px">'+acSeg('promoApSeg',promoApertura)+'</div>'; }
+      else if(area==='proxq'){ h = window.__proxqAreaControls ? window.__proxqAreaControls() : ''; }
       else if(area==='cpfr'){ h = window.__cpfrAreaControls ? window.__cpfrAreaControls() : ''; }
       else { slot.innerHTML=''; slot.style.display='none'; return; }
       slot.innerHTML=h; slot.style.display='flex';
@@ -3164,6 +3165,7 @@
       else if(area==='osa'){ onSeg('osaApSeg', function(v){ osaApertura=v; }); onSeg('osaGranSeg', function(v){ osaGran=v; }); }
       else if(area==='forecast'){ onSeg('fcApSeg', function(v){ fcApertura=v; }); }
       else if(area==='promociones'){ onSeg('promoApSeg', function(v){ promoApertura=v; promoSort={key:null,dir:1}; }); onSeg('promoGranSeg', function(v){ promoGran=v; }); }
+      else if(area==='proxq'){ if(window.__proxqWireControls) window.__proxqWireControls(); }
       else if(area==='cpfr'){ if(window.__cpfrWireControls) window.__cpfrWireControls(); }
     }
     var MAPA_FIELDS={'Cadena':1,'Formato':1,'Categoría':1,'Marca':1,'Descriptor Producto':1};
