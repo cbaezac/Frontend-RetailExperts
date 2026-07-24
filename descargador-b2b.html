@@ -603,6 +603,7 @@
       xml+='<Styles>'
         +'<Style ss:ID="hdr"><Font ss:Bold="1" ss:Color="#FFFFFF"/><Interior ss:Color="#A54199" ss:Pattern="Solid"/>'+ALIGN+BORD+'</Style>'
         +'<Style ss:ID="c">'+ALIGN+BORD+'</Style>'
+        +'<Style ss:ID="fecha">'+ALIGN+BORD+'<NumberFormat ss:Format="Short Date"/></Style>'
         +'<Style ss:ID="clp">'+ALIGN+BORD+'<NumberFormat ss:Format="&quot;$&quot;#,##0"/></Style>'
         +'<Style ss:ID="mil">'+ALIGN+BORD+'<NumberFormat ss:Format="#,##0"/></Style>'
         +'<Style ss:ID="pctS">'+ALIGN+BORD+'<NumberFormat ss:Format="0.0%"/></Style>'
@@ -619,8 +620,14 @@
       xml+='<Worksheet ss:Name="Datos"><Table>';
       widths.forEach(function(w){ xml+='<Column ss:AutoFitWidth="0" ss:Width="'+Math.round(w)+'"/>'; });
       xml+='<Row ss:Height="22">'; built.headers.forEach(function(h){ xml+='<Cell ss:StyleID="hdr"><Data ss:Type="String">'+esc(h)+'</Data></Cell>'; }); xml+='</Row>';
+      // Apertura diaria: la 1ª columna ("Fecha") es una fecha real -> se emite como
+      // DateTime (no String) para que Excel la trate como fecha (comparable con =SI,
+      // etc.), no como texto. El label viene "dd-mm-yyyy"; se pasa a ISO datetime.
+      var dateCol=built.headers[0]==='Fecha';
+      function xlDate(lbl){ var p=String(lbl).split('-'); return p.length===3 ? p[2]+'-'+p[1]+'-'+p[0]+'T00:00:00.000' : null; }
       built.rows.forEach(function(r){ xml+='<Row>'; r.forEach(function(v,ci){
         if(ci>=indStart){ if(v===''||v==null){ xml+='<Cell ss:StyleID="c"></Cell>'; } else { var k=built.indKeys[ci-indStart]; var st=STYLE_BY_KEY[k]||'mil'; var val=PCT_KEYS[k]?Number(v)/100:Number(v); xml+='<Cell ss:StyleID="'+st+'"><Data ss:Type="Number">'+val+'</Data></Cell>'; } }
+        else if(ci===0 && dateCol){ var dt=xlDate(v); if(dt){ xml+='<Cell ss:StyleID="fecha"><Data ss:Type="DateTime">'+dt+'</Data></Cell>'; } else { xml+='<Cell ss:StyleID="c"><Data ss:Type="String">'+esc(v)+'</Data></Cell>'; } }
         else { var t=(typeof v==='number')?'Number':'String'; xml+='<Cell ss:StyleID="c"><Data ss:Type="'+t+'">'+esc(v)+'</Data></Cell>'; }
       }); xml+='</Row>'; });
       xml+='</Table></Worksheet></Workbook>';
