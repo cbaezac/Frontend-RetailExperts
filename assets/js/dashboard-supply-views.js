@@ -1,19 +1,25 @@
 (function () {
   'use strict';
 
-  // Vistas Supply (cascarón de diseño — datos DEMO, sin conexión a servicios ni filtros):
-  //   · Próximos Quiebres  -> window.RENDER.proxq = panelProxQuiebres
-  //   · Entregable CPFR     -> window.RENDER.cpfr  = panelCpfr
-  // Rediseño provisto por RE. Reutiliza los helpers globales del script principal
-  // de dashboards.html: abaLocals, kpiCard, pieChart, smThead/smSortRows/smWire,
-  // wireDrillMenu, drillChildren/drillName/drillCueHtml/drillBackHtml, chartColor,
-  // num, numShort, pct, clsIns, IC, APERTURAS, COM, DEFAULT_PERIODS, host, charts, Chart.
+  // Vistas Supply:
+  //   · Próximos Quiebres -> window.RENDER.proxq = panelProxQuiebres  (rediseño, datos DEMO)
+  //   · Entregable CPFR    -> window.RENDER.cpfr  = renderCpfr         (rediseño + datos REALES
+  //                                                                     /web/dashboard/cpfr/detalle)
+  // Reutiliza helpers globales del script principal de dashboards.html: abaLocals, kpiCard,
+  // pieChart, smThead/smSortRows/smWire, wireDrillMenu, drillChildren/drillName/drillCueHtml/
+  // drillBackHtml, chartColor, num, numShort, pct, clsIns, IC, APERTURAS, COM, DEFAULT_PERIODS,
+  // LOADER_CARD, withCliente, fbFilterParams, host, charts, Chart, window.RetailAPI.
 
   // Ícono de descarga (IC.download no existe en esta versión) — hereda color/tamaño del contenedor.
   var DL_ICON = '<svg viewBox="0 0 24 24" fill="none" style="width:100%;height:100%"><path d="M12 3v11m0 0l-4-4m4 4l4-4M5 20h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   function isoOfLocal(d) {
     return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+  function escapeHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (char) {
+      return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[char];
+    });
   }
 
   function installStyles() {
@@ -50,7 +56,7 @@
     });
   }
 
-  /* ---- Próximos Quiebres ---- */
+  /* ---- Próximos Quiebres (rediseño · datos DEMO, sin conexión a servicios) ---- */
   var pqApertura = 'cadena', pqSort = {key: 'ins', dir: 1}, pqHorizon = 3, pqDrill = [];
   var pqPeriod = {start: DEFAULT_PERIODS.yesterday.start, end: DEFAULT_PERIODS.yesterday.end};
   function pqCurPeriod() {
@@ -147,94 +153,140 @@
     charts.push(ch);
   }
 
-  /* ---- Entregable CPFR ---- */
+  /* ---- Entregable CPFR (rediseño + datos REALES /web/dashboard/cpfr/detalle) ----
+     Regla de negocio (main, confirmada 2026-07-23): el usuario ve 3 estados —
+     Abierto (recién detectado, duración 0), Persiste (sigue abierto, >0 días) y
+     Resuelto. "Reincidente" del backend NO es categoría propia: el estatus se
+     recalcula acá desde estado+duración crudos (cpfrDisplayEstatus); el campo
+     `estatus` que trae /detalle no se usa. Todo (KPIs, torta, barras, filtro) se
+     calcula en este archivo a partir de las filas crudas cacheadas en cpfrData. */
   var cpfrSort = {key: 'status', dir: 1}, cpfrStatusFilter = 'todos';
-  var CPFR_TIPOS = ['Quiebre', 'Próximo quiebre 1d', 'Próximo quiebre 3d', 'Próximo quiebre 5d', 'Próximo quiebre 7d'];
-  function cpfrDays() {
+  var cpfrData = null;   // cache de casos crudos (r.casos de /detalle)
+  var cpfrError = false;
+  var CPFR_EST_COLOR = {Abierto: '#F3D47A', Persiste: '#E8918C', Resuelto: '#7FC99A'};
+
+  function cpfrDisplayEstatus(row) {
+    if (row.estado === 'RESUELTO') return 'Resuelto';
+    return (Number(row.duracion) || 0) > 0 ? 'Persiste' : 'Abierto';
+  }
+  function cpfrFmtFecha(iso) { if (!iso) return ''; var p = String(iso).split('-'); return p.length === 3 ? p[2] + '-' + p[1] + '-' + p[0] : String(iso); }
+
+  function loadCpfr() {
+    if (!window.RetailAPI) { cpfrError = true; return Promise.resolve(); }
     var de = document.getElementById('f-desde'), ha = document.getElementById('f-hasta');
-    var s = (de && de.value) || DEFAULT_PERIODS.yesterday.start, e = (ha && ha.value) || DEFAULT_PERIODS.yesterday.end;
-    if (e < s) e = s;
-    var days = Math.max(1, Math.min(45, Math.round((new Date(e) - new Date(s)) / 86400000) + 1));
-    var out = [], base = new Date(e + 'T12:00:00');
-    for (var i = days - 1; i >= 0; i--) { out.push(isoOfLocal(new Date(base.getTime() - i * 86400000))); }
-    return out;
+    var params = withCliente(Object.assign({limit: 5000, desde: de && de.value, hasta: ha && ha.value}, fbFilterParams()));
+    // "estado" de la barra global es producto.estado; no aplica al estado del caso.
+    delete params.estado;
+    return window.RetailAPI.requestJson('/web/dashboard/cpfr/detalle' + window.RetailAPI.buildQuery(params))
+      .then(function (r) { cpfrData = (r && r.casos) || []; cpfrError = false; })
+      .catch(function () { cpfrData = null; cpfrError = true; });
   }
-  function cpfrFmtFecha(iso) { var p = iso.split('-'); return p[2] + '-' + p[1] + '-' + p[0]; }
-  function cpfrCasos() {
-    var L = abaLocals(), out = [], dias = cpfrDays();
-    L.forEach(function (l) {
-      var nP = 2 + (hashN(l.cod + 'cpfrn') % 3);
-      for (var i = 0; i < nP; i++) {
-        var pv = COM.aperturas.descriptor ? COM.aperturas.descriptor.values : [];
-        var pi = hashN(l.cod + 'cp' + i) % (pv.length || 8);
-        var prod = pv.length ? pv[pi].label : ('Producto ' + (pi + 1));
-        var sku = 'SKU' + (1001 + pi);
-        var h = hashN(l.cod + ':' + sku + ':cpfr');
-        var resuelto = (h % 100) < 62;
-        var diasProb = 1 + (h >>> 4) % 9;
-        var fecha = dias[(h >>> 8) % dias.length];
-        out.push({fecha: fecha, cad: l.cad, fmt: l.fmt, cod: l.cod, nom: l.nom, sku: sku, prod: prod, tipo: CPFR_TIPOS[h % CPFR_TIPOS.length], dias: diasProb, resuelto: resuelto});
-      }
-    });
-    return out;
+  // Invalidación al "Aplicar filtros" (dashboards.html, area==='cpfr'). No dispara
+  // el fetch: el próximo renderCpfr() ve cpfrData==null y lo hace.
+  window.__cpfrInvalidate = function () { cpfrData = null; cpfrError = false; };
+
+  function cpfrErrorCard() {
+    host.innerHTML =
+      '<div class="panel-card full" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:70px 24px;text-align:center">' +
+      '<svg viewBox="0 0 24 24" fill="none" style="width:44px;height:44px;color:var(--purple)"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>' +
+      '<div style="font-family:var(--font-display);font-weight:800;font-size:1.15rem;color:var(--ink)">No se pudo cargar la información</div>' +
+      '<div style="font-size:.9rem;color:var(--muted);max-width:420px">Intentá de nuevo en unos segundos.</div>' +
+      '<button type="button" id="cpfrRetry" style="border:0;border-radius:999px;background:var(--purple);color:#fff;padding:9px 15px;font:700 .8rem var(--font-display);cursor:pointer">Reintentar</button></div>';
+    var btn = document.getElementById('cpfrRetry');
+    if (btn) btn.addEventListener('click', function () { window.__cpfrInvalidate(); renderCpfr(); });
   }
-  function panelCpfr() {
-    if (needsData('cpfr', 'descriptor', panelCpfr)) return;
-    var casos = cpfrCasos();
-    var nRes = casos.filter(function (c) { return c.resuelto; }).length, nPer = casos.length - nRes;
-    var ayer = cpfrFmtFecha(DEFAULT_PERIODS.yesterday.end);
+
+  function cpfrDownload() {
+    if (!cpfrData) return;
+    var head = ['Fecha', 'Cadena', 'Local', 'Cod Producto', 'Producto', 'Problema', 'Duración', 'Estatus'];
+    var lines = [head].concat(cpfrData.map(function (r) {
+      return [cpfrFmtFecha(r.fecha), r.cadena, r.local || '-', r.codigo_producto, r.producto || '-', r.problema, (Number(r.duracion) || 0), cpfrDisplayEstatus(r)];
+    })).map(function (row) {
+      return row.map(function (c) { return '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"'; }).join(',');
+    }).join('\n');
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(['﻿' + lines], {type: 'text/csv;charset=utf-8'}));
+    a.download = 'Reporte_CPFR.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function renderCpfr() {
+    if (cpfrError) { cpfrErrorCard(); return; }
+    if (!cpfrData) {
+      host.innerHTML = LOADER_CARD;
+      loadCpfr().then(renderCpfr).catch(function () {});
+      return;
+    }
+    var casos = cpfrData;
+    var nTot = casos.length;
+    var nRes = casos.filter(function (c) { return c.estado === 'RESUELTO'; }).length;
+    var nPer = nTot - nRes;
+    var ha = document.getElementById('f-hasta');
+    var hasta = cpfrFmtFecha((ha && ha.value) || DEFAULT_PERIODS.yesterday.end);
     var html = '<div class="kpis" id="cpfrKpis" style="grid-template-columns:repeat(5,1fr)">'
-      + kpiCard({label: 'Casos totales', value: num(casos.length), valueColor: '#5A0D74', icon: IC.box, tone: 'purple'})
+      + kpiCard({label: 'Casos totales', value: num(nTot), valueColor: '#5A0D74', icon: IC.box, tone: 'purple'})
       + kpiCard({label: 'Casos resueltos', value: num(nRes), valueColor: '#1F8A4C', icon: IC.check, tone: 'green'})
       + kpiCard({label: 'Casos persisten', value: num(nPer), valueColor: '#C0392B', icon: IC.lost, tone: 'accent'})
-      + kpiCard({label: '% Casos Resueltos', value: casos.length ? pct(nRes / casos.length * 100) : '-', valueColor: casos.length && nRes / casos.length >= 0.7 ? '#1F8A4C' : '#C0392B', icon: IC.clock, tone: 'green'})
-      + '<div class="kpi" style="background:#F2E7F7;border:1px solid #E4CFEE;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center"><button type="button" id="cpfrDl" title="Descargar reporte" style="cursor:pointer;width:44px;height:44px;border-radius:50%;border:0;background:var(--purple);color:#fff;display:grid;place-items:center"><span style="width:22px;height:22px;display:block">' + DL_ICON + '</span></button><span style="font-family:var(--font-display);font-weight:800;font-size:.82rem;line-height:1.15;color:var(--purple)">Descargar reporte de hoy</span><span style="font-style:italic;font-size:.72rem;color:var(--purple);opacity:.8">datos del ' + ayer + '</span></div>'
+      + kpiCard({label: '% Casos Resueltos', value: nTot ? pct(nRes / nTot * 100) : '-', valueColor: nTot && nRes / nTot >= 0.7 ? '#1F8A4C' : '#C0392B', icon: IC.clock, tone: 'green'})
+      + '<div class="kpi" style="background:#F2E7F7;border:1px solid #E4CFEE;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center"><button type="button" id="cpfrDl" title="Descargar reporte" style="cursor:pointer;width:44px;height:44px;border-radius:50%;border:0;background:var(--purple);color:#fff;display:grid;place-items:center"><span style="width:22px;height:22px;display:block">' + DL_ICON + '</span></button><span style="font-family:var(--font-display);font-weight:800;font-size:.82rem;line-height:1.15;color:var(--purple)">Descargar reporte</span><span style="font-style:italic;font-size:.72rem;color:var(--purple);opacity:.8">datos al ' + hasta + '</span></div>'
       + '</div>';
     html += '<div class="grid-charts">'
-      + '<div class="panel-card"><div class="pc-head"><div><div class="pc-title">Estatus de casos</div><div class="pc-sub">Resueltos vs. persiste</div></div></div><div class="chart-box h-mid"><canvas id="cpfr-pie"></canvas></div></div>'
+      + '<div class="panel-card"><div class="pc-head"><div><div class="pc-title">Estatus de casos</div><div class="pc-sub">Abierto · Persiste · Resuelto</div></div></div><div class="chart-box h-mid"><canvas id="cpfr-pie"></canvas></div></div>'
       + '<div class="panel-card"><div class="pc-head"><div><div class="pc-title">Casos por cadena</div><div class="pc-sub">Según estatus</div></div></div><div class="chart-box h-mid"><canvas id="cpfr-bar"></canvas></div></div>'
       + '</div>';
     html += '<div id="cpfrWrap"></div>';
     host.innerHTML = html;
-    pieChart(document.getElementById('cpfr-pie'), ['Resuelto', 'Persiste'], [nRes, nPer], ['#7FC99A', '#E8918C'], function (n) { return num(n) + ' casos'; });
-    var byCad = {}; casos.forEach(function (c) { if (!byCad[c.cad]) byCad[c.cad] = {r: 0, p: 0}; if (c.resuelto) byCad[c.cad].r++; else byCad[c.cad].p++; });
+
+    var est = {Abierto: 0, Persiste: 0, Resuelto: 0};
+    casos.forEach(function (c) { est[cpfrDisplayEstatus(c)]++; });
+    pieChart(document.getElementById('cpfr-pie'), ['Abierto', 'Persiste', 'Resuelto'], [est.Abierto, est.Persiste, est.Resuelto], [CPFR_EST_COLOR.Abierto, CPFR_EST_COLOR.Persiste, CPFR_EST_COLOR.Resuelto], function (n) { return num(n) + ' casos'; });
+
+    var byCad = {};
+    casos.forEach(function (c) { var e = cpfrDisplayEstatus(c); if (!byCad[c.cadena]) byCad[c.cadena] = {Abierto: 0, Persiste: 0, Resuelto: 0}; byCad[c.cadena][e]++; });
     var cads = Object.keys(byCad);
-    var cb = new Chart(document.getElementById('cpfr-bar'), {type: 'bar', data: {labels: cads, datasets: [
-      {label: 'Resuelto', data: cads.map(function (c) { return byCad[c].r; }), backgroundColor: 'rgba(127,201,154,.85)', borderRadius: 5, maxBarThickness: 44},
-      {label: 'Persiste', data: cads.map(function (c) { return byCad[c].p; }), backgroundColor: 'rgba(232,145,140,.85)', borderRadius: 5, maxBarThickness: 44}
-    ]},
+    var cb = new Chart(document.getElementById('cpfr-bar'), {type: 'bar', data: {labels: cads, datasets: ['Abierto', 'Persiste', 'Resuelto'].map(function (e) {
+      return {label: e, data: cads.map(function (c) { return byCad[c][e]; }), backgroundColor: CPFR_EST_COLOR[e], borderRadius: 5, maxBarThickness: 44};
+    })},
       options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {display: true, position: 'top', align: 'end', labels: {usePointStyle: true, pointStyle: 'circle', boxWidth: 8, padding: 14, font: {weight: '600'}}}}, scales: {x: {grid: {display: false}, stacked: true}, y: {grid: {color: 'rgba(42,20,8,0.07)'}, stacked: true}}}});
     charts.push(cb);
-    var dl = document.getElementById('cpfrDl'); if (dl) dl.addEventListener('click', function () { var t = document.getElementById('cpfrTable'); if (!t) return; var b = []; t.querySelectorAll('tr').forEach(function (tr) { b.push([].slice.call(tr.children).map(function (c) { return '"' + c.textContent.replace(/"/g, '""') + '"'; }).join(',')); }); var blob = new Blob(['﻿' + b.join('\n')], {type: 'text/csv;charset=utf-8'}); var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Reporte_CPFR.csv'; a.click(); });
-    renderCpfrMatrix(casos);
+
+    var dl = document.getElementById('cpfrDl'); if (dl) dl.addEventListener('click', cpfrDownload);
+    renderCpfrMatrix();
   }
-  function renderCpfrMatrix(casos) {
-    var rows = casos.filter(function (c) { return cpfrStatusFilter === 'todos' || (cpfrStatusFilter === 'resuelto' ? c.resuelto : !c.resuelto); });
+
+  function renderCpfrMatrix() {
+    var rows = cpfrData.filter(function (c) { return cpfrStatusFilter === 'todos' || cpfrDisplayEstatus(c).toLowerCase() === cpfrStatusFilter; });
+    function pill(est) {
+      var col = est === 'Resuelto' ? 'background:rgba(31,138,76,.12);color:#1F8A4C'
+        : (est === 'Persiste' ? 'background:rgba(192,57,43,.10);color:#C0392B' : 'background:rgba(242,160,61,.16);color:#B26A00');
+      return '<td><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:999px;font-weight:700;font-size:.74rem;' + col + '">' + est + '</span></td>';
+    }
     var cols = [
-      {key: 'fecha', label: 'Fecha', type: 'str', get: function (r) { return r.fecha; }, cell: function (r) { return '<td>' + cpfrFmtFecha(r.fecha) + '</td>'; }},
-      {key: 'cad', label: 'Cadena', type: 'str', get: function (r) { return r.cad; }, cell: function (r) { return '<td>' + r.cad + '</td>'; }},
-      {key: 'cod', label: 'Cod Local', type: 'str', get: function (r) { return r.cod; }, cell: function (r) { return '<td>' + r.cod + '</td>'; }},
-      {key: 'nom', label: 'Local', type: 'str', get: function (r) { return r.nom; }, cell: function (r) { return '<td>' + r.nom + '</td>'; }},
-      {key: 'sku', label: 'Cod Producto', type: 'str', get: function (r) { return r.sku; }, cell: function (r) { return '<td>' + r.sku + '</td>'; }},
-      {key: 'prod', label: 'Producto', type: 'str', get: function (r) { return r.prod; }, cell: function (r) { return '<td>' + r.prod + '</td>'; }},
-      {key: 'tipo', label: 'Problema', type: 'str', get: function (r) { return r.tipo; }, cell: function (r) { return '<td>' + r.tipo + '</td>'; }},
-      {key: 'dias', label: 'Duración Problema', type: 'num', get: function (r) { return r.dias; }, cell: function (r) { return '<td>' + r.dias + '</td>'; }},
-      {key: 'status', label: 'Estatus', type: 'str', get: function (r) { return r.resuelto ? 'Resuelto' : 'Persiste'; }, cell: function (r) { return '<td><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:999px;font-weight:700;font-size:.74rem;' + (r.resuelto ? 'background:rgba(31,138,76,.12);color:#1F8A4C' : 'background:rgba(192,57,43,.10);color:#C0392B') + '">' + (r.resuelto ? 'Resuelto' : 'Persiste') + '</span></td>'; }}
+      {key: 'fecha', label: 'Fecha', type: 'str', get: function (r) { return r.fecha || ''; }, cell: function (r) { return '<td>' + cpfrFmtFecha(r.fecha) + '</td>'; }},
+      {key: 'cadena', label: 'Cadena', type: 'str', get: function (r) { return r.cadena || ''; }, cell: function (r) { return '<td>' + escapeHtml(r.cadena) + '</td>'; }},
+      {key: 'local', label: 'Local', type: 'str', get: function (r) { return r.local || ''; }, cell: function (r) { return '<td>' + escapeHtml(r.local || '-') + '</td>'; }},
+      {key: 'cod', label: 'Cod Producto', type: 'str', get: function (r) { return r.codigo_producto || ''; }, cell: function (r) { return '<td>' + escapeHtml(r.codigo_producto) + '</td>'; }},
+      {key: 'prod', label: 'Producto', type: 'str', get: function (r) { return r.producto || ''; }, cell: function (r) { return '<td>' + escapeHtml(r.producto || '-') + '</td>'; }},
+      {key: 'problema', label: 'Problema', type: 'str', get: function (r) { return r.problema || ''; }, cell: function (r) { return '<td>' + escapeHtml(r.problema) + '</td>'; }},
+      {key: 'dias', label: 'Duración Problema', type: 'num', get: function (r) { return Number(r.duracion) || 0; }, cell: function (r) { return '<td>' + (Number(r.duracion) || 0) + '</td>'; }},
+      {key: 'status', label: 'Estatus', type: 'str', get: function (r) { return cpfrDisplayEstatus(r); }, cell: function (r) { return pill(cpfrDisplayEstatus(r)); }}
     ];
     var body = smSortRows(cols, rows, cpfrSort).map(function (r) { return '<tr>' + cols.map(function (c) { return c.cell(r); }).join('') + '</tr>'; }).join('');
     if (!rows.length) body = '<tr><td colspan="' + cols.length + '" style="text-align:center;color:var(--muted);padding:26px">Sin casos con este estatus</td></tr>';
-    document.getElementById('cpfrWrap').innerHTML = '<div class="panel-card full" id="cpfrMatrix" style="text-align:center"><div class="pc-head" style="text-align:left"><div><div class="pc-title">Detalle de casos · Local / Producto</div><div class="pc-sub">Seguimiento de quiebres y próximos quiebres</div></div>'
-      + '<div class="metric-switch" id="cpfrSw"><button type="button" data-m="todos"' + (cpfrStatusFilter === 'todos' ? ' class="on"' : '') + '>Todos</button><button type="button" data-m="resuelto"' + (cpfrStatusFilter === 'resuelto' ? ' class="on"' : '') + '>Resueltos</button><button type="button" data-m="persiste"' + (cpfrStatusFilter === 'persiste' ? ' class="on"' : '') + '>Persiste</button></div></div>'
-      + '<div class="table-scroll"><table class="matrix" id="cpfrTable" style="font-size:.72rem;table-layout:fixed;width:100%;min-width:0"><colgroup><col style="width:12%"><col style="width:11%"><col style="width:9%"><col style="width:14%"><col style="width:11%"><col style="width:14%"><col style="width:11%"><col style="width:11%"><col style="width:11%"></colgroup><thead>' + smThead(cols, cpfrSort) + '</thead><tbody>' + body + '</tbody></table></div></div>';
-    smWire('#cpfrMatrix', cols, cpfrSort, function () { renderCpfrMatrix(casos); });
-    var sw = document.getElementById('cpfrSw'); if (sw) sw.addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; cpfrStatusFilter = b.getAttribute('data-m'); renderCpfrMatrix(casos); });
+    function swBtn(m, label) { return '<button type="button" data-m="' + m + '"' + (cpfrStatusFilter === m ? ' class="on"' : '') + '>' + label + '</button>'; }
+    document.getElementById('cpfrWrap').innerHTML = '<div class="panel-card full" id="cpfrMatrix" style="text-align:center"><div class="pc-head" style="text-align:left"><div><div class="pc-title">Detalle de casos · Local / Producto</div><div class="pc-sub">Seguimiento de quiebres y próximos quiebres · datos reales</div></div>'
+      + '<div class="metric-switch" id="cpfrSw">' + swBtn('todos', 'Todos') + swBtn('abierto', 'Abierto') + swBtn('persiste', 'Persiste') + swBtn('resuelto', 'Resuelto') + '</div></div>'
+      + '<div class="table-scroll"><table class="matrix" id="cpfrTable" style="font-size:.72rem;table-layout:fixed;width:100%;min-width:0"><colgroup><col style="width:11%"><col style="width:12%"><col style="width:17%"><col style="width:12%"><col style="width:15%"><col style="width:12%"><col style="width:10%"><col style="width:11%"></colgroup><thead>' + smThead(cols, cpfrSort) + '</thead><tbody>' + body + '</tbody></table></div></div>';
+    smWire('#cpfrMatrix', cols, cpfrSort, renderCpfrMatrix);
+    var sw = document.getElementById('cpfrSw'); if (sw) sw.addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; cpfrStatusFilter = b.getAttribute('data-m'); renderCpfrMatrix(); });
   }
 
   installStyles();
   installTabs();
   if (window.RENDER) {
     window.RENDER.proxq = panelProxQuiebres;
-    window.RENDER.cpfr = panelCpfr;
+    window.RENDER.cpfr = renderCpfr;
   }
   if (window.AREA_LOG) {
     window.AREA_LOG.proxq = 'Próximos Quiebres';
