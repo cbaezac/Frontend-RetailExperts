@@ -184,20 +184,21 @@
   };
 
   /* ---- Entregable CPFR (rediseño + datos REALES /web/dashboard/cpfr/detalle) ----
-     Regla de negocio (main, confirmada 2026-07-23): el usuario ve 3 estados —
-     Abierto (recién detectado, duración 0), Persiste (sigue abierto, >0 días) y
-     Resuelto. "Reincidente" del backend NO es categoría propia: el estatus se
-     recalcula acá desde estado+duración crudos (cpfrDisplayEstatus); el campo
-     `estatus` que trae /detalle no se usa. Todo (KPIs, torta, barras, filtro) se
-     calcula en este archivo a partir de las filas crudas cacheadas en cpfrData. */
+     Regla de negocio (simplificada 2026-07-27, reemplaza la de 2026-07-23):
+     el usuario ve 2 estados -- Persiste (cualquier caso con estado != RESUELTO,
+     sin distinguir duración) y Resuelto. Se elimino la distincion Abierto/
+     Persiste por antiguedad. "Reincidente" del backend NO es categoría propia:
+     el estatus se recalcula acá desde estado crudo (cpfrDisplayEstatus); el
+     campo `estatus` que trae /detalle no se usa. Todo (KPIs, torta, barras,
+     filtro) se calcula en este archivo a partir de las filas crudas cacheadas
+     en cpfrData. */
   var cpfrSort = {key: 'status', dir: 1}, cpfrStatusFilter = 'todos';
   var cpfrData = null;   // cache de casos crudos (r.casos de /detalle)
   var cpfrError = false;
-  var CPFR_EST_COLOR = {Abierto: '#F3D47A', Persiste: '#E8918C', Resuelto: '#7FC99A'};
+  var CPFR_EST_COLOR = {Persiste: '#E8918C', Resuelto: '#7FC99A'};
 
   function cpfrDisplayEstatus(row) {
-    if (row.estado === 'RESUELTO') return 'Resuelto';
-    return (Number(row.duracion) || 0) > 0 ? 'Persiste' : 'Abierto';
+    return row.estado === 'RESUELTO' ? 'Resuelto' : 'Persiste';
   }
   function cpfrFmtFecha(iso) { if (!iso) return ''; var p = String(iso).split('-'); return p.length === 3 ? p[2] + '-' + p[1] + '-' + p[0] : String(iso); }
 
@@ -268,8 +269,8 @@
     html += '<div id="cpfrWrap"></div>';
     host.innerHTML = html;
 
-    // "Abierto" (no resuelto, duración 0) se cuenta como Persiste: así torta y
-    // barras suman el total y calzan con el KPI "Casos persisten" (= totales − resueltos).
+    // Binario (no RESUELTO = Persiste): torta y barras suman el total y
+    // calzan con el KPI "Casos persisten" (= totales − resueltos).
     var est = {Persiste: 0, Resuelto: 0};
     casos.forEach(function (c) { est[c.estado === 'RESUELTO' ? 'Resuelto' : 'Persiste']++; });
     pieChart(document.getElementById('cpfr-pie'), ['Persiste', 'Resuelto'], [est.Persiste, est.Resuelto], [CPFR_EST_COLOR.Persiste, CPFR_EST_COLOR.Resuelto], function (n) { return num(n) + ' casos'; });
@@ -290,8 +291,7 @@
   function renderCpfrMatrix() {
     var rows = cpfrData.filter(function (c) { return cpfrStatusFilter === 'todos' || cpfrDisplayEstatus(c).toLowerCase() === cpfrStatusFilter; });
     function pill(est) {
-      var col = est === 'Resuelto' ? 'background:rgba(31,138,76,.12);color:#1F8A4C'
-        : (est === 'Persiste' ? 'background:rgba(192,57,43,.10);color:#C0392B' : 'background:rgba(242,160,61,.16);color:#B26A00');
+      var col = est === 'Resuelto' ? 'background:rgba(31,138,76,.12);color:#1F8A4C' : 'background:rgba(192,57,43,.10);color:#C0392B';
       return '<td><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:999px;font-weight:700;font-size:.74rem;' + col + '">' + est + '</span></td>';
     }
     var cols = [
