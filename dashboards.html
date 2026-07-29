@@ -1404,6 +1404,63 @@
       return out;
     }
     function cpfrFmtFecha(iso){ var p=iso.split('-'); return p[2]+'-'+p[1]+'-'+p[0]; }
+    function cpfrMostrarErrorDescarga(msg){
+      var old=document.getElementById('cpfrDlErr'); if(old) old.remove();
+      var box=document.createElement('div');
+      box.id='cpfrDlErr';
+      box.style.cssText='margin-top:8px;display:flex;align-items:center;gap:6px;justify-content:center;color:#C0392B;font-size:.72rem;font-weight:600;max-width:220px';
+      box.innerHTML='<svg viewBox="0 0 24 24" fill="none" style="width:16px;height:16px;flex:none"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>'+msg+'</span>';
+      var dl=document.getElementById('cpfrDl');
+      if(dl && dl.parentElement) dl.parentElement.appendChild(box);
+    }
+    // cpfrDescargarEntregable(): fetch directo (no RetailAPI.request/requestJson)
+    // porque necesitamos leer el body como blob en 200 Y distinguir 404/400 por
+    // status -- request() consume el body con response.text() y lanza un Error
+    // generico en cualquier !ok, perdiendo el status code. El 401 replica a mano
+    // el mismo clearSession()+redirect a login.html que hace request() (linea
+    // ~98 de assets/js/api.js), porque loginUrl() no esta expuesto en
+    // window.RetailAPI, solo clearSession.
+    async function cpfrDescargarEntregable(){
+      var dl=document.getElementById('cpfrDl');
+      if(!dl || dl.disabled) return;
+      dl.disabled=true;
+      var old=document.getElementById('cpfrDlErr'); if(old) old.remove();
+      try{
+        var qs=window.RetailAPI.buildQuery(withCliente({}));
+        var res=await fetch(window.RetailAPI.baseUrl+'/web/dashboard/cpfr/entregable.xlsx'+qs, {
+          headers: { 'Authorization': 'Bearer '+window.RetailAPI.getToken() }
+        });
+        if(res.status===401){
+          window.RetailAPI.clearSession();
+          window.location.href='login.html';
+          return;
+        }
+        if(res.status===404){
+          cpfrMostrarErrorDescarga('Aún no hay reporte disponible para este cliente.');
+          return;
+        }
+        if(!res.ok){
+          var text=await res.text().catch(function(){return '';});
+          var msg='No se pudo descargar el reporte.';
+          try{ var parsed=JSON.parse(text); if(parsed && parsed.message) msg=parsed.message; }catch(_){}
+          cpfrMostrarErrorDescarga(msg);
+          return;
+        }
+        var disposition=res.headers.get('Content-Disposition')||'';
+        var match=/filename="?([^";]+)"?/.exec(disposition);
+        var filename=match?match[1]:'Reporte_CPFR.xlsx';
+        var blob=await res.blob();
+        var a=document.createElement('a');
+        a.href=URL.createObjectURL(blob);
+        a.download=filename;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }catch(err){
+        cpfrMostrarErrorDescarga('No se pudo descargar el reporte. Intentá de nuevo en unos segundos.');
+      }finally{
+        dl.disabled=false;
+      }
+    }
     // cpfrCasos(): datos REALES de /web/dashboard/cpfr/detalle (reemplaza la
     // maqueta hash-based del rediseño original). Mismo patron que loadCpfr()
     // de dashboard-supply-views.js (archivo ya no cargado por este HTML, ver
@@ -1467,7 +1524,7 @@
         {label:'Persiste', data:cads.map(function(c){return byCad[c].p;}), backgroundColor:'rgba(232,145,140,.85)', borderRadius:5, maxBarThickness:44} ] },
         options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true,position:'top',align:'end',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8,padding:14,font:{weight:'600'}}}}, scales:{ x:{grid:{display:false},stacked:true}, y:{grid:{color:'rgba(42,20,8,0.07)'},stacked:true} } } });
       charts.push(cb);
-      var dl=document.getElementById('cpfrDl'); if(dl) dl.addEventListener('click', function(){ var t=document.getElementById('cpfrTable'); if(!t) return; var b=[]; t.querySelectorAll('tr').forEach(function(tr){ b.push([].slice.call(tr.children).map(function(c){return '"'+c.textContent.replace(/"/g,'""')+'"';}).join(',')); }); var blob=new Blob(['\ufeff'+b.join('\n')],{type:'text/csv;charset=utf-8'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='Reporte_CPFR.csv'; a.click(); });
+      var dl=document.getElementById('cpfrDl'); if(dl) dl.addEventListener('click', cpfrDescargarEntregable);
       renderCpfrMatrix(casos);
     }
     function renderCpfrMatrix(casos){
