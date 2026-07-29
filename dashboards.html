@@ -1404,6 +1404,12 @@
       return out;
     }
     function cpfrFmtFecha(iso){ var p=iso.split('-'); return p[2]+'-'+p[1]+'-'+p[0]; }
+    var CPFR_LABELS = {
+      QUIEBRE: 'Quiebre',
+      PROX_QUIEBRE: 'Próx. Quiebre',
+      SIN_STOCK_CD: 'Sin Stock CD',
+      DESV_PRECIO: 'Desv. Precio'
+    };
     function cpfrMostrarErrorDescarga(msg){
       var old=document.getElementById('cpfrDlErr'); if(old) old.remove();
       var box=document.createElement('div');
@@ -1483,7 +1489,7 @@
       var r=await window.RetailAPI.requestJson('/web/dashboard/cpfr/detalle'+window.RetailAPI.buildQuery(params));
       var casosCrudos=(r&&r.casos)||[];
       return casosCrudos.map(function(c){
-        return { fecha:c.fecha, cad:c.cadena, nom:c.local, sku:c.codigo_producto, prod:c.producto, tipo:c.problema, dias:c.duracion, resuelto:(c.estado==='RESUELTO') };
+        return { fecha:c.fecha, cad:c.cadena, nom:c.local, sku:c.codigo_producto, prod:c.producto, tipo:c.problema, dias:c.duracion, horizonte:c.horizonte_dias, resuelto:(c.estado==='RESUELTO') };
       });
     }
     async function panelCpfr(){
@@ -1535,7 +1541,13 @@
         {key:'nom',label:'Local',type:'str',get:function(r){return r.nom;},cell:function(r){return '<td>'+r.nom+'</td>';}},
         {key:'sku',label:'Cod Producto',type:'str',get:function(r){return r.sku;},cell:function(r){return '<td>'+r.sku+'</td>';}},
         {key:'prod',label:'Producto',type:'str',get:function(r){return r.prod;},cell:function(r){return '<td>'+r.prod+'</td>';}},
-        {key:'tipo',label:'Problema',type:'str',get:function(r){return r.tipo;},cell:function(r){return '<td>'+r.tipo+'</td>';}},
+        {key:'tipo',label:'Problema',type:'str',get:function(r){return r.tipo;},cell:function(r){
+          var label = CPFR_LABELS[r.tipo] || r.tipo;
+          if (r.tipo === 'PROX_QUIEBRE' && r.horizonte != null) {
+            label += ' (≤' + r.horizonte + ' días)';
+          }
+          return '<td>' + label + '</td>';
+        }},
         {key:'dias',label:'Duración Problema',type:'num',get:function(r){return r.dias;},cell:function(r){return '<td>'+r.dias+'</td>';}},
         {key:'status',label:'Estatus',type:'str',get:function(r){return r.resuelto?'Resuelto':'Persiste';},cell:function(r){return '<td><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:999px;font-weight:700;font-size:.74rem;'+(r.resuelto?'background:rgba(31,138,76,.12);color:#1F8A4C':'background:rgba(192,57,43,.10);color:#C0392B')+'">'+(r.resuelto?'Resuelto':'Persiste')+'</span></td>';}}
       ];
