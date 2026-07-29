@@ -1404,46 +1404,27 @@
       return out;
     }
     function cpfrFmtFecha(iso){ var p=iso.split('-'); return p[2]+'-'+p[1]+'-'+p[0]; }
-    // cpfrCasos(): datos REALES de /web/dashboard/cpfr/detalle (reemplaza la
-    // maqueta hash-based del rediseño original). Mismo patron que loadCpfr()
-    // de dashboard-supply-views.js (archivo ya no cargado por este HTML, ver
-    // Papelera/dashboards_20260729_prev_reemplazo.html) -- withCliente()
-    // agrega cliente_id solo si el usuario es interno/admin, fbFilterParams()
-    // reusa los filtros de la barra general, se borra "estado" (es el estado
-    // de producto de la barra global, no aplica al estado del caso CPFR).
-    // Mapea cada fila real al shape que ya esperan panelCpfr()/renderCpfrMatrix()
-    // (fecha/cad/nom/sku/prod/tipo/dias/resuelto) -- sin "cod" (codigo_local):
-    // el endpoint real no lo trae, solo nombre de local (ver renderCpfrMatrix).
-    // "resuelto" boolean = misma logica que cpfrDisplayEstatus() del archivo
-    // original: RESUELTO -> true (Resuelto), cualquier otro estado -> false
-    // (Persiste). No cae a datos demo si el fetch falla -- el error se
-    // propaga sin capturar, panelCpfr() lo maneja mostrando un estado de
-    // error explicito (nunca silencioso, es un entregable pagado).
-    async function cpfrCasos(){
-      var de=document.getElementById('f-desde'), ha=document.getElementById('f-hasta');
-      var params=withCliente(Object.assign({limit:5000, desde:de&&de.value, hasta:ha&&ha.value}, fbFilterParams()));
-      delete params.estado;
-      var r=await window.RetailAPI.requestJson('/web/dashboard/cpfr/detalle'+window.RetailAPI.buildQuery(params));
-      var casosCrudos=(r&&r.casos)||[];
-      return casosCrudos.map(function(c){
-        return { fecha:c.fecha, cad:c.cadena, nom:c.local, sku:c.codigo_producto, prod:c.producto, tipo:c.problema, dias:c.duracion, resuelto:(c.estado==='RESUELTO') };
+    function cpfrCasos(){
+      var L=abaLocals(), out=[], dias=cpfrDays();
+      L.forEach(function(l){
+        var nP=2+(hashN(l.cod+'cpfrn')%3);
+        for(var i=0;i<nP;i++){
+          var pv=COM.aperturas.descriptor?COM.aperturas.descriptor.values:[];
+          var pi=hashN(l.cod+'cp'+i)%(pv.length||8);
+          var prod=pv.length?pv[pi].label:('Producto '+(pi+1));
+          var sku='SKU'+(1001+pi);
+          var h=hashN(l.cod+':'+sku+':cpfr');
+          var resuelto=(h%100)<62;
+          var diasProb=1+(h>>4)%9;
+          var fecha=dias[(h>>>8)%dias.length];
+          out.push({ fecha:fecha, cad:l.cad, fmt:l.fmt, cod:l.cod, nom:l.nom, sku:sku, prod:prod, tipo:CPFR_TIPOS[h%CPFR_TIPOS.length], dias:diasProb, resuelto:resuelto });
+        }
       });
+      return out;
     }
-    async function panelCpfr(){
+    function panelCpfr(){
       if(needsData('cpfr', 'descriptor', panelCpfr)) return;
-      host.innerHTML='<div class="panel-card full" style="display:flex;align-items:center;justify-content:center;min-height:220px;padding:60px 24px;text-align:center;color:var(--muted);font-family:var(--font-body);font-size:.92rem">Cargando casos CPFR…</div>';
-      var casos;
-      try{
-        casos=await cpfrCasos();
-      }catch(err){
-        host.innerHTML='<div class="panel-card full" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:70px 24px;text-align:center">'
-          + '<svg viewBox="0 0 24 24" fill="none" style="width:44px;height:44px;color:var(--purple)"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'
-          + '<div style="font-family:var(--font-display);font-weight:800;font-size:1.15rem;color:var(--ink)">No se pudieron cargar los casos CPFR</div>'
-          + '<div style="font-size:.9rem;color:var(--muted);max-width:420px">Intentá de nuevo en unos segundos.</div>'
-          + '<button type="button" id="cpfrRetry" style="border:0;border-radius:999px;background:var(--purple);color:#fff;padding:9px 15px;font:700 .8rem var(--font-display);cursor:pointer">Reintentar</button></div>';
-        var btnRetry=document.getElementById('cpfrRetry'); if(btnRetry) btnRetry.addEventListener('click', panelCpfr);
-        return;
-      }
+      var casos=cpfrCasos();
       var nRes=casos.filter(function(c){return c.resuelto;}).length, nPer=casos.length-nRes;
       var ayer=cpfrFmtFecha(DEFAULT_PERIODS.yesterday.end);
       var html='<div class="kpis" id="cpfrKpis" style="grid-template-columns:repeat(5,1fr)">'
@@ -1475,6 +1456,7 @@
       var cols=[
         {key:'fecha',label:'Fecha',type:'str',get:function(r){return r.fecha;},cell:function(r){return '<td>'+cpfrFmtFecha(r.fecha)+'</td>';}},
         {key:'cad',label:'Cadena',type:'str',get:function(r){return r.cad;},cell:function(r){return '<td>'+r.cad+'</td>';}},
+        {key:'cod',label:'Cod Local',type:'str',get:function(r){return r.cod;},cell:function(r){return '<td>'+r.cod+'</td>';}},
         {key:'nom',label:'Local',type:'str',get:function(r){return r.nom;},cell:function(r){return '<td>'+r.nom+'</td>';}},
         {key:'sku',label:'Cod Producto',type:'str',get:function(r){return r.sku;},cell:function(r){return '<td>'+r.sku+'</td>';}},
         {key:'prod',label:'Producto',type:'str',get:function(r){return r.prod;},cell:function(r){return '<td>'+r.prod+'</td>';}},
@@ -1486,7 +1468,7 @@
       if(!rows.length) body='<tr><td colspan="'+cols.length+'" style="text-align:center;color:var(--muted);padding:26px">Sin casos con este estatus</td></tr>';
       document.getElementById('cpfrWrap').innerHTML='<div class="panel-card full" id="cpfrMatrix" style="text-align:center"><div class="pc-head" style="text-align:left"><div><div class="pc-title">Detalle de casos · Local / Producto</div><div class="pc-sub">Seguimiento de quiebres y próximos quiebres</div></div>'
         + '<div class="metric-switch" id="cpfrSw"><button type="button" data-m="todos"'+(cpfrStatusFilter==='todos'?' class="on"':'')+'>Todos</button><button type="button" data-m="resuelto"'+(cpfrStatusFilter==='resuelto'?' class="on"':'')+'>Resueltos</button><button type="button" data-m="persiste"'+(cpfrStatusFilter==='persiste'?' class="on"':'')+'>Persiste</button></div></div>'
-        + '<div class="table-scroll"><table class="matrix" id="cpfrTable" style="font-size:.72rem;table-layout:fixed;width:100%;min-width:0"><colgroup><col style="width:13%"><col style="width:12%"><col style="width:15%"><col style="width:12%"><col style="width:15%"><col style="width:12%"><col style="width:12%"><col style="width:12%"></colgroup><thead>'+smThead(cols,cpfrSort)+'</thead><tbody>'+body+'</tbody></table></div></div>';
+        + '<div class="table-scroll"><table class="matrix" id="cpfrTable" style="font-size:.72rem;table-layout:fixed;width:100%;min-width:0"><colgroup><col style="width:12%"><col style="width:11%"><col style="width:9%"><col style="width:14%"><col style="width:11%"><col style="width:14%"><col style="width:11%"><col style="width:11%"><col style="width:11%"></colgroup><thead>'+smThead(cols,cpfrSort)+'</thead><tbody>'+body+'</tbody></table></div></div>';
       smWire('#cpfrMatrix', cols, cpfrSort, function(){ renderCpfrMatrix(casos); });
       var sw=document.getElementById('cpfrSw'); if(sw) sw.addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; cpfrStatusFilter=b.getAttribute('data-m'); renderCpfrMatrix(casos); });
     }
