@@ -1367,9 +1367,17 @@
       var vs=COM.aperturas[abaApertura].values;
       return vs[hashN(l.cod+':'+abaApertura)%vs.length].label;
     }
-    /* ---- Próximos Quiebres ---- */
+    /* ---- Próximos Quiebres / Instock (real, GET /web/dashboard/instock) ----
+       pqCache: cache + estado de fetch, mismo patron que drillCache
+       (drillValuesReal, mas arriba) -- clave = JSON de los params exactos
+       de la llamada. pqCache[key] = array ya resuelto; pqCache[key+':p'] =
+       fetch en curso; pqCache[key+':err'] = fetch fallido para esa key
+       puntual (no un flag global -- cambiar apertura/horizonte/drill arma
+       una key nueva y dispara un fetch nuevo, sin arrastrar un error viejo
+       de otra combinacion de parametros). */
     var pqApertura='cadena', pqSort={key:'ins',dir:1}, pqHorizon=3, pqDrill=[], pqCalcBase='stock';
     var pqPeriod={start:DEFAULT_PERIODS.yesterday.start, end:DEFAULT_PERIODS.yesterday.end};
+    var pqCache={};
     function pqCurPeriod(){
       var de=document.getElementById('f-desde'), ha=document.getElementById('f-hasta');
       var s=(de&&de.value)||pqPeriod.start, e=(ha&&ha.value)||pqPeriod.end;
@@ -1384,13 +1392,55 @@
       return out;
     }
     function pqApLabel(){ return APERTURAS.filter(function(a){return a[0]===pqApertura;})[0][1]; }
-    function pqKeyFor(l){
-      if(pqApertura==='cadena') return l.cad;
-      if(pqApertura==='formato') return l.fmt;
-      if(pqApertura==='codlocal') return l.cod;
-      if(pqApertura==='nomlocal') return l.cod+' · '+l.nom;
-      var vs=COM.aperturas[pqApertura].values;
-      return vs[hashN(l.cod+':'+pqApertura)%vs.length].label;
+    // pqFetchParams(): apertura/horizonte/modo_calculo/hasta + filtros de la
+    // barra superior (fbFilterParams) + filtros acumulados del drill-down
+    // (drillPathFilters, mismo helper que ya usa el drill real de
+    // Comercial -- DRILL_PARAM ya trae el mapeo apertura corta -> nombre de
+    // parametro largo que espera el backend, cadena/formato/region/
+    // codigo_local/nombre_local/categoria/marca/codigo_producto/descriptor).
+    // Solo se manda "hasta" (el campo "hasta" del rango de la barra) --
+    // "desde" NO se manda: instock/doh son una foto (MAX(fecha)<=hasta en
+    // el backend), no un flujo -- ver dashboardInstock() en
+    // analytics-platform/backend/src/modules/web/web-data.service.ts.
+    function pqFetchParams(){
+      var curAp = pqDrill.length ? pqDrill[pqDrill.length-1].ap : pqApertura;
+      var p = pqCurPeriod();
+      return withCliente(Object.assign(
+        {
+          apertura: DRILL_PARAM[curAp] || curAp,
+          horizonte: pqHorizon,
+          modo_calculo: (pqCalcBase==='stocktra') ? 'stock_transito' : 'stock',
+          hasta: p.end,
+        },
+        fbFilterParams(),
+        drillPathFilters(pqApertura, pqDrill)
+      ));
+    }
+    // pqCasos(): null mientras carga (dispara el fetch y re-renderiza al
+    // terminar, mismo patron que drillValuesReal()/loadCpfr()), {error:true}
+    // si esa key puntual fallo, array ya agregado al nivel de apertura
+    // pedido si esta resuelto. Sin fallback a datos demo si falla -- mismo
+    // criterio que panelCpfr(), es un entregable pagado, el error se
+    // muestra explicito (ver renderPqMatrix).
+    function pqCasos(){
+      var params = pqFetchParams();
+      var key = JSON.stringify(params);
+      if(pqCache[key]) return pqCache[key];
+      if(pqCache[key+':err']) return {error:true};
+      if(pqCache[key+':p']) return null;
+      pqCache[key+':p']=1;
+      window.RetailAPI.requestJson('/web/dashboard/instock'+window.RetailAPI.buildQuery(params))
+        .then(function(r){
+          pqCache[key]=Array.isArray(r)?r:[];
+          delete pqCache[key+':p'];
+          renderPqMatrix();
+        })
+        .catch(function(){
+          pqCache[key+':err']=1;
+          delete pqCache[key+':p'];
+          renderPqMatrix();
+        });
+      return null;
     }
     /* ---- Entregable CPFR ---- */
     var cpfrSort={key:'status',dir:1}, cpfrStatusFilter='todos';
@@ -1727,8 +1777,6 @@
     }
 
     function panelProxQuiebres(){
-      var pqNeedsCom = ['cadena','formato','codlocal','nomlocal'].indexOf(pqApertura)<0 ? pqApertura : null;
-      if(needsData('proxq', pqNeedsCom, panelProxQuiebres)) return;
       renderPqMatrix();
     }
     /* ---- Quiebres CD ---- */
@@ -1774,20 +1822,29 @@
         + '</table></div></div>';
       smWire('#qcMatrix', cols, qcSort, renderQcMatrix);
     }
+    // pqLevelRows(): ya NO calcula instock/DOH client-side (antes:
+    // Math.max(38, Math.min(100, ...)) + ruido hashN(), y DOH quedaba
+    // siempre en 0 porque mapLocalResumen() nunca traia esos campos reales
+    // del backend -- ver nota en mapLocalResumen). Ahora consume directo
+    // el array que ya devuelve /web/dashboard/instock, agregado al nivel
+    // de apertura pedido (Σstock/Σventa, count/count -- nunca promedio de
+    // filas hijas, calculado server-side en dashboardInstock()). Pasa
+    // tal cual el estado null (cargando) / {error:true} (fallo) de
+    // pqCasos() -- renderPqMatrix() decide que mostrar en esos casos.
     function pqLevelRows(){
-      var level=pqDrill.length;
-      var traF=(pqCalcBase==='stocktra')?1:0;
-      if(level===0){
-        var L=abaLocals(), by={};
-        L.forEach(function(l){ var k=pqKeyFor(l); if(!by[k]) by[k]={stock:0,tra:0,cd:0,insW:0,dohW:0,w:0}; by[k].stock+=l.stock; by[k].tra+=l.transito; by[k].cd+=l.cd; by[k].insW+=l.ins*l.stock; by[k].dohW+=(l.doh||0)*l.stock; by[k].w+=l.stock; });
-        return Object.keys(by).map(function(k){ var o=by[k]; var base=o.w?o.insW/o.w:0; var ins=Math.max(38,Math.min(100,base-(pqHorizon-1)*2.4+(hashN('pqh:'+k+pqHorizon)%18)/10+(traF?3:0))); var doh=o.w?o.dohW/o.w:0; return {key:k,label:k,stock:o.stock,tra:o.tra,cd:o.cd,ins:ins,doh:doh,drill:true}; });
-      }
-      var last=pqDrill[level-1];
-      var seed=pqDrill.map(function(p){return p.label;}).join('>');
-      var terminal=(last.ap==='producto'||last.ap==='codprod');
-      return drillChildren(last.ap, seed).map(function(o){
-        var ins=Math.max(38,Math.min(100, last.row.ins + ((o.h%800)/100-4)));
-        return {key:o.cod||o.label,label:o.label,cod:o.cod,rawLabel:o.label,stock:Math.round(last.row.stock*o.frac),tra:Math.round(last.row.tra*o.frac),cd:Math.round(last.row.cd*o.frac),ins:ins,doh:last.row.doh*(0.9+(o.h%20)/100),drill:!terminal};
+      var rows = pqCasos();
+      if(rows===null || rows.error) return rows;
+      var curAp = pqDrill.length ? pqDrill[pqDrill.length-1].ap : pqApertura;
+      var terminal = (curAp==='descriptor'); // ultimo nivel de APERTURAS, sin mas drill posible
+      return rows.map(function(r){
+        var label = (r.clave==null || r.clave==='') ? '(Sin dato)' : String(r.clave);
+        return {
+          key: r.clave, label: label, rawLabel: r.clave,
+          stock: r.stock||0, tra: r.stock_transito||0, cd: r.stock_cd,
+          ins: r.instock_pct==null?0:r.instock_pct,
+          doh: r.doh==null?0:r.doh,
+          drill: !terminal,
+        };
       });
     }
     function renderPqMatrix(){
@@ -1795,6 +1852,24 @@
       var curAp=level?pqDrill[level-1].ap:pqApertura;
       var usedAps=[pqApertura].concat(pqDrill.map(function(p){return p.ap;}));
       var rows=pqLevelRows();
+      if(rows===null){
+        host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--muted)">Cargando datos…</div>';
+        return;
+      }
+      if(rows.error){
+        host.innerHTML='<div class="panel-card full" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:70px 24px;text-align:center">'
+          + '<svg viewBox="0 0 24 24" fill="none" style="width:44px;height:44px;color:var(--purple)"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'
+          + '<div style="font-family:var(--font-display);font-weight:800;font-size:1.15rem;color:var(--ink)">No se pudo cargar la información</div>'
+          + '<div style="font-size:.9rem;color:var(--muted);max-width:420px">Intentá de nuevo en unos segundos.</div>'
+          + '<button type="button" id="pqRetry" style="border:0;border-radius:999px;background:var(--purple);color:#fff;padding:9px 15px;font:700 .8rem var(--font-display);cursor:pointer">Reintentar</button></div>';
+        var retryBtn=document.getElementById('pqRetry');
+        if(retryBtn) retryBtn.addEventListener('click', function(){
+          var key=JSON.stringify(pqFetchParams());
+          delete pqCache[key+':err'];
+          renderPqMatrix();
+        });
+        return;
+      }
       var byKey={}; rows.forEach(function(r){ byKey[r.key]=r; });
       var sub, back='';
       if(level===0){ sub='Por '+drillName(curAp).toLowerCase()+' · instock proyectado a '+pqHorizon+' día'+(pqHorizon===1?'':'s')+' · abre otra apertura con la flecha'; }
@@ -1803,14 +1878,23 @@
         {key:'label',label:drillName(curAp),type:'text',thLeft:true,get:function(r){return r.label;},cell:function(r,ri){return '<td><span class="cell-chain"><span class="cell-dot" style="background:'+chartColor(ri)+'"></span>'+r.label+'</span>'+(r.drill?drillCueHtml(r.key):'')+'</td>';}},
         {key:'stock',label:'Stock',type:'num',get:function(r){return r.stock;},cell:function(r){return '<td>'+num(r.stock)+'</td>';}},
         {key:'tra',label:'Stock en tránsito',type:'num',get:function(r){return r.tra;},cell:function(r){return '<td>'+num(r.tra)+'</td>';}},
-        {key:'cd',label:'Stock en CD',type:'num',get:function(r){return r.cd;},cell:function(r){return '<td>'+num(r.cd)+'</td>';}},
+        {key:'cd',label:'Stock en CD',type:'num',get:function(r){return r.cd;},cell:function(r){return r.cd==null?'<td style="color:var(--muted)">-</td>':'<td>'+num(r.cd)+'</td>';}},
         {key:'ins',label:'Instock',type:'num',get:function(r){return r.ins;},cell:function(r){return '<td class="'+clsIns(r.ins)+'">'+r.ins.toFixed(1)+'%</td>';}},
         {key:'doh',label:'DOH',type:'num',get:function(r){return r.doh;},cell:function(r){return '<td>'+r.doh.toFixed(1)+'</td>';}}
       ];
       var sorted=smSortRows(cols,rows,pqSort);
       var body=sorted.map(function(r){ var ri=rows.indexOf(r); return '<tr'+(r.drill?' class="drillable"':'')+'>'+cols.map(function(c){return c.cell(r,ri);}).join('')+'</tr>'; }).join('');
       if(!rows.length) body='<tr><td colspan="'+cols.length+'" style="text-align:center;color:var(--muted);padding:26px">Sin datos para esta apertura y período</td></tr>';
-      var tS=0,tT=0,tC=0,tIW=0,tDW=0,tW=0; rows.forEach(function(r){ tS+=r.stock;tT+=r.tra;tC+=r.cd;tIW+=r.ins*r.stock;tDW+=r.doh*r.stock;tW+=r.stock; });
+      // Total del pie de tabla: promedio ponderado por stock de las filas
+      // YA agregadas que se estan mostrando (no una re-agregacion desde el
+      // grano base) -- limitacion conocida, heredada del diseño anterior:
+      // no es exactamente Σstock_usado/Σventa del universo completo si las
+      // filas tienen distinta venta_prom_diaria_28d entre si (promedio de
+      // promedios). Pendiente si se quiere el total exacto: pedirle al
+      // backend una fila "total" aparte (sin agrupar) en vez de promediar
+      // en el cliente -- fuera del alcance de este cambio (solo pidieron
+      // reemplazar mapLocalResumen()/pqLevelRows(), no este footer).
+      var tS=0,tT=0,tC=0,tIW=0,tDW=0,tW=0; rows.forEach(function(r){ tS+=r.stock;tT+=r.tra;tC+=(r.cd||0);tIW+=r.ins*r.stock;tDW+=r.doh*r.stock;tW+=r.stock; });
       host.innerHTML='<div class="panel-card full" id="pqMatrix"><div class="pc-head"><div><div class="pc-title">Matriz de datos · Próximos Quiebres</div><div class="pc-sub">'+sub+'</div></div>'+back+'</div>'
         + '<div class="table-scroll"><table class="matrix'+(level>0?' matrix-left':'')+'" style="table-layout:fixed;width:100%"><colgroup><col style="width:26%"><col style="width:15%"><col style="width:15%"><col style="width:15%"><col style="width:15%"><col style="width:14%"></colgroup><thead>'+smThead(cols,pqSort)+'</thead><tbody>'+body+'</tbody>'
         + (rows.length?('<tfoot><tr><td>Total</td><td>'+num(tS)+'</td><td>'+num(tT)+'</td><td>'+num(tC)+'</td><td class="'+clsIns(tW?tIW/tW:0)+'">'+(tW?tIW/tW:0).toFixed(1)+'%</td><td>'+(tW?tDW/tW:0).toFixed(1)+'</td></tr></tfoot>'):'')
@@ -2206,6 +2290,21 @@
     var MESES_LBL=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     function fmtMesLabel(iso){ var p=iso.split('-'); return MESES_LBL[Number(p[1])-1]+' '+p[0].slice(2); }
     function fmtCadDash(v){ v=String(v||''); return v.toLowerCase()==='smu'?'SMU':nomPropio(v); }
+    // osa/ins/doh/qb quedan en 0 A PROPOSITO -- NO son clamp+ruido (nunca lo
+    // fueron aca, eso vivia en pqLevelRows()), son simples placeholders sin
+    // fuente real todavia para las vistas Negocio/Cadena/Local que tambien
+    // leen l.ins/l.doh desde este mismo local (resTotals/cadenaDimRows/
+    // localDimRows/Top 50 mas abajo en este archivo) -- osa/qb quedan
+    // FUERA de este cambio (pedido explicito). ins/doh especificamente NO
+    // se pueden sourcear aca desde /web/dashboard/instock: ese endpoint
+    // devuelve filas YA AGREGADAS al nivel de apertura pedido (una fila por
+    // cadena, o por codigo_local, etc.), no una fila por local cruda como
+    // espera este mapper -- son formas de dato incompatibles. La vista
+    // "Próximos Quiebres" (pqCasos/pqLevelRows, mas abajo) ya NO pasa por
+    // RES.locales/mapLocalResumen en absoluto: hace su propio fetch
+    // independiente a /web/dashboard/instock con la apertura/horizonte
+    // vigentes y consume la respuesta directo, sin depender de este objeto
+    // compartido -- ver pqCasos().
     function mapLocalResumen(l){
       return { cad:fmtCadDash(l.cadena), fmt:nomPropio(l.formato), cod:l.codigo, nom:nomPropio(l.nombre)||l.codigo, region:nomPropio(l.region),
         vp:Number(l.venta_pesos)||0, vc:Number(l.venta_costo)||0, vu:Number(l.venta_unidades)||0,
