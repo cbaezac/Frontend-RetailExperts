@@ -1377,6 +1377,7 @@
        de otra combinacion de parametros). */
     var pqApertura='cadena', pqSort={key:'ins',dir:1}, pqHorizon=3, pqDrill=[], pqCalcBase='stock';
     var pqPeriod={start:DEFAULT_PERIODS.yesterday.start, end:DEFAULT_PERIODS.yesterday.end};
+    var pqFechaDatos=null; // fecha real (YYYY-MM-DD) que devuelve el backend en fecha_datos -- NUNCA calculada en JS
     var pqCache={};
     function pqCurPeriod(){
       var de=document.getElementById('f-desde'), ha=document.getElementById('f-hasta');
@@ -1392,25 +1393,24 @@
       return out;
     }
     function pqApLabel(){ return APERTURAS.filter(function(a){return a[0]===pqApertura;})[0][1]; }
-    // pqFetchParams(): apertura/horizonte/modo_calculo/hasta + filtros de la
+    // pqFetchParams(): apertura/horizonte/modo_calculo + filtros de la
     // barra superior (fbFilterParams) + filtros acumulados del drill-down
     // (drillPathFilters, mismo helper que ya usa el drill real de
     // Comercial -- DRILL_PARAM ya trae el mapeo apertura corta -> nombre de
     // parametro largo que espera el backend, cadena/formato/region/
     // codigo_local/nombre_local/categoria/marca/codigo_producto/descriptor).
-    // Solo se manda "hasta" (el campo "hasta" del rango de la barra) --
-    // "desde" NO se manda: instock/doh son una foto (MAX(fecha)<=hasta en
-    // el backend), no un flujo -- ver dashboardInstock() en
-    // analytics-platform/backend/src/modules/web/web-data.service.ts.
+    // NO se manda "hasta": el backend lo resuelve solo como MAX(fecha) real
+    // de public.stock -- ver dashboardInstock() en
+    // analytics-platform/backend/src/modules/web/web-data.service.ts. La
+    // fecha que se muestra al usuario es la que confirma esa respuesta
+    // (fecha_datos), nunca un calculo de "ayer" en JS.
     function pqFetchParams(){
       var curAp = pqDrill.length ? pqDrill[pqDrill.length-1].ap : pqApertura;
-      var p = pqCurPeriod();
       return withCliente(Object.assign(
         {
           apertura: DRILL_PARAM[curAp] || curAp,
           horizonte: pqHorizon,
           modo_calculo: (pqCalcBase==='stocktra') ? 'stock_transito' : 'stock',
-          hasta: p.end,
         },
         fbFilterParams(),
         drillPathFilters(pqApertura, pqDrill)
@@ -1431,7 +1431,10 @@
       pqCache[key+':p']=1;
       window.RetailAPI.requestJson('/web/dashboard/instock'+window.RetailAPI.buildQuery(params))
         .then(function(r){
-          pqCache[key]=Array.isArray(r)?r:[];
+          pqCache[key]=(r&&Array.isArray(r.filas))?r.filas:[];
+          pqFechaDatos=(r&&r.fecha_datos)||null;
+          var lbl=document.getElementById('pqFechaLabel');
+          if(lbl) lbl.textContent=pqFechaDatos?cpfrFmtFecha(pqFechaDatos):'Sin datos';
           delete pqCache[key+':p'];
           renderPqMatrix();
         })
@@ -3643,7 +3646,12 @@
           + acPeriod('Período comparativo','cmp-b1','cmp-b2',cmpPeriod.b1,cmpPeriod.b2)
           + acSeg('cmpApSeg',cmpApertura) + acSwitch('cmpMetSw',cmpMetric);
       } else if(area==='abastecimiento'){ h=acSeg('abaApSeg',abaApertura); }
-      else if(area==='proxq'){ h=acSeg('pqApSeg',pqApertura)+'<div class="ctl-group"><label>Horizonte instock (días)</label><input type="number" id="pqHz" min="1" step="1" value="'+pqHorizon+'" style="width:86px;font-family:var(--font-body);font-size:.8rem;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:8px;padding:7px 12px;outline:none" /></div><div class="ctl-group"><label>Considerar para cálculo</label><div class="seg" id="pqBaseSeg"><button type="button" data-ap="stock"'+(pqCalcBase==='stock'?' class="on"':'')+'>Stock</button><button type="button" data-ap="stocktra"'+(pqCalcBase==='stocktra'?' class="on"':'')+'>Stock + tránsito</button></div></div>'; }
+      else if(area==='proxq'){ h=acSeg('pqApSeg',pqApertura)+'<div class="ctl-group"><label>Horizonte instock (días)</label><input type="number" id="pqHz" min="1" step="1" value="'+pqHorizon+'" style="width:86px;font-family:var(--font-body);font-size:.8rem;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:8px;padding:7px 12px;outline:none" /></div><div class="ctl-group"><label>Considerar para cálculo</label><div class="seg" id="pqBaseSeg"><button type="button" data-ap="stock"'+(pqCalcBase==='stock'?' class="on"':'')+'>Stock</button><button type="button" data-ap="stocktra"'+(pqCalcBase==='stocktra'?' class="on"':'')+'>Stock + tránsito</button></div></div>'
+        +'<div class="ctl-group"><label>Datos al</label><span class="period-val" id="pqFechaBadge" title="Fecha real del último dato disponible · no editable">'
+        +'<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18M8 2.5v4M16 2.5v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+        +'<span id="pqFechaLabel">'+(pqFechaDatos?cpfrFmtFecha(pqFechaDatos):'Cargando…')+'</span>'
+        +'<svg class="lock" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+        +'</span></div>'; }
       else if(area==='fore'){ h=acSeg('fsApSeg',fsApertura)+'<div class="ctl-group"><label>Horizonte (días)</label><input type="number" id="fsHz" min="1" step="1" value="'+fsHorizon+'" style="width:86px;font-family:var(--font-body);font-size:.82rem;color:var(--ink);background:#fff;border:1.2px solid var(--line);border-radius:8px;padding:7px 10px;outline:none" /></div>'; }
       else if(area==='osa'){ h=acGran('osaGranSeg',osaGran)+acSeg('osaApSeg',osaApertura); }
       else if(area==='forecast'){ h=acSeg('fcApSeg',fcApertura); }
@@ -3712,7 +3720,7 @@
       if(window.logEvent && area!==_lastLoggedArea){ _lastLoggedArea=area; try{ logEvent('Dashboards', AREA_LOG[area]||area); }catch(e){} }
       // Período editable en todas las áreas EXCEPTO Resumen de Negocio (bloqueado)
       // Comercial-Evolutivo y Comparativo traen su propio período en el panel; ocultar solo el chip de período
-      var ownPeriod = (area==='comercial' || area==='comparativo' || area==='personalizado' || area==='mapa');
+      var ownPeriod = (area==='comercial' || area==='comparativo' || area==='personalizado' || area==='mapa' || area==='proxq');
       var fb=document.querySelector('.filterbar'); if(fb) fb.style.display=(area==='personalizado'||area==='supply')?'none':'flex';
       applyFieldVisibility(area);
       var pc=document.querySelector('.period-chip'); if(pc) pc.style.display=(ownPeriod||area==='inmovilizados')?'none':'flex';
