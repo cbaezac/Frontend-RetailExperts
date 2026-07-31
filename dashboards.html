@@ -1784,47 +1784,128 @@
     function panelProxQuiebres(){
       renderPqMatrix();
     }
-    /* ---- Quiebres CD ---- */
-    var qcSort={key:'cd',dir:1};
-    function panelQuiebresCD(){
-      if(needsData('quiebrescadena', 'descriptor', panelQuiebresCD)) return;
-      renderQcMatrix();
+    /* ---- Quiebres CD (real, GET /web/dashboard/quiebres-cd) ----
+       Mismo patron de cache/fetch que pqCasos() (Proximos Quiebres, arriba):
+       key=JSON de los params exactos, qcCache[key]=filas ya resueltas,
+       qcCache[key+':p']=fetch en curso, qcCache[key+':err']=fetch fallido
+       para esa key puntual. Reusa pqHorizon -- mismo input compartido #pqHz
+       (ver buildAreaControls/wireAreaControls). modo_calculo NO tiene
+       control propio en este panel todavia: queda en 'stock' (default del
+       backend) -- si se necesita exponer el toggle Stock/Stock+transito
+       aca tambien, agregar despues (no pedido en el alcance original).
+       qcSort arranca en {key:null,...}: smSortRows() con un key que no
+       matchea ninguna columna devuelve las filas tal cual llegaron -- o
+       sea, el orden inicial es el del backend (stock_cd ASC NULLS LAST),
+       sin reordenar en cliente. Clickear un header SI reordena (mismo
+       comportamiento que el resto de las matrices reales del dashboard,
+       via smWire) -- interaccion estandar, no un "reorden por defecto". */
+    var qcSort={key:null,dir:1}, qcCache={}, qcFechasCd=null, qcFechasVenta=null, qcTotales=null;
+    function qcFetchParams(){
+      return withCliente(Object.assign({ horizonte: pqHorizon }, fbFilterParams()));
+    }
+    function qcFilas(){
+      var params=qcFetchParams();
+      var key=JSON.stringify(params);
+      if(qcCache[key]) return qcCache[key];
+      if(qcCache[key+':err']) return {error:true};
+      if(qcCache[key+':p']) return null;
+      qcCache[key+':p']=1;
+      window.RetailAPI.requestJson('/web/dashboard/quiebres-cd'+window.RetailAPI.buildQuery(params))
+        .then(function(r){
+          qcCache[key]=(r&&Array.isArray(r.filas))?r.filas:[];
+          qcFechasCd=(r&&r.fechas_stock_cd)||null;
+          qcFechasVenta=(r&&r.fechas_venta)||null;
+          qcTotales=(r&&r.totales)||null;
+          if(_currentArea==='quiebrescadena'){
+            var lbl=document.getElementById('periodLabel');
+            if(lbl) lbl.textContent=qcFechaMax()?cpfrFmtFecha(qcFechaMax()):'Sin datos';
+          }
+          delete qcCache[key+':p'];
+          renderQcMatrix();
+        })
+        .catch(function(){
+          qcCache[key+':err']=1;
+          delete qcCache[key+':p'];
+          renderQcMatrix();
+        });
+      return null;
+    }
+    function panelQuiebresCD(){ renderQcMatrix(); }
+    // MAX(fechas_stock_cd) -- una sola fecha para el candado "Datos al" del
+    // chip de periodo global (#periodLocked/#periodLabel, reusado igual que
+    // proxq desde 08d4969 -- ver showArea()), igual criterio que
+    // pqFechaDatos pero agregado con MAX en vez de venir ya resuelto del
+    // backend (acá SI hay mas de una fecha por cadena, walmart puede ir 1
+    // dia atras). yyyy-mm-dd ordena lexicograficamente = cronologico, no
+    // hace falta parsear Date.
+    function qcFechaMax(){
+      if(!qcFechasCd) return null;
+      var fechas=Object.keys(qcFechasCd).map(function(k){return qcFechasCd[k];}).filter(Boolean);
+      return fechas.length?fechas.sort().slice(-1)[0]:null;
+    }
+    // "Stock CD al: cencosud/smu/tottus 30-07 · walmart 29-07" -- agrupa
+    // cadenas que comparten la misma fecha. Detalle FINO por cadena para el
+    // subtitulo de la tabla -- complementa al candado del chip de periodo
+    // (que solo muestra el MAX, via qcFechaMax()), no lo reemplaza.
+    function qcFechasSub(){
+      if(!qcFechasCd) return '';
+      var byFecha={};
+      Object.keys(qcFechasCd).forEach(function(cad){
+        var f=qcFechasCd[cad]; if(!f) return;
+        (byFecha[f]=byFecha[f]||[]).push(cad);
+      });
+      var partes=Object.keys(byFecha).sort().reverse().map(function(f){
+        return byFecha[f].join('/')+' '+f.slice(8,10)+'-'+f.slice(5,7);
+      });
+      return partes.length?('Stock CD al: '+partes.join(' · ')):'';
     }
     function renderQcMatrix(){
-      var L=abaLocals(), out=[];
-      L.forEach(function(l){
-        var pv=COM.aperturas.descriptor?COM.aperturas.descriptor.values:[];
-        var nP=1+(hashN(l.cod+'qcn')%3);
-        for(var i=0;i<nP;i++){
-          var pi=hashN(l.cod+'qc'+i)%(pv.length||8);
-          var prod=pv.length?pv[pi].label:('Producto '+(pi+1));
-          var cat=CATS[hashN(l.cod+'qcc'+i)%CATS.length];
-          var sku='SKU'+(1001+pi);
-          var h=hashN(l.cad+':'+sku+':qc');
-          out.push({cad:l.cad, cat:cat, sku:sku, prod:prod, cd:Math.round(l.cd*(0.2+(h%60)/100)), ins:Math.max(38,Math.min(100,(l.ins||90)+((h%400)/100-2))), doh:(l.doh||6)*(0.8+(h%40)/100)});
-        }
-      });
-      // consolidar por cadena-producto
-      var by={};
-      out.forEach(function(r){ var k=r.cad+'|'+r.sku; if(!by[k]){ by[k]=r; } else { by[k].cd+=r.cd; } });
-      var rows=Object.keys(by).map(function(k){ return by[k]; });
+      var rows=qcFilas();
+      if(rows===null){
+        host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--muted)">Cargando datos…</div>';
+        return;
+      }
+      if(rows.error){
+        host.innerHTML='<div class="panel-card full" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:70px 24px;text-align:center">'
+          + '<svg viewBox="0 0 24 24" fill="none" style="width:44px;height:44px;color:var(--purple)"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'
+          + '<div style="font-family:var(--font-display);font-weight:800;font-size:1.15rem;color:var(--ink)">No se pudo cargar la información</div>'
+          + '<div style="font-size:.9rem;color:var(--muted);max-width:420px">Intentá de nuevo en unos segundos.</div>'
+          + '<button type="button" id="qcRetry" style="border:0;border-radius:999px;background:var(--purple);color:#fff;padding:9px 15px;font:700 .8rem var(--font-display);cursor:pointer">Reintentar</button></div>';
+        var retryBtn=document.getElementById('qcRetry');
+        if(retryBtn) retryBtn.addEventListener('click', function(){
+          var key=JSON.stringify(qcFetchParams());
+          delete qcCache[key+':err'];
+          renderQcMatrix();
+        });
+        return;
+      }
       var cols=[
-        {key:'cad',label:'Cadena',type:'text',thLeft:true,get:function(r){return r.cad;},cell:function(r){return '<td>'+r.cad+'</td>';}},
-        {key:'cat',label:'Categoría',type:'text',get:function(r){return r.cat;},cell:function(r){return '<td>'+r.cat+'</td>';}},
-        {key:'sku',label:'Código Producto',type:'text',get:function(r){return r.sku;},cell:function(r){return '<td>'+r.sku+'</td>';}},
-        {key:'prod',label:'Producto',type:'text',get:function(r){return r.prod;},cell:function(r){return '<td>'+r.prod+'</td>';}},
-        {key:'cd',label:'Stock en CD',type:'num',get:function(r){return r.cd;},cell:function(r){return '<td>'+num(r.cd)+'</td>';}},
-        {key:'ins',label:'Instock',type:'num',get:function(r){return r.ins;},cell:function(r){return '<td class="'+clsIns(r.ins)+'">'+r.ins.toFixed(1)+'%</td>';}},
-        {key:'doh',label:'DOH',type:'num',get:function(r){return r.doh;},cell:function(r){return '<td>'+r.doh.toFixed(1)+'</td>';}}
+        {key:'cadena',label:'Cadena',type:'text',thLeft:true,get:function(r){return r.cadena;},cell:function(r){return '<td>'+fmtCadDash(r.cadena)+'</td>';}},
+        {key:'categoria',label:'Categoría',type:'text',get:function(r){return r.categoria;},cell:function(r){return '<td>'+(r.categoria?nomPropio(r.categoria):'-')+'</td>';}},
+        {key:'codigo_producto',label:'Código Producto',type:'text',get:function(r){return r.codigo_producto;},cell:function(r){return '<td>'+r.codigo_producto+'</td>';}},
+        {key:'nombre_producto',label:'Producto',type:'text',get:function(r){return r.nombre_producto;},cell:function(r){return '<td>'+(r.nombre_producto?nomPropio(r.nombre_producto):'-')+'</td>';}},
+        {key:'stock_cd',label:'Stock en CD',type:'num',get:function(r){return r.stock_cd==null?-Infinity:r.stock_cd;},cell:function(r){return '<td title="'+(r.fecha_stock_cd?('Al '+r.fecha_stock_cd.slice(8,10)+'-'+r.fecha_stock_cd.slice(5,7)):'')+'">'+(r.stock_cd==null?'<span style="color:var(--muted)">-</span>':num(r.stock_cd))+'</td>';}},
+        {key:'instock_pct',label:'Instock',type:'num',get:function(r){return r.instock_pct==null?-1:r.instock_pct;},cell:function(r){return r.instock_pct==null?'<td style="color:var(--muted)">-</td>':'<td class="'+clsIns(r.instock_pct)+'">'+r.instock_pct.toFixed(1)+'%</td>';}},
+        {key:'doh_cd',label:'DOH <span title="DOH siempre a nivel cadena completa (CD nacional / venta de TODOS los locales de la cadena) -- no cambia si filtrás por local. Piso en 0: stock negativo = 0 días de cobertura." style="cursor:help;color:var(--muted);font-weight:600">ⓘ</span>',type:'num',get:function(r){return r.doh_cd==null?-Infinity:(r.stock_cd<0?0:r.doh_cd);},cell:function(r){var dv=r.doh_cd==null?null:(r.stock_cd<0?0:r.doh_cd);return '<td title="'+(r.fecha_venta_hasta?('Venta hasta '+r.fecha_venta_hasta.slice(8,10)+'-'+r.fecha_venta_hasta.slice(5,7)):'')+'">'+(dv==null?'<span style="color:var(--muted)">-</span>':dv.toFixed(1))+'</td>';}}
       ];
       var sorted=smSortRows(cols,rows,qcSort);
       var body=sorted.map(function(r){ return '<tr>'+cols.map(function(c){return c.cell(r);}).join('')+'</tr>'; }).join('');
       if(!rows.length) body='<tr><td colspan="'+cols.length+'" style="text-align:center;color:var(--muted);padding:26px">Sin datos para los filtros seleccionados</td></tr>';
-      var tC=0,tIW=0,tDW=0,tW=0; rows.forEach(function(r){ tC+=r.cd;tIW+=r.ins*r.cd;tDW+=r.doh*r.cd;tW+=r.cd; });
-      host.innerHTML='<div class="panel-card full" id="qcMatrix"><div class="pc-head"><div><div class="pc-title">Matriz de datos · Quiebres CD</div><div class="pc-sub">Combinaciones cadena · producto con stock en CD, instock y DOH</div></div></div>'
-        + '<div class="table-scroll"><table class="matrix matrix-left" id="qcTable" style="font-size:.78rem;table-layout:fixed;width:100%"><colgroup><col style="width:13%"><col style="width:14%"><col style="width:14%"><col style="width:23%"><col style="width:12%"><col style="width:12%"><col style="width:12%"></colgroup><thead>'+smThead(cols,qcSort)+'</thead><tbody>'+body+'</tbody>'
-        + (rows.length?('<tfoot><tr><td>Total</td><td></td><td></td><td></td><td>'+num(tC)+'</td><td class="'+clsIns(tW?tIW/tW:0)+'">'+(tW?tIW/tW:0).toFixed(1)+'%</td><td>'+(tW?tDW/tW:0).toFixed(1)+'</td></tr></tfoot>'):'')
-        + '</table></div></div>';
+      var sub=qcFechasSub()||'Combinaciones cadena · producto con stock en CD, instock y DOH · orden por stock en CD (negativos primero)';
+      // Total: viene YA calculado del backend (totales.*, ver dashboardQuiebresCD)
+      // -- NUNCA promedio client-side de las filas visibles. doh_cd del total
+      // lleva el MISMO piso en 0 que las filas (consistencia visual) -- el
+      // valor crudo (potencialmente negativo) sigue intacto en qcTotales.doh_cd,
+      // el piso es solo de presentación acá.
+      var tfoot='';
+      if(qcTotales){
+        var tStock=qcTotales.stock_cd==null?'-':num(qcTotales.stock_cd);
+        var tIns=qcTotales.instock_pct==null?'<span style="color:var(--muted)">-</span>':('<span class="'+clsIns(qcTotales.instock_pct)+'">'+qcTotales.instock_pct.toFixed(1)+'%</span>');
+        var tDoh=qcTotales.doh_cd==null?'-':Math.max(0,qcTotales.doh_cd).toFixed(1);
+        tfoot='<tfoot><tr><td>Total</td><td></td><td></td><td></td><td>'+tStock+'</td><td>'+tIns+'</td><td>'+tDoh+'</td></tr></tfoot>';
+      }
+      host.innerHTML='<div class="panel-card full" id="qcMatrix"><div class="pc-head"><div><div class="pc-title">Matriz de datos · Quiebres CD</div><div class="pc-sub">'+sub+'</div></div></div>'
+        + '<div class="table-scroll"><table class="matrix matrix-left" id="qcTable" style="font-size:.78rem;table-layout:fixed;width:100%"><colgroup><col style="width:13%"><col style="width:14%"><col style="width:14%"><col style="width:23%"><col style="width:12%"><col style="width:12%"><col style="width:12%"></colgroup><thead>'+smThead(cols,qcSort)+'</thead><tbody>'+body+'</tbody>'+tfoot+'</table></div></div>';
       smWire('#qcMatrix', cols, qcSort, renderQcMatrix);
     }
     // pqLevelRows(): ya NO calcula instock/DOH client-side (antes:
@@ -3582,7 +3663,7 @@
       inmovilizados:panelInmovilizados,
       personalizado:panelPersonalizado
     };
-    var AREA_LOG={resumen:'Resumen de Negocio',cadena:'Avance · Cadena',local:'Avance · Local',mapa:'Mapa',comercial:'Venta · Evolutivo',comparativo:'Venta · Comparativo',fore:'Forecast',abastecimiento:'Abastecimiento',proxq:'Próximos Quiebres',cpfr:'Entregable CPFR',osa:'OSA',forecast:'Venta Perdida',promociones:'Promociones',supply:'Supply',levantamientos:'Levantamientos',inmovilizados:'Inmovilizados',personalizado:'Personalizado'};
+    var AREA_LOG={resumen:'Resumen de Negocio',cadena:'Avance · Cadena',local:'Avance · Local',mapa:'Mapa',comercial:'Venta · Evolutivo',comparativo:'Venta · Comparativo',fore:'Forecast',abastecimiento:'Abastecimiento',proxq:'Próximos Quiebres',quiebrescadena:'Quiebres CD',cpfr:'Entregable CPFR',osa:'OSA',forecast:'Venta Perdida',promociones:'Promociones',supply:'Supply',levantamientos:'Levantamientos',inmovilizados:'Inmovilizados',personalizado:'Personalizado'};
     var _lastLoggedArea=null;
     var _currentArea=null;
     function periodForArea(area){
@@ -3649,6 +3730,7 @@
           + acSeg('cmpApSeg',cmpApertura) + acSwitch('cmpMetSw',cmpMetric);
       } else if(area==='abastecimiento'){ h=acSeg('abaApSeg',abaApertura); }
       else if(area==='proxq'){ h=acSeg('pqApSeg',pqApertura)+'<div class="ctl-group"><label>Horizonte instock (días)</label><input type="number" id="pqHz" min="1" step="1" value="'+pqHorizon+'" style="width:86px;font-family:var(--font-body);font-size:.8rem;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:8px;padding:7px 12px;outline:none" /></div><div class="ctl-group"><label>Considerar para cálculo</label><div class="seg" id="pqBaseSeg"><button type="button" data-ap="stock"'+(pqCalcBase==='stock'?' class="on"':'')+'>Stock</button><button type="button" data-ap="stocktra"'+(pqCalcBase==='stocktra'?' class="on"':'')+'>Stock + tránsito</button></div></div>'; }
+      else if(area==='quiebrescadena'){ h='<div class="ctl-group"><label>Horizonte instock (días)</label><input type="number" id="pqHz" min="1" step="1" value="'+pqHorizon+'" style="width:86px;font-family:var(--font-body);font-size:.8rem;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:8px;padding:7px 12px;outline:none" /></div>'; }
       else if(area==='fore'){ h=acSeg('fsApSeg',fsApertura)+'<div class="ctl-group"><label>Horizonte (días)</label><input type="number" id="fsHz" min="1" step="1" value="'+fsHorizon+'" style="width:86px;font-family:var(--font-body);font-size:.82rem;color:var(--ink);background:#fff;border:1.2px solid var(--line);border-radius:8px;padding:7px 10px;outline:none" /></div>'; }
       else if(area==='osa'){ h=acGran('osaGranSeg',osaGran)+acSeg('osaApSeg',osaApertura); }
       else if(area==='forecast'){ h=acSeg('fcApSeg',fcApertura); }
@@ -3680,7 +3762,7 @@
         onPeriod('cmp-b1', function(){ var e2=document.getElementById('cmp-b1'); if(e2&&e2.value) cmpPeriod.b1=e2.value; });
         onPeriod('cmp-b2', function(){ var e2=document.getElementById('cmp-b2'); if(e2&&e2.value) cmpPeriod.b2=e2.value; });
       } else if(area==='abastecimiento'){ onSeg('abaApSeg', function(v){ abaApertura=v; }); }
-      else if(area==='proxq'){ onSeg('pqApSeg', function(v){ pqApertura=v; }); onSeg('pqBaseSeg', function(v){ pqCalcBase=v; }); var hzi=document.getElementById('pqHz'); if(hzi) hzi.addEventListener('change', function(){ var n=parseInt(this.value,10); if(!isFinite(n)||n<1) n=1; this.value=n; pqHorizon=n; }); }
+      else if(area==='proxq' || area==='quiebrescadena'){ onSeg('pqApSeg', function(v){ pqApertura=v; }); onSeg('pqBaseSeg', function(v){ pqCalcBase=v; }); var hzi=document.getElementById('pqHz'); if(hzi) hzi.addEventListener('change', function(){ var n=parseInt(this.value,10); if(!isFinite(n)||n<1) n=1; this.value=n; pqHorizon=n; }); }
       else if(area==='fore'){ onSeg('fsApSeg', function(v){ fsApertura=v; }); var fhz=document.getElementById('fsHz'); if(fhz) fhz.addEventListener('change', function(){ var n=parseInt(this.value,10); if(!isFinite(n)||n<1) n=1; this.value=n; fsHorizon=n; }); }
       else if(area==='osa'){ onSeg('osaApSeg', function(v){ osaApertura=v; }); onSeg('osaGranSeg', function(v){ osaGran=v; }); }
       else if(area==='forecast'){ onSeg('fcApSeg', function(v){ fcApertura=v; }); }
@@ -3722,7 +3804,7 @@
       applyFieldVisibility(area);
       var pc=document.querySelector('.period-chip'); if(pc) pc.style.display=(ownPeriod||area==='inmovilizados')?'none':'flex';
       var pd=document.querySelector('.fb-divider'); if(pd) pd.style.display=(ownPeriod||area==='inmovilizados')?'none':'block';
-      var locked = (area==='resumen' || area==='cadena' || area==='local' || area==='proxq');
+      var locked = (area==='resumen' || area==='cadena' || area==='local' || area==='proxq' || area==='quiebrescadena');
       if(area==='resumen' || area==='cadena' || area==='local'){ cadDrill=[]; topDrill=null; }
       if(area==='comercial') comDrill=[];
       if(area==='comparativo') cmpDrill=[];
@@ -3734,13 +3816,18 @@
       var elL=document.getElementById('periodLocked'), elE=document.getElementById('periodEdit');
       if(elL&&elE){
         elL.style.display=locked?'':'none'; elE.style.display=locked?'none':'inline-flex';
-        elL.title = (area==='proxq') ? 'Fecha real del último dato disponible · no editable' : 'Mes en curso · no editable';
+        elL.title = (area==='proxq') ? 'Fecha real del último dato disponible · no editable'
+          : (area==='quiebrescadena') ? 'Fecha más reciente entre cadenas (MAX) · el detalle por cadena está en el subtítulo de la tabla · no editable'
+          : 'Mes en curso · no editable';
       }
       var plbl=document.getElementById('periodChipLabel');
-      if(plbl) plbl.textContent = (area==='proxq') ? 'Datos al' : 'Período';
+      if(plbl) plbl.textContent = (area==='proxq' || area==='quiebrescadena') ? 'Datos al' : 'Período';
       if(area==='proxq'){
         var pval=document.getElementById('periodLabel');
         if(pval) pval.textContent = pqFechaDatos ? cpfrFmtFecha(pqFechaDatos) : 'Cargando…';
+      } else if(area==='quiebrescadena'){
+        var pval2=document.getElementById('periodLabel');
+        if(pval2) pval2.textContent = qcFechaMax() ? cpfrFmtFecha(qcFechaMax()) : 'Cargando…';
       }
       buildAreaControls(area);
       destroyCharts(); renderWithLoader(RENDER[area]);
