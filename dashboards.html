@@ -243,7 +243,12 @@
   #cpfrMatrix table.matrix thead th:first-child, #cpfrMatrix table.matrix tbody td:first-child{ text-align:center; }
   #cpfrMatrix table.matrix thead th, #cpfrMatrix table.matrix tbody td{ padding:7px 5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #cpfrMatrix table.matrix thead th{ font-size:.6rem; letter-spacing:0; }
-  #cpfrMatrix .table-scroll{ overflow-x:hidden; }
+  #cpfrMatrix .table-scroll{ overflow-x:hidden; max-height:620px; overflow-y:auto; }
+  #cpfrOcMatrix table.matrix thead th:first-child, #cpfrOcMatrix table.matrix tbody td:first-child{ text-align:center; }
+  #cpfrOcMatrix table.matrix thead th, #cpfrOcMatrix table.matrix tbody td{ padding:7px 5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #cpfrOcMatrix table.matrix thead th{ font-size:.6rem; letter-spacing:0; white-space:normal; line-height:1.15; overflow:visible; text-overflow:clip; word-break:break-word; }
+  table#cpfrOcTable thead th:not(:first-child), table#cpfrOcTable tbody td:not(:first-child){ min-width:0; }
+  #cpfrOcMatrix .table-scroll{ overflow-x:hidden; max-height:350px; overflow-y:auto; }
   #inmoTable thead th:not(:first-child), #inmoTable tbody td:not(:first-child){ min-width:0; }
   #inmoMatrix .table-scroll{ overflow-x:hidden; }
   #levMatrix table.matrix thead th{ white-space:normal; line-height:1.15; word-break:break-word; overflow:visible; text-overflow:clip; }
@@ -1449,6 +1454,7 @@
     }
     /* ---- Entregable CPFR ---- */
     var cpfrSort={key:'status',dir:1}, cpfrStatusFilter='todos';
+    var cpfrOcSort={key:'status',dir:1}, cpfrOcStatusFilter='todos';
     var CPFR_TIPOS=['Quiebre','Próximo quiebre 1d','Próximo quiebre 3d','Próximo quiebre 5d','Próximo quiebre 7d'];
     function cpfrDays(){
       var de=document.getElementById('f-desde'), ha=document.getElementById('f-hasta');
@@ -1548,12 +1554,30 @@
         return { fecha:c.fecha, cad:c.cadena, nom:c.local, sku:c.codigo_producto, prod:c.producto, tipo:c.problema, dias:c.duracion, horizonte:c.horizonte_dias, resuelto:(c.estado==='RESUELTO') };
       });
     }
+    // cpfrOcCasos(): mismo patron que cpfrCasos(), contra /web/dashboard/cpfr/oc
+    // (casos SIN_STOCK_CD, grano cadena-producto -- simil hoja OC del Excel).
+    // "resuelto" = fecha_cierre no nulo, NO estado==='RESUELTO': un caso puede
+    // cerrarse con un estado que no sea RESUELTO sin dejar de estar cerrado --
+    // fecha_cierre es la señal correcta de "ya no esta abierto", mismo criterio
+    // ya acordado para evitar el bug "Persiste = no resuelto".
+    async function cpfrOcCasos(){
+      var de=document.getElementById('f-desde'), ha=document.getElementById('f-hasta');
+      var params=withCliente(Object.assign({desde:de&&de.value, hasta:ha&&ha.value}, fbFilterParams()));
+      delete params.estado;
+      var r=await window.RetailAPI.requestJson('/web/dashboard/cpfr/oc'+window.RetailAPI.buildQuery(params));
+      var casosCrudos=(r&&r.casos)||[];
+      return casosCrudos.map(function(c){
+        return { fecha:c.fecha_apertura, cad:c.cadena, sku:c.codigo_producto, prod:c.nombre_producto, problema:c.problema, locales:c.locales_afectados, stockCd:c.stock_cd, dias:c.duracion, venta:c.potencial_venta_diaria, resuelto:(c.fecha_cierre!=null) };
+      });
+    }
     async function panelCpfr(){
       if(needsData('cpfr', 'descriptor', panelCpfr)) return;
       host.innerHTML='<div class="panel-card full" style="display:flex;align-items:center;justify-content:center;min-height:220px;padding:60px 24px;text-align:center;color:var(--muted);font-family:var(--font-body);font-size:.92rem">Cargando casos CPFR…</div>';
       var casos;
+      var casosOc;
       try{
-        casos=await cpfrCasos();
+        var _r=await Promise.all([cpfrCasos(), cpfrOcCasos()]);
+        casos=_r[0]; casosOc=_r[1];
       }catch(err){
         host.innerHTML='<div class="panel-card full" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:70px 24px;text-align:center">'
           + '<svg viewBox="0 0 24 24" fill="none" style="width:44px;height:44px;color:var(--purple)"><path d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'
@@ -1576,6 +1600,7 @@
         + '<div class="panel-card"><div class="pc-head"><div><div class="pc-title">Estatus de casos</div><div class="pc-sub">Resueltos vs. persiste</div></div></div><div class="chart-box h-mid"><canvas id="cpfr-pie"></canvas></div></div>'
         + '<div class="panel-card"><div class="pc-head"><div><div class="pc-title">Casos por cadena</div><div class="pc-sub">Según estatus</div></div></div><div class="chart-box h-mid"><canvas id="cpfr-bar"></canvas></div></div>'
         + '</div>';
+      html+='<div id="cpfrOcWrap"></div>';
       html+='<div id="cpfrWrap"></div>';
       host.innerHTML=html;
       pieChart(document.getElementById('cpfr-pie'), ['Resuelto','Persiste'], [nRes,nPer], ['#7FC99A','#E8918C'], function(n){return num(n)+' casos';});
@@ -1587,13 +1612,14 @@
         options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:true,position:'top',align:'end',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8,padding:14,font:{weight:'600'}}}}, scales:{ x:{grid:{display:false},stacked:true}, y:{grid:{color:'rgba(42,20,8,0.07)'},stacked:true} } } });
       charts.push(cb);
       var dl=document.getElementById('cpfrDl'); if(dl) dl.addEventListener('click', cpfrDescargarEntregable);
+      renderCpfrOcMatrix(casosOc);
       renderCpfrMatrix(casos);
     }
     function renderCpfrMatrix(casos){
       var rows=casos.filter(function(c){ return cpfrStatusFilter==='todos' || (cpfrStatusFilter==='resuelto'?c.resuelto:!c.resuelto); });
       var cols=[
         {key:'fecha',label:'Fecha',type:'str',get:function(r){return r.fecha;},cell:function(r){return '<td>'+cpfrFmtFecha(r.fecha)+'</td>';}},
-        {key:'cad',label:'Cadena',type:'str',get:function(r){return r.cad;},cell:function(r){return '<td>'+r.cad+'</td>';}},
+        {key:'cad',label:'Cadena',type:'str',get:function(r){return r.cad;},cell:function(r){return '<td>'+fmtCadDash(r.cad)+'</td>';}},
         {key:'nom',label:'Local',type:'str',get:function(r){return r.nom;},cell:function(r){return '<td>'+r.nom+'</td>';}},
         {key:'sku',label:'Cod Producto',type:'str',get:function(r){return r.sku;},cell:function(r){return '<td>'+r.sku+'</td>';}},
         {key:'prod',label:'Producto',type:'str',get:function(r){return r.prod;},cell:function(r){return '<td>'+r.prod+'</td>';}},
@@ -1614,6 +1640,31 @@
         + '<div class="table-scroll"><table class="matrix" id="cpfrTable" style="font-size:.72rem;table-layout:fixed;width:100%;min-width:0"><colgroup><col style="width:13%"><col style="width:12%"><col style="width:15%"><col style="width:12%"><col style="width:15%"><col style="width:12%"><col style="width:12%"><col style="width:12%"></colgroup><thead>'+smThead(cols,cpfrSort)+'</thead><tbody>'+body+'</tbody></table></div></div>';
       smWire('#cpfrMatrix', cols, cpfrSort, function(){ renderCpfrMatrix(casos); });
       var sw=document.getElementById('cpfrSw'); if(sw) sw.addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; cpfrStatusFilter=b.getAttribute('data-m'); renderCpfrMatrix(casos); });
+    }
+    function renderCpfrOcMatrix(casos){
+      var rows=casos.filter(function(c){ return cpfrOcStatusFilter==='todos' || (cpfrOcStatusFilter==='resuelto'?c.resuelto:!c.resuelto); });
+      var cols=[
+        {key:'fecha',label:'Fecha',type:'str',get:function(r){return r.fecha;},cell:function(r){return '<td>'+cpfrFmtFecha(r.fecha)+'</td>';}},
+        {key:'cad',label:'Cadena',type:'str',get:function(r){return r.cad;},cell:function(r){return '<td>'+fmtCadDash(r.cad)+'</td>';}},
+        {key:'sku',label:'Cod Producto',type:'str',get:function(r){return r.sku;},cell:function(r){return '<td>'+r.sku+'</td>';}},
+        {key:'prod',label:'Producto',type:'str',get:function(r){return r.prod;},cell:function(r){return '<td>'+(nomPropio(r.prod)||'-')+'</td>';}},
+        {key:'problema',label:'Problema',type:'str',get:function(r){return r.problema;},cell:function(r){
+          var esSinStock=r.problema==='Sin Stock CD';
+          return '<td><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:999px;font-weight:700;font-size:.74rem;'+(esSinStock?'background:rgba(192,57,43,.10);color:#C0392B':'background:rgba(224,140,28,.14);color:#B7791F')+'">'+r.problema+'</span></td>';
+        }},
+        {key:'locales',label:'# Locales afectados',type:'num',get:function(r){return r.locales;},cell:function(r){return '<td>'+r.locales+'</td>';}},
+        {key:'stockCd',label:'Stock en CD',type:'num',get:function(r){return r.stockCd;},cell:function(r){return '<td>'+num(r.stockCd)+'</td>';}},
+        {key:'dias',label:'Duración problema',type:'num',get:function(r){return r.dias;},cell:function(r){return '<td>'+r.dias+'</td>';}},
+        {key:'venta',label:'Venta potencial perdida',type:'num',get:function(r){return r.venta;},cell:function(r){return '<td>'+(r.venta!=null?clp(r.venta):'-')+'</td>';}},
+        {key:'status',label:'Estatus',type:'str',get:function(r){return r.resuelto?'Resuelto':'Persiste';},cell:function(r){return '<td><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:999px;font-weight:700;font-size:.74rem;'+(r.resuelto?'background:rgba(31,138,76,.12);color:#1F8A4C':'background:rgba(192,57,43,.10);color:#C0392B')+'">'+(r.resuelto?'Resuelto':'Persiste')+'</span></td>';}}
+      ];
+      var body=smSortRows(cols,rows,cpfrOcSort).map(function(r){ return '<tr>'+cols.map(function(c){return c.cell(r);}).join('')+'</tr>'; }).join('');
+      if(!rows.length) body='<tr><td colspan="'+cols.length+'" style="text-align:center;color:var(--muted);padding:26px">Sin casos con este estatus</td></tr>';
+      document.getElementById('cpfrOcWrap').innerHTML='<div class="panel-card full" id="cpfrOcMatrix" style="text-align:center"><div class="pc-head" style="text-align:left"><div><div class="pc-title">Detalle de casos · Cadena / Producto</div><div class="pc-sub">Productos donde el stock CD no cubre la demanda proyectada</div></div>'
+        + '<div class="metric-switch" id="cpfrOcSw"><button type="button" data-m="todos"'+(cpfrOcStatusFilter==='todos'?' class="on"':'')+'>Todos</button><button type="button" data-m="resuelto"'+(cpfrOcStatusFilter==='resuelto'?' class="on"':'')+'>Resueltos</button><button type="button" data-m="persiste"'+(cpfrOcStatusFilter==='persiste'?' class="on"':'')+'>Persiste</button></div></div>'
+        + '<div class="table-scroll"><table class="matrix" id="cpfrOcTable" style="font-size:.72rem;table-layout:fixed;width:100%;min-width:0"><colgroup><col style="width:8%"><col style="width:8%"><col style="width:10%"><col style="width:16%"><col style="width:11%"><col style="width:9%"><col style="width:8%"><col style="width:8%"><col style="width:13%"><col style="width:9%"></colgroup><thead>'+smThead(cols,cpfrOcSort)+'</thead><tbody>'+body+'</tbody></table></div></div>';
+      smWire('#cpfrOcMatrix', cols, cpfrOcSort, function(){ renderCpfrOcMatrix(casos); });
+      var sw2=document.getElementById('cpfrOcSw'); if(sw2) sw2.addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; cpfrOcStatusFilter=b.getAttribute('data-m'); renderCpfrOcMatrix(casos); });
     }
 
     /* ---- Levantamientos ---- */
