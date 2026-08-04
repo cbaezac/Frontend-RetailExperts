@@ -1852,7 +1852,7 @@
        via smWire) -- interaccion estandar, no un "reorden por defecto". */
     var qcSort={key:null,dir:1}, qcCache={}, qcFechasCd=null, qcFechasVenta=null, qcTotales=null;
     function qcFetchParams(){
-      return withCliente(Object.assign({ horizonte: pqHorizon }, fbFilterParams()));
+      return withCliente(Object.assign({ horizonte: 3 }, fbFilterParams()));
     }
     function qcFilas(){
       var params=qcFetchParams();
@@ -3790,7 +3790,6 @@
           + acSeg('cmpApSeg',cmpApertura) + acSwitch('cmpMetSw',cmpMetric);
       } else if(area==='abastecimiento'){ h=acSeg('abaApSeg',abaApertura); }
       else if(area==='proxq'){ h=acSeg('pqApSeg',pqApertura)+'<div class="ctl-group"><label>Horizonte instock (días)</label><input type="number" id="pqHz" min="1" step="1" value="'+pqHorizon+'" style="width:86px;font-family:var(--font-body);font-size:.8rem;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:8px;padding:7px 12px;outline:none" /></div><div class="ctl-group"><label>Considerar para cálculo</label><div class="seg" id="pqBaseSeg"><button type="button" data-ap="stock"'+(pqCalcBase==='stock'?' class="on"':'')+'>Stock</button><button type="button" data-ap="stocktra"'+(pqCalcBase==='stocktra'?' class="on"':'')+'>Stock + tránsito</button></div></div>'; }
-      else if(area==='quiebrescadena'){ h='<div class="ctl-group"><label>Horizonte instock (días)</label><input type="number" id="pqHz" min="1" step="1" value="'+pqHorizon+'" style="width:86px;font-family:var(--font-body);font-size:.8rem;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:8px;padding:7px 12px;outline:none" /></div>'; }
       else if(area==='fore'){ h=acSeg('fsApSeg',fsApertura)+'<div class="ctl-group"><label>Horizonte (días)</label><input type="number" id="fsHz" min="1" step="1" value="'+fsHorizon+'" style="width:86px;font-family:var(--font-body);font-size:.82rem;color:var(--ink);background:#fff;border:1.2px solid var(--line);border-radius:8px;padding:7px 10px;outline:none" /></div>'; }
       else if(area==='osa'){ h=acGran('osaGranSeg',osaGran)+acSeg('osaApSeg',osaApertura); }
       else if(area==='forecast'){ h=acSeg('fcApSeg',fcApertura); }
@@ -3992,7 +3991,8 @@
       else if(area==='comercial'){ v.ap=comApertura; v.m=comSalesMetric; v.pp=!!comMetrics.precio; }
       else if(area==='comparativo'){ v.ap=cmpApertura; v.m=cmpMetric; }
       else if(area==='abastecimiento'){ v.sort={key:abaCadSort.key,dir:abaCadSort.dir}; }
-      else if(area==='proxq' || area==='quiebrescadena'){ v.ap=pqApertura; v.hz=pqHorizon; v.sort={key:pqSort.key,dir:pqSort.dir}; }
+      else if(area==='proxq'){ v.ap=pqApertura; v.hz=pqHorizon; v.sort={key:pqSort.key,dir:pqSort.dir}; }
+      else if(area==='quiebrescadena'){ v.ap=pqApertura; v.sort={key:pqSort.key,dir:pqSort.dir}; }
       else if(area==='cpfr'){ v.st=cpfrStatusFilter; v.sort={key:cpfrSort.key,dir:cpfrSort.dir}; }
       else if(area==='fore'){ v.ap=fsApertura; v.hz=fsHorizon; v.sort={key:fsSort.key,dir:fsSort.dir}; }
       else if(area==='forecast'){ v.line=fcLineMetric; v.sort={key:fcSort.key,dir:fcSort.dir}; }
@@ -4005,7 +4005,8 @@
       else if(area==='comercial'){ if(v.ap)comApertura=v.ap; if(v.m)comSalesMetric=v.m; comMetrics.precio=!!v.pp; comDrill=[]; }
       else if(area==='comparativo'){ if(v.ap)cmpApertura=v.ap; if(v.m)cmpMetric=v.m; cmpDrill=[]; }
       else if(area==='abastecimiento'){ if(v.sort){abaCadSort={key:v.sort.key,dir:v.sort.dir};} abaDrill=[]; }
-      else if(area==='proxq' || area==='quiebrescadena'){ if(v.ap)pqApertura=v.ap; if(v.hz)pqHorizon=v.hz; if(v.sort){pqSort={key:v.sort.key,dir:v.sort.dir};} }
+      else if(area==='proxq'){ if(v.ap)pqApertura=v.ap; if(v.hz)pqHorizon=v.hz; if(v.sort){pqSort={key:v.sort.key,dir:v.sort.dir};} }
+      else if(area==='quiebrescadena'){ if(v.ap)pqApertura=v.ap; if(v.sort){pqSort={key:v.sort.key,dir:v.sort.dir};} }
       else if(area==='cpfr'){ if(v.st)cpfrStatusFilter=v.st; if(v.sort){cpfrSort={key:v.sort.key,dir:v.sort.dir};} }
       else if(area==='fore'){ if(v.ap)fsApertura=v.ap; if(v.hz)fsHorizon=v.hz; if(v.sort){fsSort={key:v.sort.key,dir:v.sort.dir};} }
       else if(area==='forecast'){ if(v.line)fcLineMetric=v.line; if(v.sort){fcSort={key:v.sort.key,dir:v.sort.dir};} fcDrill=[]; }
