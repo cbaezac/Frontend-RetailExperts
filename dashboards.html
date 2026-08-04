@@ -1950,10 +1950,19 @@
       // el piso es solo de presentación acá.
       var tfoot='';
       if(qcTotales){
+        // Icono ⓘ por columna (no uno generico para toda la fila): cada total
+        // se calcula distinto de lo que sugiere la fila de arriba -- stock_cd
+        // es SUM simple, instock_pct se recalcula a nivel tienda (no es
+        // promedio de los % individuales) y doh_cd es SUM(stock)/SUM(venta)
+        // (no promedio de los DOH individuales). Mismo patron visual que el
+        // ⓘ del header "DOH" (title nativo + span, sin componente nuevo).
+        var icoStock=' <span title="Suma del stock en CD de todos los productos filtrados." style="cursor:help;color:var(--muted);font-weight:600">ⓘ</span>';
+        var icoIns=' <span title="Calculado a nivel tienda: % de tiendas con cobertura suficiente sobre el total de tiendas de estos productos -- no es el promedio de los % de arriba." style="cursor:help;color:var(--muted);font-weight:600">ⓘ</span>';
+        var icoDoh=' <span title="Suma de stock ÷ suma de venta diaria promedio de los productos filtrados -- no es el promedio de los DOH individuales de arriba." style="cursor:help;color:var(--muted);font-weight:600">ⓘ</span>';
         var tStock=qcTotales.stock_cd==null?'-':num(qcTotales.stock_cd);
         var tIns=qcTotales.instock_pct==null?'<span style="color:var(--muted)">-</span>':('<span class="'+clsIns(qcTotales.instock_pct)+'">'+qcTotales.instock_pct.toFixed(1)+'%</span>');
         var tDoh=qcTotales.doh_cd==null?'-':Math.max(0,qcTotales.doh_cd).toFixed(1);
-        tfoot='<tfoot><tr><td>Total</td><td></td><td></td><td></td><td>'+tStock+'</td><td>'+tIns+'</td><td>'+tDoh+'</td></tr></tfoot>';
+        tfoot='<tfoot><tr><td>Total</td><td></td><td></td><td></td><td>'+tStock+icoStock+'</td><td>'+tIns+icoIns+'</td><td>'+tDoh+icoDoh+'</td></tr></tfoot>';
       }
       host.innerHTML='<div class="panel-card full" id="qcMatrix"><div class="pc-head"><div><div class="pc-title">Matriz de datos · Quiebres CD</div><div class="pc-sub">'+sub+'</div></div></div>'
         + '<div class="table-scroll"><table class="matrix matrix-left" id="qcTable" style="font-size:.78rem;table-layout:fixed;width:100%"><colgroup><col style="width:13%"><col style="width:14%"><col style="width:14%"><col style="width:23%"><col style="width:12%"><col style="width:12%"><col style="width:12%"></colgroup><thead>'+smThead(cols,qcSort)+'</thead><tbody>'+body+'</tbody>'+tfoot+'</table></div></div>';
