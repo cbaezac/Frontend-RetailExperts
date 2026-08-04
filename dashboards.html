@@ -4045,22 +4045,21 @@
     /* ---- Favoritos (consultas guardadas por usuario y dashboard) ---- */
     var AREA_LABEL={resumen:'Avance Mensual - Negocio',mapa:'Avance Mensual - Mapa',comercial:'Comercial - Evolutivo',comparativo:'Comercial - Comparativo',forecast:'Comercial - Venta Perdida',abastecimiento:'Operacional - Abastecimiento',osa:'Operacional - OSA',promociones:'Operacional - Promociones',personalizado:'Personalizado - Personalizado'};
     function favUser(){ try{ return localStorage.getItem('re_current_user')||'invitado'; }catch(e){ return 'invitado'; } }
-    function favStore(){ try{ return JSON.parse(localStorage.getItem('re_dash_favs')||'{}'); }catch(e){ return {}; } }
-    function favSaveStore(s){ try{ localStorage.setItem('re_dash_favs', JSON.stringify(s)); }catch(e){} }
-    function favList(area){ var s=favStore(); return (s[favUser()]&&s[favUser()][area])||[]; }
-    function favWriteList(area, list){ var s=favStore(); if(!s[favUser()])s[favUser()]={}; s[favUser()][area]=list; favSaveStore(s); }
-    // Favoritos globales: una sola lista con el dashboard (area) guardado en cada favorito.
-    var FAV_GKEY='__global__';
-    function favMigrateGlobal(){
-      var s=favStore(); var u=favUser(); var byArea=s[u]||{};
-      if(byArea[FAV_GKEY]) return;
-      var flat=[];
-      Object.keys(byArea).forEach(function(a){ if(a===FAV_GKEY) return; (byArea[a]||[]).forEach(function(f){ f.area=f.area||a; flat.push(f); }); delete byArea[a]; });
-      flat.sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
-      byArea[FAV_GKEY]=flat; s[u]=byArea; favSaveStore(s);
+    // Los favoritos persisten en el backend (por usuario) via /web/dashboard/vistas.
+    // FAV_CACHE es el espejo en memoria que leen renderFavs/favApply; localStorage
+    // (re_dash_favs_cache) queda solo como respaldo offline si la API no responde.
+    var FAV_CACHE=null;
+    function favMapRemote(v){ var cfg=v.config||{}; return {id:v.id, name:v.nombre, area:v.area, filters:cfg.filters||{}, view:cfg.view||{}, ts:v.ts||0}; }
+    function favLocalGet(){ try{ return JSON.parse(localStorage.getItem('re_dash_favs_cache')||'[]'); }catch(e){ return []; } }
+    function favLocalSet(list){ try{ localStorage.setItem('re_dash_favs_cache', JSON.stringify(list||[])); }catch(e){} }
+    function favLoadRemote(){
+      if(!window.RetailAPI){ FAV_CACHE=favLocalGet(); return Promise.resolve(FAV_CACHE); }
+      return window.RetailAPI.requestJson('/web/dashboard/vistas').then(function(r){
+        FAV_CACHE=(r.vistas||[]).map(favMapRemote); favLocalSet(FAV_CACHE); return FAV_CACHE;
+      }).catch(function(){ if(FAV_CACHE==null) FAV_CACHE=favLocalGet(); return FAV_CACHE; });
     }
-    function favListAll(){ favMigrateGlobal(); return favList(FAV_GKEY); }
-    function favWriteAll(list){ favWriteList(FAV_GKEY, list); }
+    function favListAll(){ if(FAV_CACHE==null) FAV_CACHE=favLocalGet(); return FAV_CACHE; }
+    function favWriteAll(list){ FAV_CACHE=list||[]; favLocalSet(FAV_CACHE); }
     function favFilterParts(fav){
       var parts=[];
       ['locales','productos'].forEach(function(g){ var o=(fav.filters&&fav.filters[g])||{}; Object.keys(o).forEach(function(k){ if(o[k]&&o[k].length) parts.push(k+': '+o[k].join(', ')); }); });
@@ -4105,16 +4104,24 @@
     function favSaveCurrent(){
       var area=favCurrentArea();
       openFavModal('Guardar favorito', '', function(name){
-        var list=favListAll();
-        list.push({ name:name, area:area, filters:JSON.parse(JSON.stringify(gFilters)), view:captureView(area), ts:Date.now() });
-        favWriteAll(list); renderFavs(); openFavManager();
+        var config={ filters:JSON.parse(JSON.stringify(gFilters)), view:captureView(area) };
+        var done=function(fav){ favListAll().push(fav); favLocalSet(FAV_CACHE); renderFavs(); openFavManager(); };
+        window.RetailAPI.requestJson('/web/dashboard/vistas', {method:'POST', body:JSON.stringify({nombre:name, area:area, config:config})})
+          .then(function(v){ done(favMapRemote(v)); })
+          .catch(function(){ done({ id:null, name:name, area:area, filters:config.filters, view:config.view, ts:Date.now() }); });
       });
     }
     function favRename(idx){
       var list=favListAll(); var fav=list[idx]; if(!fav) return;
-      openFavModal('Renombrar favorito', fav.name, function(name){ fav.name=name; favWriteAll(list); renderFavs(); openFavManager(); });
+      openFavModal('Renombrar favorito', fav.name, function(name){
+        fav.name=name; favLocalSet(FAV_CACHE); renderFavs(); openFavManager();
+        if(fav.id!=null) window.RetailAPI.requestJson('/web/dashboard/vistas/'+fav.id, {method:'PATCH', body:JSON.stringify({nombre:name})}).catch(function(){});
+      });
     }
-    function favDelete(idx){ var list=favListAll(); list.splice(idx,1); favWriteAll(list); renderFavs(); openFavManager(); }
+    function favDelete(idx){
+      var list=favListAll(); var fav=list[idx]; if(!fav) return; list.splice(idx,1); favLocalSet(FAV_CACHE); renderFavs(); openFavManager();
+      if(fav.id!=null) window.RetailAPI.requestJson('/web/dashboard/vistas/'+fav.id, {method:'DELETE'}).catch(function(){});
+    }
 
     /* ---- Modal nombre ---- */
     function openFavModal(title, current, onSave){
@@ -4174,7 +4181,7 @@
 
     function startDashboard(){
       setDataBadge(true);
-      setTimeout(function(){ buildMultiFilters(); showArea('resumen'); renderFavs(); }, 0);
+      setTimeout(function(){ buildMultiFilters(); showArea('resumen'); renderFavs(); favLoadRemote().then(renderFavs); }, 0);
     }
     if (IS_INTERNAL && !CLIENTE_ID) {
       showClientGate(startDashboard);
