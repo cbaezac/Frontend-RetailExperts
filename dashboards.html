@@ -1148,6 +1148,56 @@
       return null;
     }
 
+    /* ---------- Datos REALES por dimensión para Gerencial (Local / Cadena) ----------
+       Venta desde /web/dashboard/comercial (venta_historica) e indicadores
+       instock/doh/quiebre desde /web/dashboard/abastecimiento (indicadores_
+       abastecimiento_diario), ambos por la MISMA apertura y período MTD (igual que
+       Negocio). Reemplaza los generadores sintéticos (hashN) previos. Se cachea por
+       apertura en DIM_AP y se limpia al reaplicar filtros. */
+    // Caché indexado por apertura + firma de filtros/cliente: al cambiar la barra de
+    // filtros o el cliente, la clave cambia y se refetchea con el scope correcto.
+    var DIM_AP = {};
+    function opsKey(s){ return String(s==null?'':s).toLowerCase().trim(); }
+    function numOrNull(x){ return x==null?null:Number(x); }
+    function gerSig(){ try{ return JSON.stringify(withCliente(fbFilterParams())); }catch(e){ return ''; } }
+    function dimApKey(ap){ return ap+'@'+gerSig(); }
+    function fetchGerCom(ap){ var p=DEFAULT_PERIODS.mtd; return fetchComercialPeriod(ap, {start:p.start, end:p.end}); }
+    function fetchGerAba(ap){
+      var p=DEFAULT_PERIODS.mtd;
+      var params=withCliente(Object.assign({apertura:ap, desde:p.start, hasta:p.end}, fbFilterParams()));
+      return window.RetailAPI.requestJson('/web/dashboard/abastecimiento'+window.RetailAPI.buildQuery(params));
+    }
+    // Re-render suave del panel Gerencial activo (para refrescar cuando los
+    // indicadores llegan en segundo plano, sin bloquear el render de la venta).
+    function rerenderGerencial(){ if(!RES) return; var a=_currentArea; if(a==='resumen'||a==='local'||a==='cadena'){ destroyCharts(); panelResumen(); } }
+    function loadGerDim(ap){
+      var key=dimApKey(ap);
+      if(DIM_AP[key]) return Promise.resolve();
+      // 1) Venta (comercial) primero -> la tabla se pinta de inmediato.
+      return fetchGerCom(ap).catch(function(){return null;}).then(function(com){
+        var rows=((com&&com.values)||[]).map(function(v){
+          var raw=(v.rawLabel!=null?v.rawLabel:v.label);
+          var p=sumArr(v.pesos||[]), c=sumArr(v.costo||[]), u=sumArr(v.unidades||[]), lyP=Number(v.ly)||0;
+          return { rawLabel:raw, label:displayAperturaLabel(ap, raw), vp:p, vc:c, vu:u,
+                   vpLy:lyP, vcLy:(p?lyP*(c/p):0), vuLy:(u&&p?lyP/(p/u):0), ins:null, doh:null, qb:null };
+        });
+        DIM_AP[key]={ rows:rows };
+        // 2) Indicadores (abastecimiento) en segundo plano -> parchea y refresca.
+        fetchGerAba(ap).then(function(aba){
+          var ops={}; ((aba&&aba.values)||[]).forEach(function(v){ var raw=(v.rawLabel!=null?v.rawLabel:v.label); ops[opsKey(raw)]={ ins:numOrNull(v.instock), doh:numOrNull(v.doh), qb:numOrNull(v.quiebre) }; });
+          var entry=DIM_AP[key]; if(!entry) return;
+          entry.rows.forEach(function(r){ var o=ops[opsKey(r.rawLabel)]; if(o){ r.ins=o.ins; r.doh=o.doh; r.qb=o.qb; } });
+          rerenderGerencial();
+        }).catch(function(){});
+      });
+    }
+    /* Variación % de una fila-dimensión según la métrica activa (vp/vc/vu) */
+    function dimVarp(r){ return (resMetric==='vp')?(r.vpLy?(r.vp/r.vpLy-1)*100:0):(resMetric==='vc')?(r.vcLy?(r.vc/r.vcLy-1)*100:0):(r.vuLy?(r.vu/r.vuLy-1)*100:0); }
+    function dimRowsReal(ap){
+      var d=DIM_AP[dimApKey(ap)]; if(!d) return [];
+      return d.rows.map(function(r){ return { label:r.label, rawLabel:r.rawLabel, vp:r.vp, vc:r.vc, vu:r.vu, varp:dimVarp(r), osa:null, ins:r.ins, doh:r.doh, qb:r.qb }; });
+    }
+
     /* Períodos por defecto = acumulado del mes hasta AYER (la venta llega actualizada
        hasta el día anterior). Si hoy es 1°, se muestra el mes anterior completo. Editables. */
     function isoDay(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
@@ -2446,9 +2496,10 @@
       return { cad:fmtCadDash(l.cadena), fmt:nomPropio(l.formato), cod:l.codigo, nom:nomPropio(l.nombre)||l.codigo, region:nomPropio(l.region),
         vp:Number(l.venta_pesos)||0, vc:Number(l.venta_costo)||0, vu:Number(l.venta_unidades)||0,
         vpLy:Number(l.venta_pesos_ly)||0, vcLy:Number(l.venta_costo_ly)||0, vuLy:Number(l.venta_unidades_ly)||0,
-        mVp:0, mVc:0, mVu:0, osa:0, ins:0, doh:0, qb:0 };
+        mVp:0, mVc:0, mVu:0, osa:null, ins:null, doh:null, qb:null };
     }
-    var RES_OPS = null; // instock/doh/quiebre reales (indicadores_abastecimiento_diario, MTD)
+    var RES_OPS = null; // instock/doh/quiebre reales (indicadores_abastecimiento_diario, MTD) -- TOTALES
+    var RES_OPS_LOC = null; // instock/doh/quiebre reales POR LOCAL (apertura=codlocal, MTD)
     function loadResumenOps(){
       var p=DEFAULT_PERIODS.mtd;
       var params=withCliente(Object.assign({apertura:'cadena', desde:p.start, hasta:p.end}, fbFilterParams()));
@@ -2456,8 +2507,20 @@
         .then(function(r){ RES_OPS=(r&&r.totales)||null; })
         .catch(function(){ RES_OPS=null; });
     }
+    // Indicadores reales por LOCAL: alimentan Top 50 (Negocio) y las aperturas
+    // formato/región/local de Cadena (que agregan desde RES.locales).
+    function loadResumenOpsLocales(){
+      var p=DEFAULT_PERIODS.mtd;
+      var params=withCliente(Object.assign({apertura:'codlocal', desde:p.start, hasta:p.end}, fbFilterParams()));
+      return window.RetailAPI.requestJson('/web/dashboard/abastecimiento'+window.RetailAPI.buildQuery(params))
+        .then(function(r){ var m={}; ((r&&r.values)||[]).forEach(function(v){ var raw=(v.rawLabel!=null?v.rawLabel:v.label); m[opsKey(raw)]={ ins:numOrNull(v.instock), doh:numOrNull(v.doh), qb:numOrNull(v.quiebre) }; }); RES_OPS_LOC=m; applyResOpsLocales(); })
+        .catch(function(){ RES_OPS_LOC=null; });
+    }
+    function applyResOpsLocales(){
+      if(!RES||!RES_OPS_LOC) return;
+      RES.locales.forEach(function(l){ var o=RES_OPS_LOC[opsKey(l.cod)]; if(o){ l.ins=o.ins; l.doh=o.doh; l.qb=o.qb; } });
+    }
     function loadResumen(){
-      var opsP = loadResumenOps();
       return window.RetailAPI.requestJson('/web/dashboard/resumen-mtd'+window.RetailAPI.buildQuery(withCliente(fbFilterParams())))
         .then(function(r){
           RES = {
@@ -2474,8 +2537,11 @@
           refreshFilterOptionsFromResumen();
           // Todos los filtros (locales y productos) con valores DISTINCT reales de la DB.
           loadAtributos();
+          // Indicadores (abastecimiento) EN SEGUNDO PLANO: no bloquean el render de la
+          // venta; al llegar parchean RES.locales/RES_OPS y refrescan el panel.
+          loadResumenOps().then(rerenderGerencial);
+          loadResumenOpsLocales().then(rerenderGerencial);
         })
-        .then(function(){ return opsP; })
         .catch(function(){ RES = RES_DEMO; VENTA_REAL = false; setDataBadge(true); refreshFilterOptionsFromResumen(); });
     }
     var localAp='categoria';
@@ -2485,15 +2551,8 @@
       codprod:{label:'Código Producto', vals:['SKU1001','SKU1002','SKU1003','SKU1004','SKU1005','SKU1006','SKU1007','SKU1008']},
       producto:{label:'Producto', vals:['Aceite Oliva 1L','Detergente 3kg','Café Grano 250g','Shampoo 400ml','Arroz Grado 1 1kg','Galletas Avena 180g','Lavalozas 750ml','Té Verde 20u']}
     };
-    function localDimRows(){
-      var t=resTotals(); var dim=LOCAL_DIMS[localAp];
-      var w=dim.vals.map(function(v){ return 0.6+((hashN('locDim:'+localAp+':'+v)>>2)%100)/70; });
-      var sw=w.reduce(function(a,b){return a+b;},0);
-      return dim.vals.map(function(v,i){
-        var f=w[i]/sw; var h=hashN('locDimV:'+localAp+':'+v);
-        return { label:v, vp:t.vp*f, vc:t.vc*f, vu:t.vu*f, varp:-6+((h>>3)%160)/10, osa:90+((h>>5)%90)/10, ins:91+((h>>7)%80)/10, doh:8+((h>>9)%140)/10, qb:1+((h>>11)%60)/10 };
-      });
-    }
+    // Real: venta (comercial) + indicadores (abastecimiento) por la apertura elegida.
+    function localDimRows(){ return dimRowsReal(localAp); }
     function renderLocalDonuts(){
       var rows=localDimRows();
       var colorIdx={}; rows.forEach(function(o,i){ colorIdx[o.label]=i; });
@@ -2513,14 +2572,14 @@
         else if(ap==='region'){ getK=function(l){return l.region;}; getLbl=getK; }
         else if(ap==='codlocal'){ getK=function(l){return l.cod;}; getLbl=getK; }
         else { getK=function(l){return l.cod;}; getLbl=function(l){return l.cod+' · '+l.nom;}; }
+        // Venta real agregada desde RES.locales (resumen-mtd); indicadores reales por
+        // local (RES_OPS_LOC) ponderados por venta, contando sólo locales con dato.
         var agg={};
-        FL().forEach(function(l){ var k=getK(l); if(!k)return; if(!agg[k])agg[k]={label:getLbl(l),vp:0,vc:0,vu:0,vpLy:0,vcLy:0,vuLy:0,osaW:0,insW:0,dohW:0,qbW:0,w:0}; var a=agg[k]; a.vp+=l.vp;a.vc+=l.vc;a.vu+=l.vu;a.vpLy+=l.vpLy;a.vcLy+=l.vcLy;a.vuLy+=l.vuLy;a.osaW+=(l.osa||0)*l.vp;a.insW+=(l.ins||0)*l.vp;a.dohW+=(l.doh||0)*l.vp;a.qbW+=(l.qb||0)*l.vp;a.w+=l.vp; });
-        return Object.keys(agg).map(function(k){ var a=agg[k]; return {label:a.label, vp:a.vp,vc:a.vc,vu:a.vu, varp:(resMetric==='vp'?(a.vpLy?(a.vp/a.vpLy-1)*100:0):resMetric==='vc'?(a.vcLy?(a.vc/a.vcLy-1)*100:0):(a.vuLy?(a.vu/a.vuLy-1)*100:0)), osa:a.w?a.osaW/a.w:0, ins:a.w?a.insW/a.w:0, doh:a.w?a.dohW/a.w:0, qb:a.w?a.qbW/a.w:0}; });
+        FL().forEach(function(l){ var k=getK(l); if(!k)return; if(!agg[k])agg[k]={label:getLbl(l),vp:0,vc:0,vu:0,vpLy:0,vcLy:0,vuLy:0,insW:0,insWt:0,dohW:0,dohWt:0,qbW:0,qbWt:0}; var a=agg[k]; a.vp+=l.vp;a.vc+=l.vc;a.vu+=l.vu;a.vpLy+=l.vpLy;a.vcLy+=l.vcLy;a.vuLy+=l.vuLy; if(l.ins!=null){a.insW+=l.ins*l.vp;a.insWt+=l.vp;} if(l.doh!=null){a.dohW+=l.doh*l.vp;a.dohWt+=l.vp;} if(l.qb!=null){a.qbW+=l.qb*l.vp;a.qbWt+=l.vp;} });
+        return Object.keys(agg).map(function(k){ var a=agg[k]; return {label:a.label, vp:a.vp,vc:a.vc,vu:a.vu, varp:(resMetric==='vp'?(a.vpLy?(a.vp/a.vpLy-1)*100:0):resMetric==='vc'?(a.vcLy?(a.vc/a.vcLy-1)*100:0):(a.vuLy?(a.vu/a.vuLy-1)*100:0)), osa:null, ins:a.insWt?a.insW/a.insWt:null, doh:a.dohWt?a.dohW/a.dohWt:null, qb:a.qbWt?a.qbW/a.qbWt:null}; });
       }
-      var t=resTotals(); var dim=LOCAL_DIMS[ap];
-      var w=dim.vals.map(function(v){ return 0.6+((hashN('cadDim:'+ap+':'+v)>>2)%100)/70; });
-      var sw=w.reduce(function(a,b){return a+b;},0);
-      return dim.vals.map(function(v,i){ var f=w[i]/sw; var h=hashN('cadDimV:'+ap+':'+v); return {label:v, vp:t.vp*f,vc:t.vc*f,vu:t.vu*f, varp:-6+((h>>3)%160)/10, osa:90+((h>>5)%90)/10, ins:91+((h>>7)%80)/10, doh:8+((h>>9)%140)/10, qb:1+((h>>11)%60)/10}; });
+      // Aperturas de producto/taxonomía (categoría/marca/código/producto): datos reales.
+      return dimRowsReal(ap);
     }
     function renderCadenaFormatoDonuts(){
       var rows=cadenaDimRows('formato');
@@ -2538,10 +2597,10 @@
         {key:'cat',label:CADENA_DIMS[cadenaAp].label,type:'text',thLeft:true,get:function(r){return r.cat;},cell:function(r){return '<td>'+r.cat+'</td>';}},
         {key:'val',label:m.label,type:'num',get:function(r){return r.val;},cell:function(r){return '<td>'+m.fmtFull(r.val)+'</td>';}},
         {key:'varp',label:'Variación',type:'num',get:function(r){return r.varp;},cell:function(r){return '<td class="'+(r.varp>=0?'pos':'neg')+'">'+(r.varp>=0?'+':'')+r.varp.toFixed(1)+'%</td>';}},
-        {key:'osa',label:'OSA',type:'num',get:function(r){return r.osa;},cell:function(r){return HAS_OPS?('<td class="'+clsOSA(r.osa)+'">'+r.osa.toFixed(1)+'%</td>'):SIN_DATOS_TD;}},
-        {key:'ins',label:'Instock',type:'num',get:function(r){return r.ins;},cell:function(r){return HAS_OPS?('<td class="'+clsIns(r.ins)+'">'+r.ins.toFixed(1)+'%</td>'):SIN_DATOS_TD;}},
-        {key:'doh',label:'DOH',type:'num',get:function(r){return r.doh;},cell:function(r){return HAS_OPS?('<td>'+r.doh.toFixed(1)+'</td>'):SIN_DATOS_TD;}},
-        {key:'qb',label:'Quiebres',type:'num',get:function(r){return r.qb;},cell:function(r){return HAS_OPS?('<td class="'+clsQb(r.qb)+'">'+r.qb.toFixed(1)+'%</td>'):SIN_DATOS_TD;}}
+        {key:'osa',label:'OSA',type:'num',get:function(r){return r.osa;},cell:function(r){return opsPctTd(r.osa, clsOSA);}},
+        {key:'ins',label:'Instock',type:'num',get:function(r){return r.ins;},cell:function(r){return opsPctTd(r.ins, clsIns);}},
+        {key:'doh',label:'DOH',type:'num',get:function(r){return r.doh;},cell:function(r){return opsDohTd(r.doh);}},
+        {key:'qb',label:'Quiebres',type:'num',get:function(r){return r.qb;},cell:function(r){return opsPctTd(r.qb, clsQb);}}
       ];
       var sorted=smSortRows(cols, rows, topSort);
       var body=sorted.map(function(r){ return '<tr>'+cols.map(function(c){return c.cell(r);}).join('')+'</tr>'; }).join('');
@@ -2567,6 +2626,14 @@
             +'<div style="font-size:.9rem;color:var(--muted);max-width:460px">Elige una cadena en el filtro de <strong>Cadena</strong> y presiona “Aplicar filtros” para ver su información.</div></div>';
           return;
         }
+      }
+      // Datos reales por dimensión: Local siempre; Cadena sólo aperturas de producto/taxonomía
+      // (formato/región/local se agregan desde RES.locales, ya cargado).
+      var needAp = isLocalArea ? localAp : (isCadenaArea && ['categoria','marca','codprod','producto'].indexOf(cadenaAp)>=0 ? cadenaAp : null);
+      if(needAp && !DIM_AP[dimApKey(needAp)]){
+        host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--muted)">Cargando datos…</div>';
+        loadGerDim(needAp).then(panelResumen).catch(function(){ DIM_AP[needAp]={rows:[]}; panelResumen(); });
+        return;
       }
       var html='';
       // Indicadores de Venta + nota a la derecha (+ acceso a Galería en Local)
@@ -2746,6 +2813,10 @@
 
     var cadDrill=[], cadSort={key:'val',dir:-1};
     var SIN_DATOS_TD='<td style="color:var(--muted)">-</td>';
+    // Celdas de indicadores operacionales: muestran el valor real o "-" si no hay dato
+    // (null). Reemplazan el gate por HAS_OPS: ahora el dato manda, no un flag global.
+    function opsPctTd(v, clsFn){ return (v==null)?SIN_DATOS_TD:'<td class="'+clsFn(v)+'">'+v.toFixed(1)+'%</td>'; }
+    function opsDohTd(v){ return (v==null)?SIN_DATOS_TD:'<td>'+v.toFixed(1)+'</td>'; }
     function metaTd(m, val){ return HAS_METAS ? '<td>'+m.fmtFull(val)+'</td>' : SIN_DATOS_TD; }
     function avanceTd(val){ return HAS_METAS ? '<td class="'+clsMeta(val)+'">'+pct(val)+'</td>' : SIN_DATOS_TD; }
     function renderCadenaMatrix(){
@@ -2838,10 +2909,10 @@
         {key:'cat',label:LOCAL_DIMS[localAp].label,type:'text',get:function(r){return r.cat;},cell:function(r){return '<td>'+r.cat+'</td>';}},
         {key:'val',label:m.label,type:'num',get:function(r){return r.val;},cell:function(r){return '<td>'+m.fmtFull(r.val)+'</td>';}},
         {key:'varp',label:'Variación',type:'num',get:function(r){return r.varp;},cell:function(r){return '<td class="'+(r.varp>=0?'pos':'neg')+'">'+(r.varp>=0?'+':'')+r.varp.toFixed(1)+'%</td>';}},
-        {key:'osa',label:'OSA',type:'num',get:function(r){return r.osa;},cell:function(r){return '<td class="'+clsOSA(r.osa)+'">'+r.osa.toFixed(1)+'%</td>';}},
-        {key:'ins',label:'Instock',type:'num',get:function(r){return r.ins;},cell:function(r){return '<td class="'+clsIns(r.ins)+'">'+r.ins.toFixed(1)+'%</td>';}},
-        {key:'doh',label:'DOH',type:'num',get:function(r){return r.doh;},cell:function(r){return '<td>'+r.doh.toFixed(1)+'</td>';}},
-        {key:'qb',label:'Quiebres',type:'num',get:function(r){return r.qb;},cell:function(r){return '<td class="'+clsQb(r.qb)+'">'+r.qb.toFixed(1)+'%</td>';}}
+        {key:'osa',label:'OSA',type:'num',get:function(r){return r.osa;},cell:function(r){return opsPctTd(r.osa, clsOSA);}},
+        {key:'ins',label:'Instock',type:'num',get:function(r){return r.ins;},cell:function(r){return opsPctTd(r.ins, clsIns);}},
+        {key:'doh',label:'DOH',type:'num',get:function(r){return r.doh;},cell:function(r){return opsDohTd(r.doh);}},
+        {key:'qb',label:'Quiebres',type:'num',get:function(r){return r.qb;},cell:function(r){return opsPctTd(r.qb, clsQb);}}
       ];
       var sorted=smSortRows(cols, rows, topSort);
       var body=sorted.map(function(r){ return '<tr>'+cols.map(function(c){return c.cell(r);}).join('')+'</tr>'; }).join('');
@@ -2863,10 +2934,10 @@
         {key:'val',label:m.label,type:'num',get:function(r){return r.val;},cell:function(r){return '<td>'+m.fmtFull(r.val)+'</td>';}},
         {key:'varp',label:'Variación',type:'num',get:function(r){return r.varp;},cell:function(r){return '<td class="'+(r.varp>=0?'pos':'neg')+'">'+(r.varp>=0?'+':'')+r.varp.toFixed(1)+'%</td>';}},
         {key:'av',label:'Avance meta',type:'num',get:function(r){return r.av;},cell:function(r){return avanceTd(r.av);}},
-        {key:'osa',label:'OSA',type:'num',get:function(r){return r.osa;},cell:function(r){return HAS_OPS?('<td class="'+clsOSA(r.osa)+'">'+r.osa.toFixed(1)+'%</td>'):SIN_DATOS_TD;}},
-        {key:'ins',label:'Instock',type:'num',get:function(r){return r.ins;},cell:function(r){return HAS_OPS?('<td class="'+clsIns(r.ins)+'">'+r.ins.toFixed(1)+'%</td>'):SIN_DATOS_TD;}},
-        {key:'doh',label:'DOH',type:'num',get:function(r){return r.doh;},cell:function(r){return HAS_OPS?('<td>'+r.doh.toFixed(1)+'</td>'):SIN_DATOS_TD;}},
-        {key:'qb',label:'Quiebres',type:'num',get:function(r){return r.qb;},cell:function(r){return HAS_OPS?('<td class="'+clsQb(r.qb)+'">'+r.qb.toFixed(1)+'%</td>'):SIN_DATOS_TD;}}
+        {key:'osa',label:'OSA',type:'num',get:function(r){return r.osa;},cell:function(r){return opsPctTd(r.osa, clsOSA);}},
+        {key:'ins',label:'Instock',type:'num',get:function(r){return r.ins;},cell:function(r){return opsPctTd(r.ins, clsIns);}},
+        {key:'doh',label:'DOH',type:'num',get:function(r){return r.doh;},cell:function(r){return opsDohTd(r.doh);}},
+        {key:'qb',label:'Quiebres',type:'num',get:function(r){return r.qb;},cell:function(r){return opsPctTd(r.qb, clsQb);}}
       ];
       var sorted=smSortRows(cols, rows, topSort);
       var body=sorted.map(function(r){ return '<tr>'+cols.map(function(c){return c.cell(r);}).join('')+'</tr>'; }).join('');
@@ -2896,6 +2967,17 @@
           venta_pesos:Number(p.venta_pesos)||0, venta_costo:Number(p.venta_costo)||0, venta_unidades:Number(p.venta_unidades)||0,
           venta_pesos_ly:Number(p.venta_pesos_ly)||0, venta_costo_ly:Number(p.venta_costo_ly)||0, venta_unidades_ly:Number(p.venta_unidades_ly)||0 }; }); });
     }
+    // Indicadores reales (instock/doh/quiebre) por producto dentro del local:
+    // abastecimiento apertura=codprod acotado al codigo_local, período MTD. Se
+    // cruza por código con la lista de venta. topProdOps[cod]: undefined=sin pedir,
+    // null=en curso, objeto={codigo->{ins,doh,qb}}.
+    var topProdOps={};
+    function fetchLocalProductosOps(cod){
+      var p=DEFAULT_PERIODS.mtd;
+      var params=withCliente(Object.assign({apertura:'codprod', desde:p.start, hasta:p.end}, fbFilterParams(), {codigo_local:cod}));
+      return window.RetailAPI.requestJson('/web/dashboard/abastecimiento'+window.RetailAPI.buildQuery(params))
+        .then(function(r){ var m={}; ((r&&r.values)||[]).forEach(function(v){ var raw=(v.rawLabel!=null?v.rawLabel:v.label); m[opsKey(raw)]={ ins:numOrNull(v.instock), doh:numOrNull(v.doh), qb:numOrNull(v.quiebre) }; }); return m; });
+    }
     function renderLocalProductos(m){
       var l=RES.locales.filter(function(x){return x.cod===topDrill;})[0];
       var cached=topProdCache[topDrill];
@@ -2914,16 +2996,23 @@
         return;
       }
       if(cached===null){ return; } // fetch en curso
-      var rows=cached.map(function(p){ var rm=RESP_MET[resMetric]; var val=Number(p[rm.v])||0, ly=Number(p[rm.ly])||0; return {code:p.code, name:p.name, val:val, varp:ly?(val/ly-1)*100:0}; });
+      // Indicadores por producto en segundo plano (no bloquean la venta).
+      if(topProdOps[topDrill]===undefined){
+        topProdOps[topDrill]=null;
+        fetchLocalProductosOps(topDrill).then(function(mp){ topProdOps[topDrill]=mp; if(topDrill===l.cod) renderTopLocales(); })
+          .catch(function(){ topProdOps[topDrill]={}; });
+      }
+      var opsMap=(topProdOps[topDrill]&&topProdOps[topDrill]!==null)?topProdOps[topDrill]:{};
+      var rows=cached.map(function(p){ var rm=RESP_MET[resMetric]; var val=Number(p[rm.v])||0, ly=Number(p[rm.ly])||0; var o=opsMap[opsKey(p.code)]||{}; return {code:p.code, name:p.name, val:val, varp:ly?(val/ly-1)*100:0, osa:null, ins:(o.ins==null?null:o.ins), doh:(o.doh==null?null:o.doh), qb:(o.qb==null?null:o.qb)}; });
       var cols=[
         {key:'code',label:'Código Producto',type:'text',thLeft:true,get:function(r){return r.code;},cell:function(r){return '<td>'+r.code+'</td>';}},
         {key:'name',label:'Descriptor Producto',type:'text',get:function(r){return r.name;},cell:function(r){return '<td>'+r.name+'</td>';}},
         {key:'val',label:m.label,type:'num',get:function(r){return r.val;},cell:function(r){return '<td>'+m.fmtFull(r.val)+'</td>';}},
         {key:'varp',label:'Variación',type:'num',get:function(r){return r.varp;},cell:function(r){return '<td class="'+(r.varp>=0?'pos':'neg')+'">'+(r.varp>=0?'+':'')+r.varp.toFixed(1)+'%</td>';}},
-        {key:'osa',label:'OSA',type:'num',get:function(r){return 0;},cell:function(){return SIN_DATOS_TD;}},
-        {key:'ins',label:'Instock',type:'num',get:function(r){return 0;},cell:function(){return SIN_DATOS_TD;}},
-        {key:'doh',label:'DOH',type:'num',get:function(r){return 0;},cell:function(){return SIN_DATOS_TD;}},
-        {key:'qb',label:'Quiebres',type:'num',get:function(r){return 0;},cell:function(){return SIN_DATOS_TD;}}
+        {key:'osa',label:'OSA',type:'num',get:function(r){return r.osa;},cell:function(r){return opsPctTd(r.osa, clsOSA);}},
+        {key:'ins',label:'Instock',type:'num',get:function(r){return r.ins;},cell:function(r){return opsPctTd(r.ins, clsIns);}},
+        {key:'doh',label:'DOH',type:'num',get:function(r){return r.doh;},cell:function(r){return opsDohTd(r.doh);}},
+        {key:'qb',label:'Quiebres',type:'num',get:function(r){return r.qb;},cell:function(r){return opsPctTd(r.qb, clsQb);}}
       ];
       var sorted=smSortRows(cols, rows, prodSort);
       var body=sorted.map(function(r){ return '<tr>'+cols.map(function(c){return c.cell(r);}).join('')+'</tr>'; }).join('');
@@ -3900,7 +3989,7 @@
       var active = document.querySelector('.tab.on').getAttribute('data-area');
       // Invalidar cachés para que los datos se refetcheen con los filtros aplicados
       if(active==='comercial' || active==='comparativo'){ COM.aperturas={}; drillCache={}; CMP={ana:{}, comp:{}}; cmpDrillCache={}; }
-      if(active==='resumen' || active==='local' || active==='mapa'){ RES=null; RES_OPS=null; cadDrill=[]; topDrill=null; topProdCache={}; if(window.__mapaInvalidate) window.__mapaInvalidate(); }
+      if(active==='resumen' || active==='local' || active==='cadena' || active==='mapa'){ RES=null; RES_OPS=null; RES_OPS_LOC=null; cadDrill=[]; topDrill=null; topProdCache={}; topProdOps={}; if(window.__mapaInvalidate) window.__mapaInvalidate(); }
       if(active==='abastecimiento'){ ABA=null; abaDrill=[]; }
       showArea(active);
     });
