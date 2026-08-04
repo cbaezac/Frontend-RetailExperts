@@ -2967,6 +2967,17 @@
           venta_pesos:Number(p.venta_pesos)||0, venta_costo:Number(p.venta_costo)||0, venta_unidades:Number(p.venta_unidades)||0,
           venta_pesos_ly:Number(p.venta_pesos_ly)||0, venta_costo_ly:Number(p.venta_costo_ly)||0, venta_unidades_ly:Number(p.venta_unidades_ly)||0 }; }); });
     }
+    // Indicadores reales (instock/doh/quiebre) por producto dentro del local:
+    // abastecimiento apertura=codprod acotado al codigo_local, período MTD. Se
+    // cruza por código con la lista de venta. topProdOps[cod]: undefined=sin pedir,
+    // null=en curso, objeto={codigo->{ins,doh,qb}}.
+    var topProdOps={};
+    function fetchLocalProductosOps(cod){
+      var p=DEFAULT_PERIODS.mtd;
+      var params=withCliente(Object.assign({apertura:'codprod', desde:p.start, hasta:p.end}, fbFilterParams(), {codigo_local:cod}));
+      return window.RetailAPI.requestJson('/web/dashboard/abastecimiento'+window.RetailAPI.buildQuery(params))
+        .then(function(r){ var m={}; ((r&&r.values)||[]).forEach(function(v){ var raw=(v.rawLabel!=null?v.rawLabel:v.label); m[opsKey(raw)]={ ins:numOrNull(v.instock), doh:numOrNull(v.doh), qb:numOrNull(v.quiebre) }; }); return m; });
+    }
     function renderLocalProductos(m){
       var l=RES.locales.filter(function(x){return x.cod===topDrill;})[0];
       var cached=topProdCache[topDrill];
@@ -2985,16 +2996,23 @@
         return;
       }
       if(cached===null){ return; } // fetch en curso
-      var rows=cached.map(function(p){ var rm=RESP_MET[resMetric]; var val=Number(p[rm.v])||0, ly=Number(p[rm.ly])||0; return {code:p.code, name:p.name, val:val, varp:ly?(val/ly-1)*100:0}; });
+      // Indicadores por producto en segundo plano (no bloquean la venta).
+      if(topProdOps[topDrill]===undefined){
+        topProdOps[topDrill]=null;
+        fetchLocalProductosOps(topDrill).then(function(mp){ topProdOps[topDrill]=mp; if(topDrill===l.cod) renderTopLocales(); })
+          .catch(function(){ topProdOps[topDrill]={}; });
+      }
+      var opsMap=(topProdOps[topDrill]&&topProdOps[topDrill]!==null)?topProdOps[topDrill]:{};
+      var rows=cached.map(function(p){ var rm=RESP_MET[resMetric]; var val=Number(p[rm.v])||0, ly=Number(p[rm.ly])||0; var o=opsMap[opsKey(p.code)]||{}; return {code:p.code, name:p.name, val:val, varp:ly?(val/ly-1)*100:0, osa:null, ins:(o.ins==null?null:o.ins), doh:(o.doh==null?null:o.doh), qb:(o.qb==null?null:o.qb)}; });
       var cols=[
         {key:'code',label:'Código Producto',type:'text',thLeft:true,get:function(r){return r.code;},cell:function(r){return '<td>'+r.code+'</td>';}},
         {key:'name',label:'Descriptor Producto',type:'text',get:function(r){return r.name;},cell:function(r){return '<td>'+r.name+'</td>';}},
         {key:'val',label:m.label,type:'num',get:function(r){return r.val;},cell:function(r){return '<td>'+m.fmtFull(r.val)+'</td>';}},
         {key:'varp',label:'Variación',type:'num',get:function(r){return r.varp;},cell:function(r){return '<td class="'+(r.varp>=0?'pos':'neg')+'">'+(r.varp>=0?'+':'')+r.varp.toFixed(1)+'%</td>';}},
-        {key:'osa',label:'OSA',type:'num',get:function(r){return 0;},cell:function(){return SIN_DATOS_TD;}},
-        {key:'ins',label:'Instock',type:'num',get:function(r){return 0;},cell:function(){return SIN_DATOS_TD;}},
-        {key:'doh',label:'DOH',type:'num',get:function(r){return 0;},cell:function(){return SIN_DATOS_TD;}},
-        {key:'qb',label:'Quiebres',type:'num',get:function(r){return 0;},cell:function(){return SIN_DATOS_TD;}}
+        {key:'osa',label:'OSA',type:'num',get:function(r){return r.osa;},cell:function(r){return opsPctTd(r.osa, clsOSA);}},
+        {key:'ins',label:'Instock',type:'num',get:function(r){return r.ins;},cell:function(r){return opsPctTd(r.ins, clsIns);}},
+        {key:'doh',label:'DOH',type:'num',get:function(r){return r.doh;},cell:function(r){return opsDohTd(r.doh);}},
+        {key:'qb',label:'Quiebres',type:'num',get:function(r){return r.qb;},cell:function(r){return opsPctTd(r.qb, clsQb);}}
       ];
       var sorted=smSortRows(cols, rows, prodSort);
       var body=sorted.map(function(r){ return '<tr>'+cols.map(function(c){return c.cell(r);}).join('')+'</tr>'; }).join('');
@@ -3971,7 +3989,7 @@
       var active = document.querySelector('.tab.on').getAttribute('data-area');
       // Invalidar cachés para que los datos se refetcheen con los filtros aplicados
       if(active==='comercial' || active==='comparativo'){ COM.aperturas={}; drillCache={}; CMP={ana:{}, comp:{}}; cmpDrillCache={}; }
-      if(active==='resumen' || active==='local' || active==='cadena' || active==='mapa'){ RES=null; RES_OPS=null; RES_OPS_LOC=null; cadDrill=[]; topDrill=null; topProdCache={}; if(window.__mapaInvalidate) window.__mapaInvalidate(); }
+      if(active==='resumen' || active==='local' || active==='cadena' || active==='mapa'){ RES=null; RES_OPS=null; RES_OPS_LOC=null; cadDrill=[]; topDrill=null; topProdCache={}; topProdOps={}; if(window.__mapaInvalidate) window.__mapaInvalidate(); }
       if(active==='abastecimiento'){ ABA=null; abaDrill=[]; }
       showArea(active);
     });
