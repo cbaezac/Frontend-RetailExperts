@@ -1698,10 +1698,7 @@
         {key:'cad',label:'Cadena',type:'str',get:function(r){return r.cad;},cell:function(r){return '<td>'+fmtCadDash(r.cad)+'</td>';}},
         {key:'sku',label:'Cod Producto',type:'str',get:function(r){return r.sku;},cell:function(r){return '<td>'+r.sku+'</td>';}},
         {key:'prod',label:'Producto',type:'str',get:function(r){return r.prod;},cell:function(r){return '<td>'+(nomPropio(r.prod)||'-')+'</td>';}},
-        {key:'problema',label:'Problema',type:'str',get:function(r){return r.problema;},cell:function(r){
-          var esSinStock=r.problema==='Sin Stock CD';
-          return '<td><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 12px;border-radius:999px;font-weight:700;font-size:.74rem;'+(esSinStock?'background:rgba(192,57,43,.10);color:#C0392B':'background:rgba(224,140,28,.14);color:#B7791F')+'">'+r.problema+'</span></td>';
-        }},
+        {key:'problema',label:'Problema',type:'str',get:function(r){return r.problema;},cell:function(r){return '<td>'+r.problema+'</td>';}},
         {key:'locales',label:'# Locales afectados',type:'num',get:function(r){return r.locales;},cell:function(r){return '<td>'+r.locales+'</td>';}},
         {key:'stockCd',label:'Stock en CD',type:'num',get:function(r){return r.stockCd;},cell:function(r){return '<td>'+num(r.stockCd)+'</td>';}},
         {key:'dias',label:'Duración problema',type:'num',get:function(r){return r.dias;},cell:function(r){return '<td>'+r.dias+'</td>';}},
