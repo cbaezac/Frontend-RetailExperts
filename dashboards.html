@@ -704,9 +704,10 @@
       FILTER_DEFS.locales=[['Cadena',uniq(function(l){return l.cad;})],['Formato',uniq(function(l){return l.fmt;})],['Región',uniq(function(l){return l.region;})],['Código Local',uniq(function(l){return l.cod;})],['Nombre Local',uniq(function(l){return l.nom;})]];
       buildMultiFilters();
     }
-    function refreshFilterOptionsFromCom(ap){
+    function refreshFilterOptionsFromCom(ap, values){
       var mfd=AP_FILTER[ap]; if(!mfd||mfd[0]!=='productos') return;
-      var vals=(((COM.aperturas||{})[ap]||{}).values||[]).map(function(v){return v.label;});
+      var src=values||(((COM.aperturas||{})[ap]||{}).values||[]);
+      var vals=src.map(function(v){return v.label;});
       if(!vals.length) return;
       FILTER_DEFS.productos=FILTER_DEFS.productos.map(function(d){ return d[0]===mfd[1]?[mfd[1],vals]:d; });
       buildMultiFilters();
@@ -950,10 +951,26 @@
       for(var i=0;i<n;i++){ var x=(0.7+0.5*i/n)*(0.85+(hashN(key+'g'+g+i)%30)/100); w.push(x); sw+=x; }
       return w.map(function(x){return total*x/sw;});
     }
-    function comSeries(v,key){
-      if(comGran==='semanal') return metricWeekly(v,key);
-      if(key==='precio'){ var p=granSplit(sumArr(v.pesos),comGran,'sp:'+v.label), u=granSplit(sumArr(v.unidades),comGran,'su:'+v.label); return p.map(function(x,i){return u[i]?x/u[i]:0;}); }
-      return granSplit(metricTotal(v,key),comGran,key+':'+v.label);
+    /* ---- Buckets temporales REALES del evolutivo ----
+       El backend agrupa el período [desde,hasta] con date_trunc(unidad, fecha)
+       según el parámetro `gran` y devuelve las etiquetas en r.weeks. Aquí se
+       guardan tal cual: el eje del gráfico y las columnas de la matriz salen de
+       estos buckets, nunca de un reparto sintético (granSplit) ni de la fecha
+       de hoy. Así el período elegido manda de verdad sobre lo que se muestra. */
+    var comBuckets=[];
+    function comGranLabels(){ return comBuckets.slice(); }
+    // Serie temporal por bucket: los datos ya vienen agrupados por la
+    // granularidad desde el backend (día/semana/mes/año) → se usan directo.
+    function comSeries(v,key){ return metricWeekly(v,key); }
+    /* Inicio de la ventana según la granularidad: N buckets terminando en endIso
+       (diario=14 días, semanal=13 semanas, mensual=6 meses, anual=3 años). Se usa
+       solo cuando el usuario cambia de unidad; después puede editar el período. */
+    function comWindowStart(gran, endIso){
+      var e=parseIsoDate(endIso);
+      if(gran==='diario') return isoDate(addDays(e,-13));
+      if(gran==='mensual') return isoDate(new Date(e.getFullYear(), e.getMonth()-5, 1));
+      if(gran==='anual') return isoDate(new Date(e.getFullYear()-2, 0, 1));
+      return isoDate(addDays(e,-7*12)); // semanal: 13 semanas
     }
 
     /* ---------- Enlace a Galería con filtros (cámara) ---------- */
@@ -1102,18 +1119,38 @@
       return window.RetailAPI.requestJson('/web/dashboard/comercial'+window.RetailAPI.buildQuery(params));
     }
     function fetchComercial(apertura, extra){
-      return fetchComercialPeriod(apertura, comPeriod, extra);
+      // El evolutivo manda la granularidad: el backend agrupa el período por
+      // día/semana/mes/año con datos reales (no se reparte nada en el front).
+      return fetchComercialPeriod(apertura, comPeriod, Object.assign({gran:comGran}, extra||{}));
     }
+    /* Último error de la API comercial (evolutivo/comparativo). Si la API falla NO
+       se muestran datos demo: se muestra el error, porque un dashboard con números
+       inventados es peor que uno vacío. */
+    var COM_ERR=null;
+    function apiErrMsg(e){ var s=(e&&e.message)||''; s=String(s).replace(/^\{.*"message":"?/,'').slice(0,180); return s||'No se pudo conectar con la API'; }
     function loadComercial(apertura){
+      COM_ERR=null;
       return fetchComercial(apertura).then(function(r){
-        if(r.weeks && r.weeks.length) D.weeks = r.weeks;
+        comBuckets = (r.weeks && r.weeks.length) ? r.weeks.slice() : [];
         COM.aperturas[apertura] = { values: normalizeAperturaValues(apertura, r.values) };
         COM_REAL = true;
         refreshFilterOptionsFromCom(apertura);
-      }).catch(function(){
+      }).catch(function(e){
+        // Evolutivo y Comparativo muestran el error (ver panelComercial /
+        // panelComparativo). El relleno demo queda solo para las vistas que
+        // siguen siendo demostrativas y piden aperturas por needsData().
+        COM_ERR=apiErrMsg(e);
+        comBuckets=[];
         COM.aperturas[apertura] = { values: normalizeAperturaValues(apertura, ((COM_DEMO_APERTURAS[apertura]||{}).values||[])) };
         refreshFilterOptionsFromCom(apertura);
       });
+    }
+    /* Panel de error (datos reales no disponibles) */
+    function errPanel(msg){
+      return '<div class="panel-card full" style="padding:38px;text-align:center">'
+        + '<div style="font-family:var(--font-display);font-weight:800;font-size:1.05rem;color:#C0392B;margin-bottom:8px">No se pudieron cargar los datos reales</div>'
+        + '<div style="color:var(--muted);font-size:.9rem">'+String(msg||'').replace(/</g,'&lt;')+'</div>'
+        + '<div style="color:var(--muted);font-size:.82rem;margin-top:10px">Revisa la sesión, el cliente seleccionado y la conexión con la API.</div></div>';
     }
     /* Guard genérico: asegura que RES y/o la apertura comercial estén cargadas antes de renderizar */
     function needsData(area, apertura, rerender){
@@ -1203,17 +1240,30 @@
     function isoDay(d){ return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
     function mesActualRange(){ var ayer=new Date(Date.now()-86400000); return { start: isoDay(new Date(ayer.getFullYear(), ayer.getMonth(), 1)), end: isoDay(ayer) }; }
     function shiftYearISO(iso){ var p=iso.split('-'); return (Number(p[0])-1)+'-'+p[1]+'-'+p[2]; }
-    var comPeriod=mesActualRange();
+    // Evolutivo: ventana inicial = 13 semanas terminando ayer (coincide con la
+    // granularidad semanal por defecto). El usuario puede editar el período.
+    var comPeriod=(function(){ var e=mesActualRange().end; return {start:comWindowStart('semanal', e), end:e}; })();
     var cmpPeriod=(function(){ var r=mesActualRange(); return {a1:r.start, a2:r.end, b1:shiftYearISO(r.start), b2:shiftYearISO(r.end)}; })();
+    /* Firma del scope de la consulta comercial: período + granularidad + filtros
+       de la barra + cliente. Si cambia, el caché de aperturas deja de ser válido
+       y hay que refetchear (así el período nunca queda "pegado" a datos viejos). */
+    function comSig(){ try{ return JSON.stringify([comPeriod.start, comPeriod.end, comGran, withCliente(fbFilterParams())]); }catch(e){ return ''; } }
+    var COM_SIG=null;
+    function comInvalidateIfStale(){
+      var s=comSig();
+      if(COM_SIG!==s){ COM_SIG=s; COM.aperturas={}; drillCache={}; COM_ERR=null; }
+    }
     function panelComercial(){
       if(!comDrill._keep) comDrill=[];
+      comInvalidateIfStale();
       if(!COM.aperturas[comApertura]){
         host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--muted)">Cargando datos comerciales…</div>';
         loadComercial(comApertura).then(panelComercial).catch(function(){
-          host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--red)">No se pudieron cargar los datos comerciales.</div>';
+          host.innerHTML=errPanel('No se pudieron cargar los datos comerciales.');
         });
         return;
       }
+      if(COM_ERR){ host.innerHTML=errPanel(COM_ERR); return; }
       var k=comKpis();
       var html='';
       // Controles (período · apertura · métrica) viven en la barra de filtros superior (buildAreaControls)
@@ -1242,7 +1292,7 @@
 
     function renderComEvo(){
       var key=comSalesMetric; var precioOn=!!comMetrics.precio;
-      var labels=granLabels(comGran);
+      var labels=comGranLabels();
       var title=document.getElementById('lineTitle'), sub=document.getElementById('lineSub');
       var apLabel=APERTURAS.filter(function(a){return a[0]===comApertura;})[0][1];
       var leftFmt=(key==='unidades')?numShort:clpShort;
@@ -1254,7 +1304,7 @@
       // paleta que su barra, punteada para diferenciarla). Precio real de
       // indicadores_abastecimiento_diario si el backend lo manda; si no, derivado.
       if(precioOn){ vals.forEach(function(o){ datasets.push({ type:'line', label:'Precio · '+o.v.label, data:comSeries(o.v,'precio'), borderColor:apColor(o.idx,o.v.label), backgroundColor:'transparent', borderDash:[5,4], tension:0, borderWidth:2, pointRadius:0, pointHoverRadius:4, yAxisID:'yP', _mkey:'precio' }); }); }
-      sub.textContent=METRIC_LABEL[key]+' en barras por '+apLabel.toLowerCase()+(precioOn?' y precio promedio en línea':'')+' · apertura '+comGran;
+      sub.textContent=METRIC_LABEL[key]+' en barras por '+apLabel.toLowerCase()+(precioOn?' y precio promedio en línea':'')+' · apertura '+comGran+' · '+periodLabel(comPeriod);
       comEvoChart(labels, datasets, leftFmt, false);
     }
     var lineRef=null;
@@ -1330,8 +1380,14 @@
       }
       comRowsByKey={}; rows.forEach(function(r){ comRowsByKey[r.key]=r; });
       var t={val:0}; rows.forEach(function(r){t.val+=r.val;});
-      var labs=granLabels(comGran);
-      function rowB(r){ if(!r._bk||r._bkg!==comGran+m.k){ r._bk=(comGran==='semanal'&&r.weekly)?r.weekly:granSplit(r.val,comGran,'mx:'+m.k+':'+r.key); r._bkg=comGran+m.k; } return r._bk; }
+      var labs=comGranLabels();
+      // Columnas = buckets REALES del backend (r.weekly, misma longitud que labs).
+      // Sin serie real (p.ej. una fila demo) se muestran ceros, nunca un reparto
+      // inventado: la matriz tiene que cuadrar con el período consultado.
+      function rowB(r){
+        if(r.weekly && r.weekly.length===labs.length) return r.weekly;
+        var out=[]; for(var i=0;i<labs.length;i++) out.push(0); return out;
+      }
       var cols=[ firstCol ];
       labs.forEach(function(lab,i){ cols.push({key:'b'+i,label:lab,type:'num',get:function(r){return rowB(r)[i];},cell:function(r){return '<td>'+m.fmt(rowB(r)[i])+'</td>';}}); });
       cols.push({key:'val',label:'Total',type:'num',get:function(r){return r.val;},cell:function(r){return '<td style="font-weight:700">'+m.fmt(r.val)+'</td>';}});
@@ -1339,7 +1395,7 @@
       var bt=labs.map(function(_,i){ var s=0; rows.forEach(function(r){ s+=rowB(r)[i]; }); return s; });
       var tblClass=level>0?'matrix matrix-left':'matrix';
       setTimeout(function(){ rewireComMat(); },0);
-      return '<div class="panel-card full" id="comMatrix"><div class="pc-head"><div><div class="pc-title">Matriz de datos · Comercial</div><div class="pc-sub">'+subTitle+' · '+m.label.toLowerCase()+' · apertura '+comGran+'</div></div>'+(backBtn||'<div class="metric-switch" id="comMatSw"><button type="button" data-m="vp"'+(comMatMetric==='vp'?' class="on"':'')+'>Pesos</button><button type="button" data-m="vc"'+(comMatMetric==='vc'?' class="on"':'')+'>Costo</button><button type="button" data-m="vu"'+(comMatMetric==='vu'?' class="on"':'')+'>Unidades</button></div>')+'</div>'
+      return '<div class="panel-card full" id="comMatrix"><div class="pc-head"><div><div class="pc-title">Matriz de datos · Comercial</div><div class="pc-sub">'+subTitle+' · '+m.label.toLowerCase()+' · apertura '+comGran+' · '+periodLabel(comPeriod)+'</div></div>'+(backBtn||'<div class="metric-switch" id="comMatSw"><button type="button" data-m="vp"'+(comMatMetric==='vp'?' class="on"':'')+'>Pesos</button><button type="button" data-m="vc"'+(comMatMetric==='vc'?' class="on"':'')+'>Costo</button><button type="button" data-m="vu"'+(comMatMetric==='vu'?' class="on"':'')+'>Unidades</button></div>')+'</div>'
         + '<div class="table-scroll"><table class="'+tblClass+'"><thead>'+smThead(cols,comSort)+'</thead><tbody>'+body+'</tbody>'
         + '<tfoot><tr><td>Total</td>'+bt.map(function(v){return '<td>'+m.fmt(v)+'</td>';}).join('')+'<td style="font-weight:700">'+m.fmt(t.val)+'</td></tr></tfoot></table></div></div>';
     }
@@ -3033,53 +3089,68 @@
     var cmpApertura='cadena'; var cmpMetric='vp';
     var cmpDrill=[];
     var CMP={ana:{}, comp:{}};
+    var CMP_ERR=null;
     var cmpDrillCache={};
     var cmpSort={key:'ana',dir:-1};
     function cmpAnaPeriod(){ return {start:cmpPeriod.a1, end:cmpPeriod.a2}; }
     function cmpCompPeriod(){ return {start:cmpPeriod.b1, end:cmpPeriod.b2}; }
-    function cloneValue(v){ return Object.assign({}, v, {pesos:(v.pesos||[]).slice(), costo:(v.costo||[]).slice(), unidades:(v.unidades||[]).slice()}); }
-    function scaledValue(v, factor){
-      var out=cloneValue(v);
-      out.pesos=out.pesos.map(function(x){return x*factor;});
-      out.costo=out.costo.map(function(x){return x*factor;});
-      out.unidades=out.unidades.map(function(x){return x*factor;});
-      out.ly=0; out.meta=(out.meta||0)*factor;
-      return out;
-    }
-    function cmpFallbackValues(apertura, side){
-      var vals=normalizeAperturaValues(apertura, (((COM_DEMO_APERTURAS[apertura]||{}).values)||[]));
-      if(side==='ana') return vals.map(cloneValue);
-      return vals.map(function(v){ var p=sumArr(v.pesos||[]); return scaledValue(v, p?(Number(v.ly)||0)/p:0.92); });
-    }
+    /* (Se eliminó el respaldo demo del comparativo: si la API falla se muestra el
+       error, no datos sintéticos que ignoran los períodos elegidos.) */
+    /* La clave del caché incluye AMBOS períodos + los filtros de la barra + el
+       cliente: cualquier cambio en el scope obliga a refetchear contra el backend. */
     function cmpCacheKey(apertura){
-      return apertura+'|'+cmpPeriod.a1+'|'+cmpPeriod.a2+'|'+cmpPeriod.b1+'|'+cmpPeriod.b2;
+      var f=''; try{ f=JSON.stringify(withCliente(fbFilterParams())); }catch(e){}
+      return apertura+'|'+cmpPeriod.a1+'|'+cmpPeriod.a2+'|'+cmpPeriod.b1+'|'+cmpPeriod.b2+'|'+f;
     }
     function loadComparativo(apertura){
       var key=cmpCacheKey(apertura);
       if(CMP.ana[key]&&CMP.comp[key]) return Promise.resolve();
+      CMP_ERR=null;
+      // Dos consultas reales al mismo endpoint: una por el período de análisis y
+      // otra por el período comparativo (cada una con sus propios desde/hasta).
       return Promise.all([
         fetchComercialPeriod(apertura, cmpAnaPeriod()),
         fetchComercialPeriod(apertura, cmpCompPeriod())
       ]).then(function(rs){
         CMP.ana[key] = { values: normalizeAperturaValues(apertura, rs[0].values) };
         CMP.comp[key] = { values: normalizeAperturaValues(apertura, rs[1].values) };
-        COM.aperturas[apertura] = CMP.ana[key];
         COM_REAL = true;
-        refreshFilterOptionsFromCom(apertura);
-      }).catch(function(){
-        CMP.ana[key] = { values: cmpFallbackValues(apertura, 'ana') };
-        CMP.comp[key] = { values: cmpFallbackValues(apertura, 'comp') };
-        COM.aperturas[apertura] = CMP.ana[key];
+        // No se escribe en COM.aperturas: ese caché es del Evolutivo y tiene otro
+        // período; mezclarlos hacía que una vista mostrara los datos de la otra.
+        refreshFilterOptionsFromCom(apertura, CMP.ana[key].values);
+      }).catch(function(e){
+        // Sin datos reales se muestra el error: nada de números demo que no
+        // reaccionan a los períodos elegidos.
+        CMP_ERR=apiErrMsg(e);
+        CMP.ana[key] = { values: [] };
+        CMP.comp[key] = { values: [] };
       });
     }
     function cmpVals(side, apertura){
       var key=cmpCacheKey(apertura);
       return filterDimValues(apertura, ((CMP[side]&&CMP[side][key]||{}).values)||[]);
     }
+    /* Une AMBOS períodos por etiqueta (unión, no intersección): una cadena/local/
+       producto que vendió solo en el período comparativo también tiene que
+       aparecer (con 0 en análisis), o el total comparativo y la variación salen
+       subestimados. Se usa un objeto-espejo vacío para el lado que falta. */
+    function cmpEmptyLike(v){
+      var n=(v&&v.pesos&&v.pesos.length)||1, z=[];
+      for(var i=0;i<n;i++) z.push(0);
+      return {label:v.label, rawLabel:v.rawLabel||v.label, pesos:z.slice(), costo:z.slice(), unidades:z.slice(), ly:0, meta:0};
+    }
+    function cmpUnionPairs(ana, comp){
+      var anaByRaw={}, compByRaw={}, order=[], seen={};
+      function raw(v){ return v.rawLabel||v.label; }
+      (ana||[]).forEach(function(v){ anaByRaw[raw(v)]=v; if(!seen[raw(v)]){ seen[raw(v)]=1; order.push(raw(v)); } });
+      (comp||[]).forEach(function(v){ compByRaw[raw(v)]=v; if(!seen[raw(v)]){ seen[raw(v)]=1; order.push(raw(v)); } });
+      return order.map(function(k,idx){
+        var a=anaByRaw[k], b=compByRaw[k]||null;
+        return {a:a||cmpEmptyLike(b), b:b, idx:idx};
+      });
+    }
     function cmpPairRows(apertura){
-      var ana=cmpVals('ana', apertura), comp=cmpVals('comp', apertura), compByRaw={};
-      comp.forEach(function(v){ compByRaw[v.rawLabel||v.label]=v; });
-      return ana.map(function(a,idx){ return {a:a, b:compByRaw[a.rawLabel||a.label]||null, idx:idx}; });
+      return cmpUnionPairs(cmpVals('ana', apertura), cmpVals('comp', apertura));
     }
     function cmpPairValue(a,b,m){
       function total(v,key){ return v?metricTotal(v,key):0; }
@@ -3107,13 +3178,17 @@
       if(!cmpDrill._keep) cmpDrill=cmpDrill||[];
       if(!CMP.ana[cmpCacheKey(cmpApertura)] || !CMP.comp[cmpCacheKey(cmpApertura)]){
         host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--muted)">Cargando datos comerciales…</div>';
-        loadComparativo(cmpApertura).then(panelComparativo).catch(function(){
-          host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--red)">No se pudieron cargar los datos.</div>';
+        loadComparativo(cmpApertura).then(panelComparativo).catch(function(e){
+          host.innerHTML=errPanel(apiErrMsg(e));
         });
         return;
       }
+      if(CMP_ERR){ host.innerHTML=errPanel(CMP_ERR); return; }
       var apLabel=APERTURAS.filter(function(a){return a[0]===cmpApertura;})[0][1];
       var m=COM_MET[cmpMetric];
+      // Rangos reales consultados, visibles en los subtítulos: lo que se ve es
+      // exactamente lo que se pidió al backend.
+      var cmpRangoTxt='Análisis '+periodLabel({start:cmpPeriod.a1,end:cmpPeriod.a2})+' · Comparativo '+periodLabel({start:cmpPeriod.b1,end:cmpPeriod.b2});
       var html='';
       // Controles (períodos · apertura · métrica) viven en la barra de filtros superior (buildAreaControls)
       // datos: análisis y comparativo usan sus propios rangos desde/hasta.
@@ -3134,7 +3209,7 @@
         + kpiCard({label:'Precio prom. · Comparativo', value:clp(ppB), icon:IC.tag, tone:'accent'})
         + '</div>';
       // gráfico de barras: análisis vs comparativo por apertura
-      html+='<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">'+m.label+' · análisis vs comparativo</div><div class="pc-sub">Por '+apLabel.toLowerCase()+'</div></div></div><div class="chart-box h-line"><canvas id="cmp-bar"></canvas></div></div>';
+      html+='<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">'+m.label+' · análisis vs comparativo</div><div class="pc-sub">Por '+apLabel.toLowerCase()+' · '+cmpRangoTxt+'</div></div></div><div class="chart-box h-line"><canvas id="cmp-bar"></canvas></div></div>';
       // matriz (con apertura jerárquica: dimensión → local → producto)
       var cmpLevel=cmpDrill.length;
       var cmpCur=cmpLevel?cmpDrill[cmpLevel-1].ap:cmpApertura;
@@ -3144,15 +3219,19 @@
       if(cmpLevel===0){
         rows=vals.map(function(r){ return {key:r.label, label:r.label, rawLabel:r.rawLabel, idx:r.idx, ana:r.ana, cmp:r.cmp, drill:!cmpTerminal}; });
         firstCol={key:'label',label:drillName(cmpCur),type:'text',thLeft:true,get:function(r){return r.label;},cell:function(r){return '<td><span class="cell-chain"><span class="cell-dot" style="background:'+chartColor(r.idx)+'"></span>'+r.label+'</span>'+(r.drill?drillCueHtml(r.key):'')+'</td>';}};
-        cmpSub='Análisis sobre comparativo · por '+drillName(cmpCur).toLowerCase();
+        cmpSub='Análisis sobre comparativo · por '+drillName(cmpCur).toLowerCase()+' · '+cmpRangoTxt;
       } else {
         var lastM=cmpDrill[cmpLevel-1];
         if(COM_REAL){
           var rvM=cmpDrillValuesReal(cmpApertura, cmpDrill, function(){ panelComparativo(); });
           if(rvM===null){ rows=[]; cmpSub='Cargando apertura…'; }
           else {
-            var rvCompByRaw={}; rvM.comp.forEach(function(v){ rvCompByRaw[v.rawLabel||v.label]=v; });
-            rows=rvM.ana.map(function(v){ var d=cmpPairValue(v, rvCompByRaw[v.rawLabel||v.label]||null, m); return {key:v.label, label:v.label, rawLabel:v.rawLabel||v.label, cod:(cmpCur==='codlocal'?(v.rawLabel||v.label):null), ana:d.ana, cmp:d.cmp, drill:!cmpTerminal}; });
+            // Misma unión que en el primer nivel: los ítems presentes solo en el
+            // período comparativo también se listan (análisis en 0).
+            rows=cmpUnionPairs(rvM.ana, rvM.comp).map(function(p){
+              var v=p.a, d=cmpPairValue(p.a, p.b, m);
+              return {key:v.label, label:v.label, rawLabel:v.rawLabel||v.label, cod:(cmpCur==='codlocal'?(v.rawLabel||v.label):null), ana:d.ana, cmp:d.cmp, drill:!cmpTerminal};
+            });
           }
         } else {
         var seedM=cmpDrill.map(function(p){return p.label;}).join('>');
@@ -3167,7 +3246,9 @@
         {key:'ana',label:'Venta análisis',type:'num',get:function(r){return r.ana;},cell:function(r){return '<td>'+m.fmt(r.ana)+'</td>';}},
         {key:'cmp',label:'Venta comparativo',type:'num',get:function(r){return r.cmp;},cell:function(r){return '<td>'+m.fmt(r.cmp)+'</td>';}},
         {key:'dif',label:'Diferencia',type:'num',get:function(r){return r.ana-r.cmp;},cell:function(r){var d=r.ana-r.cmp;return '<td class="'+(d>=0?'pos':'neg')+'">'+(d>=0?'+':'')+m.fmt(d)+'</td>';}},
-        {key:'var',label:'Variación',type:'num',get:function(r){return r.cmp?(r.ana/r.cmp-1)*100:0;},cell:function(r){var vv=r.cmp?(r.ana/r.cmp-1)*100:0;return '<td class="'+(vv>=0?'pos':'neg')+'">'+(vv>=0?'+':'')+vv.toFixed(1)+'%</td>';}}
+        // Sin venta en el período comparativo no hay base de comparación: se
+        // marca "nuevo" en vez de un +0,0% que se leería como "sin cambios".
+        {key:'var',label:'Variación',type:'num',get:function(r){return r.cmp?(r.ana/r.cmp-1)*100:(r.ana?Infinity:0);},cell:function(r){ if(!r.cmp) return '<td class="'+(r.ana?'pos':'')+'">'+(r.ana?'nuevo':'-')+'</td>'; var vv=(r.ana/r.cmp-1)*100; return '<td class="'+(vv>=0?'pos':'neg')+'">'+(vv>=0?'+':'')+vv.toFixed(1)+'%</td>'; }}
       ];
       var body=smSortRows(cols,rows,cmpSort).map(function(r){ return '<tr'+(r.drill?' class="clickable" data-key="'+r.key+'"':'')+'>'+cols.map(function(c){return c.cell(r);}).join('')+'</tr>'; }).join('');
       var totDifCls=(tA-tB>=0?'pos':'neg');
@@ -3895,7 +3976,14 @@
       function onPeriod(id, apply){ var el=document.getElementById(id); if(!el) return; el.addEventListener('change', function(){ apply(); markDirty(); }); }
       if(area==='comercial'){
         onSeg('apSeg', function(v){ comApertura=v; });
-        onSeg('comGranSeg', function(v){ comGran=v; });
+        // Al cambiar de unidad se propone la ventana típica de esa unidad y se
+        // refleja en el input "desde"; el usuario puede editarla después.
+        onSeg('comGranSeg', function(v){
+          comGran=v;
+          comPeriod.start=comWindowStart(v, comPeriod.end);
+          var d0=document.getElementById('evo-desde');
+          if(d0){ d0.value=comPeriod.start; if(d0._dmySync) d0._dmySync(); }
+        });
         onChips('mChips', function(){return comSalesMetric;}, function(v){ comSalesMetric=v; });
         var pp=document.getElementById('ppChip'); if(pp) pp.addEventListener('click', function(e){ var b=e.target.closest('.metric-chip'); if(!b)return; comMetrics.precio=!comMetrics.precio; b.classList.toggle('sel', true); b.classList.toggle('on', false); markDirty(); });
         onPeriod('evo-desde', function(){ var d=document.getElementById('evo-desde'); if(d&&d.value) comPeriod.start=d.value; if(comPeriod.end<comPeriod.start) comPeriod.end=comPeriod.start; });
@@ -3928,7 +4016,11 @@
       });
     }
     /* ---------- Overlay de carga (dentro del área de paneles) ---------- */
-    var LOADER_MS=3000; // TEMPORAL para preview; bajar a ~500 en producción
+    /* El loader se muestra mientras el panel se arma; el panel a su vez espera sus
+       propias consultas al backend. Antes había un retardo fijo de 3 s que se
+       sumaba a CADA render (cambio de tab, de filtro, de período) y hacía sentir
+       lento el dashboard aunque la API respondiera al tiro. */
+    var LOADER_MS=60;
     var _loaderT=null;
     function renderWithLoader(fn){
       if(host){ host.innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:340px;padding:40px 24px"><img src="assets/img/loader.gif" alt="Cargando…" style="width:min(170px,45vw);height:auto" /></div>'; }
@@ -3994,7 +4086,10 @@
     document.getElementById('applyBtn').addEventListener('click', function(){
       var active = document.querySelector('.tab.on').getAttribute('data-area');
       // Invalidar cachés para que los datos se refetcheen con los filtros aplicados
-      if(active==='comercial' || active==='comparativo'){ COM.aperturas={}; drillCache={}; CMP={ana:{}, comp:{}}; cmpDrillCache={}; }
+      // Comercial/Comparativo NO se vacían a mano: sus cachés están indexados por
+      // período + granularidad + filtros + cliente (comInvalidateIfStale /
+      // cmpCacheKey), así que se refetchea solo cuando el scope cambió de verdad
+      // y cambiar de apertura o de métrica ya no obliga a repetir consultas.
       if(active==='resumen' || active==='local' || active==='cadena' || active==='mapa'){ RES=null; RES_OPS=null; RES_OPS_LOC=null; cadDrill=[]; topDrill=null; topProdCache={}; topProdOps={}; if(window.__mapaInvalidate) window.__mapaInvalidate(); }
       if(active==='abastecimiento'){ ABA=null; abaDrill=[]; }
       showArea(active);
