@@ -1984,7 +1984,7 @@
         {key:'nombre_producto',label:'Producto',type:'text',get:function(r){return r.nombre_producto;},cell:function(r){return '<td>'+(r.nombre_producto?nomPropio(r.nombre_producto):'-')+'</td>';}},
         {key:'stock_cd',label:'Stock en CD',type:'num',get:function(r){return r.stock_cd==null?-Infinity:r.stock_cd;},cell:function(r){return '<td title="'+(r.fecha_stock_cd?('Al '+r.fecha_stock_cd.slice(8,10)+'-'+r.fecha_stock_cd.slice(5,7)):'')+'">'+(r.stock_cd==null?'<span style="color:var(--muted)">-</span>':num(r.stock_cd))+'</td>';}},
         {key:'instock_pct',label:'Instock',type:'num',get:function(r){return r.instock_pct==null?-1:r.instock_pct;},cell:function(r){return r.instock_pct==null?'<td style="color:var(--muted)">-</td>':'<td class="'+clsIns(r.instock_pct)+'">'+r.instock_pct.toFixed(1)+'%</td>';}},
-        {key:'doh_cd',label:'DOH <span title="DOH siempre a nivel cadena completa (CD nacional / venta de TODOS los locales de la cadena) -- no cambia si filtrás por local. Piso en 0: stock negativo = 0 días de cobertura." style="cursor:help;color:var(--muted);font-weight:600">ⓘ</span>',type:'num',get:function(r){return r.doh_cd==null?-Infinity:(r.stock_cd<0?0:r.doh_cd);},cell:function(r){var dv=r.doh_cd==null?null:(r.stock_cd<0?0:r.doh_cd);return '<td title="'+(r.fecha_venta_hasta?('Venta hasta '+r.fecha_venta_hasta.slice(8,10)+'-'+r.fecha_venta_hasta.slice(5,7)):'')+'">'+(dv==null?'<span style="color:var(--muted)">-</span>':dv.toFixed(1))+'</td>';}}
+        {key:'doh_cd',label:'DOH',type:'num',get:function(r){return r.doh_cd==null?-Infinity:(r.stock_cd<0?0:r.doh_cd);},cell:function(r){var dv=r.doh_cd==null?null:(r.stock_cd<0?0:r.doh_cd);return '<td title="'+(r.fecha_venta_hasta?('Venta hasta '+r.fecha_venta_hasta.slice(8,10)+'-'+r.fecha_venta_hasta.slice(5,7)):'')+'">'+(dv==null?'<span style="color:var(--muted)">-</span>':dv.toFixed(1))+'</td>';}}
       ];
       var sorted=smSortRows(cols,rows,qcSort);
       var body=sorted.map(function(r){ return '<tr>'+cols.map(function(c){return c.cell(r);}).join('')+'</tr>'; }).join('');
@@ -1999,13 +1999,14 @@
       if(qcTotales){
         // Icono ⓘ por columna (no uno generico para toda la fila): cada total
         // se calcula distinto de lo que sugiere la fila de arriba -- stock_cd
-        // es SUM simple, instock_pct se recalcula a nivel tienda (no es
-        // promedio de los % individuales) y doh_cd es SUM(stock)/SUM(venta)
-        // (no promedio de los DOH individuales). Mismo patron visual que el
-        // ⓘ del header "DOH" (title nativo + span, sin componente nuevo).
+        // es SUM simple, instock_pct es cobertura de CD agregada (SUM(stock_cd)
+        // / (SUM(venta) * COBERTURA_OBJETIVO_INSTOCK_CD), no promedio de los %
+        // individuales) y doh_cd es SUM(stock)/SUM(venta) (no promedio de los
+        // DOH individuales). Mismo patron visual (title nativo + span, sin
+        // componente nuevo) -- el header "DOH" en si ya no lleva icono propio.
         var icoStock=' <span title="Suma del stock en CD de todos los productos filtrados." style="cursor:help;color:var(--muted);font-weight:600">ⓘ</span>';
-        var icoIns=' <span title="Calculado a nivel tienda: % de tiendas con cobertura suficiente sobre el total de tiendas de estos productos -- no es el promedio de los % de arriba." style="cursor:help;color:var(--muted);font-weight:600">ⓘ</span>';
-        var icoDoh=' <span title="Suma de stock ÷ suma de venta diaria promedio de los productos filtrados -- no es el promedio de los DOH individuales de arriba." style="cursor:help;color:var(--muted);font-weight:600">ⓘ</span>';
+        var icoIns=' <span title="Cobertura total del CD sobre todos los productos filtrados. No es el promedio de la columna." style="cursor:help;color:var(--muted);font-weight:600">ⓘ</span>';
+        var icoDoh=' <span title="Suma de stock ÷ suma de venta diaria, no el promedio de la columna." style="cursor:help;color:var(--muted);font-weight:600">ⓘ</span>';
         var tStock=qcTotales.stock_cd==null?'-':num(qcTotales.stock_cd);
         var tIns=qcTotales.instock_pct==null?'<span style="color:var(--muted)">-</span>':('<span class="'+clsIns(qcTotales.instock_pct)+'">'+qcTotales.instock_pct.toFixed(1)+'%</span>');
         var tDoh=qcTotales.doh_cd==null?'-':Math.max(0,qcTotales.doh_cd).toFixed(1);
