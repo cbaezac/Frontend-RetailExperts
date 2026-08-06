@@ -3643,7 +3643,7 @@
        con respuesta) y el período de la barra filtra por fecha de la visita.
        Ver WebDataService.dashboardCarteleria en el backend. */
     var promoMetric='pesos';
-    var promoBar='impl';   // barras del gráfico: impl | doh | instock (antes OSA)
+    var promoBar='doh';   // barras del gráfico: doh | instock (antes OSA | instock)
     var promoDrill=[];
     var promoSort={key:null,dir:1};
     var CART=null, CART_ERR=null, CART_SIG=null;
@@ -3732,7 +3732,7 @@
       var M_LABEL={pesos:'Venta pesos',costo:'Venta costo',unidades:'Venta unidades'};
       var M_FMT={pesos:clpShort,costo:clpShort,unidades:numShort};
       var M_FMT_FULL={pesos:clp,costo:clp,unidades:num};
-      var B_LABEL={impl:'% Implementación',doh:'DOH',instock:'Instock'};
+      var B_LABEL={doh:'DOH',instock:'Instock'};
       var mTot={pesos:pesosTot,costo:costoTot,unidades:unidTot};
       var html='';
       // Apertura y granularidad viven en la barra de filtros superior (buildAreaControls)
@@ -3754,7 +3754,6 @@
         + '<button type="button" data-m="unidades"'+(m==='unidades'?' class="on"':'')+'>Unidades</button>'
         + '</div>'
         + '<div class="metric-switch" id="promoBarSw">'
-        + '<button type="button" data-b="impl"'+(promoBar==='impl'?' class="on"':'')+'>Implementación</button>'
         + '<button type="button" data-b="doh"'+(promoBar==='doh'?' class="on"':'')+'>DOH</button>'
         + '<button type="button" data-b="instock"'+(promoBar==='instock'?' class="on"':'')+'>Instock</button>'
         + '</div>'
@@ -3767,7 +3766,7 @@
       var promoLabs=(CART.weeks||[]).slice();
       var wkKey={pesos:'pesos',costo:'costo',unidades:'unidades'}[m];
       var weekly=serie.map(function(s){ return Number(s[wkKey]||0); });
-      var barKey={impl:'implementacion',doh:'doh',instock:'instock'}[promoBar];
+      var barKey={doh:'doh',instock:'instock'}[promoBar];
       var barWeekly=serie.map(function(s){ return s[barKey]==null?null:Number(s[barKey]); });
       var esPct=(promoBar!=='doh');
       var c=new Chart(document.getElementById('promo-line'), { data:{ labels:promoLabs, datasets:[
