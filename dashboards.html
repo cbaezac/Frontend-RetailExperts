@@ -192,6 +192,10 @@
 
   /* KPI cards */
   .kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(186px,1fr)); gap:14px; margin-bottom:22px; }
+  /* 7 tarjetas con auto-fit quedan 6+1 (una sola colgando abajo). En Cartelería se
+     reparten parejas: 4+3 en desktop, 2 por fila en tablet. */
+  @media (min-width:1080px){ .kpis.kpis-cart{ grid-template-columns:repeat(4,minmax(0,1fr)); } }
+  @media (min-width:700px) and (max-width:1079px){ .kpis.kpis-cart{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
   .kpi{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:17px 18px; box-shadow:0 8px 22px rgba(42,20,8,0.05); position:relative; overflow:hidden; }
   .kpi .k-top{ display:flex; align-items:center; gap:8px; margin-bottom:9px; }
   .kpi .k-ico{ width:30px; height:30px; flex:0 0 auto; border-radius:9px; display:grid; place-items:center; }
@@ -650,7 +654,12 @@
     var AP_FILTER={cadena:['locales','Cadena'],formato:['locales','Formato'],region:['locales','Región'],codlocal:['locales','Código Local'],nomlocal:['locales','Nombre Local'],categoria:['productos','Categoría'],marca:['productos','Marca'],codprod:['productos','Código Producto'],descriptor:['productos','Descriptor Producto']};
     /* Label del filtro -> parámetro que espera el backend (ventaClienteWhere).
        Categoría→rubro, Marca→cliente, Descriptor→subrubro se resuelven en el backend. */
-    var FB_PARAM={'Cadena':'cadena','Formato':'formato','Región':'region','Código Local':'codigo_local','Nombre Local':'nombre_local','Categoría':'categoria','Marca':'marca','Código Producto':'codigo_producto','Descriptor Producto':'descriptor'};
+    /* "Estado" NO es un atributo literal del producto: el backend lo interpreta como
+       VIGENCIA del par local x producto (producto activo + venta en los últimos 28
+       días; ver addVigenciaFilter). Por eso sus opciones son fijas activo/inactivo
+       y no salen de /dashboard/atributos. */
+    var FB_PARAM={'Cadena':'cadena','Formato':'formato','Región':'region','Código Local':'codigo_local','Nombre Local':'nombre_local','Categoría':'categoria','Marca':'marca','Código Producto':'codigo_producto','Descriptor Producto':'descriptor','Estado':'estado'};
+    var ESTADO_OPCIONES=['activo','inactivo'];
     /* Selección actual de la barra superior como params para el endpoint comercial */
     function fbFilterParams(){
       var out={};
@@ -684,6 +693,9 @@
       grupos.forEach(function(grp){
         var g=gFilters[grp]||{};
         Object.keys(g).forEach(function(label){
+          // "Estado" es vigencia local x producto: lo resuelve el backend, no tiene
+          // equivalente sobre el local suelto.
+          if(label==='Estado') return;
           var sel=g[label]||[]; if(!sel.length) return;
           out=out.filter(function(l){ return selMatch(sel, localAttrVal(l,label)); });
         });
@@ -720,7 +732,7 @@
         if(arr(a.cadenas).length||arr(a.formatos).length){
           FILTER_DEFS.locales=[['Cadena',arr(a.cadenas)],['Formato',arr(a.formatos)],['Región',arr(a.regiones)],['Código Local',arr(a.codigos_local)],['Nombre Local',arr(a.nombres_local)]];
         }
-        FILTER_DEFS.productos=[['Categoría',arr(a.categorias)],['Marca',arr(a.marcas)],['Código Producto',arr(a.codigos_producto)],['Descriptor Producto',arr(a.descriptores)]];
+        FILTER_DEFS.productos=[['Categoría',arr(a.categorias)],['Marca',arr(a.marcas)],['Código Producto',arr(a.codigos_producto)],['Descriptor Producto',arr(a.descriptores)],['Estado',ESTADO_OPCIONES.slice()]];
         buildMultiFilters();
       }).catch(function(){ /* deja las opciones que haya (resumen/demo) */ });
     }
@@ -3624,83 +3636,117 @@
       wireDrillMenu('#osaMatrix', byKey, curAp, usedAps, function(ap,row){ osaDrill.push({ap:ap,label:row.label,row:row}); renderOsaMatrix(); });
     }
 
-    /* ---------- Panel: Promociones ---------- */
+    /* ---------- Panel: Cartelería (Ejecución) ----------
+       Datos REALES desde /web/dashboard/carteleria: implementación de carteles
+       (respuesta_promocion) cruzada con la venta y el abastecimiento de esos mismos
+       local x producto. El % de implementación es sobre lo EVALUADO (implementadas /
+       con respuesta) y el período de la barra filtra por fecha de la visita.
+       Ver WebDataService.dashboardCarteleria en el backend. */
     var promoMetric='pesos';
-    var promoBar='osa';
+    var promoBar='doh';   // barras del gráfico: doh | instock (antes OSA | instock)
     var promoDrill=[];
     var promoSort={key:null,dir:1};
-    function promoWeeklyPct(seed,base,min,max){
-      return D.weeks.map(function(_,w){ var hw=fcHashN(seed+':'+w); return Math.min(max, Math.max(min, base+((hw%500)/100-2.5))); });
+    var CART=null, CART_ERR=null, CART_SIG=null;
+    var cartDrillCache={};
+    function cartPeriod(){
+      var de=document.getElementById('f-desde'), ha=document.getElementById('f-hasta');
+      var d=DEFAULT_PERIODS.last28;
+      var s=(de&&de.value)||d.start, e=(ha&&ha.value)||d.end;
+      if(e<s) e=s;
+      return {start:s, end:e};
     }
+    function fetchCarteleria(apertura, extra){
+      var p=cartPeriod();
+      var params=withCliente(Object.assign({apertura:apertura, desde:p.start, hasta:p.end, gran:promoGran}, fbFilterParams(), extra||{}));
+      return window.RetailAPI.requestJson('/web/dashboard/carteleria'+window.RetailAPI.buildQuery(params));
+    }
+    /* Igual que en Comercial: el caché se invalida por firma (período + granularidad
+       + apertura + filtros + cliente), así el período nunca queda pegado. */
+    function cartSig(){
+      var p=cartPeriod();
+      try{ return JSON.stringify([p.start, p.end, promoGran, promoApertura, withCliente(fbFilterParams())]); }catch(e){ return ''; }
+    }
+    function cartInvalidateIfStale(){
+      var s=cartSig();
+      if(CART_SIG!==s){ CART_SIG=s; CART=null; CART_ERR=null; cartDrillCache={}; promoDrill=[]; }
+    }
+    function loadCarteleria(){
+      CART_ERR=null;
+      return fetchCarteleria(promoApertura).then(function(r){
+        CART={ totales:(r&&r.totales)||{}, values:normalizeAperturaValues(promoApertura,(r&&r.values)||[]),
+               serie:(r&&r.serie)||[], weeks:(r&&r.weeks)||[], periodo:(r&&r.periodo)||null };
+      }).catch(function(e){ CART=null; CART_ERR=apiErrMsg(e); });
+    }
+    /* Hijos del drill: se piden al backend con los filtros acumulados del camino,
+       igual que el drill de Comercial (drillPathFilters). */
+    function cartDrillRows(onReady){
+      var path=promoDrill;
+      var key=path.map(function(pp){return pp.ap+'='+(pp.rawLabel||pp.label);}).join('|');
+      if(cartDrillCache[key]) return cartDrillCache[key];
+      if(cartDrillCache[key+':p']) return null;
+      cartDrillCache[key+':p']=1;
+      var ap=path[path.length-1].ap;
+      fetchCarteleria(ap, drillPathFilters(promoApertura, path)).then(function(r){
+        cartDrillCache[key]=normalizeAperturaValues(ap,(r&&r.values)||[]);
+        delete cartDrillCache[key+':p']; onReady();
+      }).catch(function(){ cartDrillCache[key]=[]; delete cartDrillCache[key+':p']; onReady(); });
+      return null;
+    }
+    // Formatos tolerantes a null: el backend manda null cuando no hay base de
+    // cálculo (sin carteles evaluados, sin datos de abastecimiento).
+    function cartPct(v){ return v==null?'-':pct(Number(v)); }
+    function cartDoh(v){ return v==null?'-':Number(v).toFixed(1); }
+    function cartPctCell(v, umbral){ return v==null?'<td style="color:var(--muted)">-</td>':'<td><span class="'+(Number(v)>=umbral?'pos':'neg')+'">'+pct(Number(v))+'</span></td>'; }
     var promoApertura='cadena';
     var promoGran='semanal';
-    function promoBucketsPct(seed,base){
-      if(promoGran==='semanal') return promoWeeklyPct(seed,base,80,99.5);
-      var n=GRAN_N[promoGran],out=[];
-      for(var i=0;i<n;i++){ var hw=fcHashN(seed+':'+promoGran+':'+i); out.push(Math.min(99.5,Math.max(80,base+((hw%500)/100-2.5)))); }
-      return out;
-    }
     function promoApLabel(){ return APERTURAS.filter(function(a){return a[0]===promoApertura;})[0][1]; }
-    function promoRows(){
-      var vals=filterDimValues(promoApertura, COM.aperturas[promoApertura].values);
-      return vals.map(function(v){
-        var p=sumArr(v.pesos), c=sumArr(v.costo), u=sumArr(v.unidades);
-        var h=fcHashN('promo:'+v.label);
-        var impl=76+(h%2100)/100;
-        var osaW=promoWeeklyPct('promo-osa:'+v.label, 90+(h%800)/100, 82, 99.5);
-        var insW=promoWeeklyPct('promo-ins:'+v.label, 88+((h>>4)%1050)/100, 80, 99.5);
-        return { label:v.label, impl:impl,
-          osa:osaW[osaW.length-1], instock:insW[insW.length-1], osaW:osaW, insW:insW,
-          pesos:p, costo:c, unidades:u, precio:u?p/u:0,
-          wkPesos:v.pesos.slice(), wkCosto:v.costo.slice(), wkUnidades:v.unidades.slice() };
-      });
-    }
-    function promoSplit(parent, prefix, n){
-      var arr=[]; for(var i=0;i<n;i++){ var h=fcHashN(parent.label+prefix+i); arr.push({h:h, w:0.5+(h%100)/100}); }
-      var sw=arr.reduce(function(a,b){return a+b.w;},0);
-      return arr.map(function(o,i){
-        var f=o.w/sw;
-        var wkP=parent.wkPesos.map(function(x){return x*f;}), wkC=parent.wkCosto.map(function(x){return x*f;}), wkU=parent.wkUnidades.map(function(x){return x*f;});
-        var p=sumArr(wkP), c=sumArr(wkC), u=sumArr(wkU);
-        var osaW=promoWeeklyPct('promo-osa:'+parent.label+prefix+i, Math.min(99, parent.osa+((o.h%400)/100-2)), 80, 99.5);
-        var insW=promoWeeklyPct('promo-ins:'+parent.label+prefix+i, Math.min(99, parent.instock+((o.h%400)/100-2)), 78, 99.5);
-        return { h:o.h, impl:Math.min(99, Math.max(60, parent.impl+((o.h%700)/100-3.5))),
-          osa:osaW[osaW.length-1], instock:insW[insW.length-1], osaW:osaW, insW:insW,
-          pesos:p, costo:c, unidades:u, precio:u?p/u:0, wkPesos:wkP, wkCosto:wkC, wkUnidades:wkU };
-      });
-    }
-    function promoLocalesFor(d0){
-      var n=4+(fcHashN(d0.label)%5);
-      return promoSplit(d0,'L',n).map(function(s){ var code=d0.label.replace(/[^A-Za-z]/g,'').slice(0,2).toUpperCase()+(100+(s.h%900)); var NAMES=['Centro','Norte','Sur','Oriente','Poniente','Costanera','Plaza','Mall','Estación']; return Object.assign(s, {cod:code, label:code+' · '+d0.label+' '+NAMES[s.h%NAMES.length]}); });
-    }
-    function promoProductsFor(d1){
-      var n=5+(fcHashN(d1.label+'P')%4);
-      var CATS=['Bebida','Galleta','Detergente','Shampoo','Arroz','Aceite','Yogurt','Café','Pasta'];
-      return promoSplit(d1,'P',n).map(function(s,i){ var code='SKU-'+(4000+(s.h%5000)); return Object.assign(s, {label:code+' · '+CATS[s.h%CATS.length]+' '+(200+(s.h%700))+'g'}); });
+    /* Filas de la apertura base, ya filtradas por la selección de su misma dimensión */
+    function cartRows(){
+      return filterDimValues(promoApertura, (CART&&CART.values)||[]);
     }
     function panelPromociones(){
-      if(needsData('promociones', promoApertura, panelPromociones)) return;
-      var rows=promoRows();
-      var tot={pesos:0,costo:0,unidades:0,implW:0,osaW:0,insW:0};
-      rows.forEach(function(r){ tot.pesos+=r.pesos; tot.costo+=r.costo; tot.unidades+=r.unidades; tot.implW+=r.impl*r.pesos; tot.osaW+=r.osa*r.pesos; tot.insW+=r.instock*r.pesos; });
-      var implTot=tot.pesos?tot.implW/tot.pesos:0, osaTot=tot.pesos?tot.osaW/tot.pesos:0, insTot=tot.pesos?tot.insW/tot.pesos:0, precioTot=tot.unidades?tot.pesos/tot.unidades:0;
+      cartInvalidateIfStale();
+      if(CART_ERR){ host.innerHTML=errPanel(CART_ERR); return; }
+      if(!CART){
+        host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--muted)">Cargando ejecución de cartelería…</div>';
+        loadCarteleria().then(panelPromociones);
+        return;
+      }
+      var rows=cartRows();
+      // Totales: si hay filtros de la misma dimensión aplicados en el front, se
+      // recalculan sobre las filas visibles; si no, se usan los del backend.
+      var T=CART.totales||{};
+      var filtrado=rows.length!==((CART.values||[]).length);
+      var tot={evaluadas:0, implementadas:0, pesos:0, costo:0, unidades:0};
+      rows.forEach(function(r){ tot.evaluadas+=r.evaluadas||0; tot.implementadas+=r.implementadas||0; tot.pesos+=r.pesos||0; tot.costo+=r.costo||0; tot.unidades+=r.unidades||0; });
+      var implTot = filtrado ? (tot.evaluadas?tot.implementadas/tot.evaluadas*100:null) : (T.implementacion==null?null:T.implementacion);
+      var pesosTot = filtrado ? tot.pesos : (T.pesos||0);
+      var costoTot = filtrado ? tot.costo : (T.costo||0);
+      var unidTot  = filtrado ? tot.unidades : (T.unidades||0);
+      var precioTot = unidTot ? pesosTot/unidTot : 0;
+      // DOH e Instock son promedios ponderados: no se pueden re-sumar desde las
+      // filas, así que en la cabecera siempre van los del backend.
+      var dohTot = T.doh==null?null:Number(T.doh);
+      var insTot = T.instock==null?null:Number(T.instock);
       var m=promoMetric;
       var M_LABEL={pesos:'Venta pesos',costo:'Venta costo',unidades:'Venta unidades'};
       var M_FMT={pesos:clpShort,costo:clpShort,unidades:numShort};
       var M_FMT_FULL={pesos:clp,costo:clp,unidades:num};
-      var B_LABEL={osa:'OSA',instock:'Instock'};
+      var B_LABEL={doh:'DOH',instock:'Instock'};
+      var mTot={pesos:pesosTot,costo:costoTot,unidades:unidTot};
       var html='';
-      // Apertura vive en la barra de filtros superior (buildAreaControls)
-      html+='<div class="kpis">'
-        + kpiCard({label:'% Implementación', value:pct(implTot), icon:IC.check, tone:'green', valueColor:implTot>=90?'var(--green)':'var(--amber)'})
-        + kpiCard({label:M_LABEL[m], value:M_FMT_FULL[m](tot[m]), icon:m==='unidades'?IC.units:(m==='costo'?IC.cost:IC.money), tone:'accent'})
-        + kpiCard({label:'Venta costo', value:clp(tot.costo), icon:IC.cost, tone:'accent'})
-        + kpiCard({label:'Venta unidades', value:num(tot.unidades), icon:IC.units, tone:'purple'})
-        + kpiCard({label:'OSA', value:pct(osaTot), icon:IC.check, tone:'green', valueColor:osaTot>=95?'var(--green)':'var(--amber)'})
-        + kpiCard({label:'Instock', value:pct(insTot), icon:IC.cd, tone:'green', valueColor:insTot>=95?'var(--green)':'var(--amber)'})
+      // Apertura y granularidad viven en la barra de filtros superior (buildAreaControls)
+      html+='<div class="kpis kpis-cart">'
+        + kpiCard({label:'% Implementación', value:cartPct(implTot), icon:IC.check, tone:'green', valueColor:implTot==null?'var(--muted)':(implTot>=90?'var(--green)':'var(--amber)')})
+        + kpiCard({label:M_LABEL[m], value:M_FMT_FULL[m](mTot[m]), icon:m==='unidades'?IC.units:(m==='costo'?IC.cost:IC.money), tone:'accent'})
+        + kpiCard({label:'Venta costo', value:clp(costoTot), icon:IC.cost, tone:'accent'})
+        + kpiCard({label:'Venta unidades', value:num(unidTot), icon:IC.units, tone:'purple'})
+        + kpiCard({label:'DOH (días)', value:cartDoh(dohTot), icon:IC.clock, tone:'purple'})
+        + kpiCard({label:'Instock', value:cartPct(insTot), icon:IC.cd, tone:'green', valueColor:insTot==null?'var(--muted)':(insTot>=95?'var(--green)':'var(--amber)')})
         + kpiCard({label:'Precio promedio', value:clp(precioTot), icon:IC.tag, tone:'accent'})
         + '</div>';
-      html+='<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Venta promocional y disponibilidad</div><div class="pc-sub">Línea: '+M_LABEL[m]+' · Barras: '+B_LABEL[promoBar]+' · apertura '+promoGran+'</div></div>'
+      var perTxt = CART.periodo ? periodLabel({start:CART.periodo.desde, end:CART.periodo.hasta}) : periodLabel(cartPeriod());
+      html+='<div class="panel-card full"><div class="pc-head"><div><div class="pc-title">Ejecución de cartelería y venta</div><div class="pc-sub">Línea: '+M_LABEL[m]+' · Barras: '+B_LABEL[promoBar]+' · apertura '+promoGran+' · '+perTxt+'</div></div>'
         + '<div style="display:flex;gap:10px;flex-wrap:wrap">'
         + '<div class="metric-switch" id="promoSw">'
         + '<button type="button" data-m="pesos"'+(m==='pesos'?' class="on"':'')+'>Pesos</button>'
@@ -3708,28 +3754,34 @@
         + '<button type="button" data-m="unidades"'+(m==='unidades'?' class="on"':'')+'>Unidades</button>'
         + '</div>'
         + '<div class="metric-switch" id="promoBarSw">'
-        + '<button type="button" data-b="osa"'+(promoBar==='osa'?' class="on"':'')+'>OSA</button>'
+        + '<button type="button" data-b="doh"'+(promoBar==='doh'?' class="on"':'')+'>DOH</button>'
         + '<button type="button" data-b="instock"'+(promoBar==='instock'?' class="on"':'')+'>Instock</button>'
         + '</div>'
         + '</div></div><div class="chart-box h-line"><canvas id="promo-line"></canvas></div></div>';
       html+='<div id="promoWrap"></div>';
       host.innerHTML=html;
-      /* Mixto: barras % (eje derecho) + línea venta (eje izquierdo) */
-      var promoLabs=granLabels(promoGran);
-      var wkKey={pesos:'wkPesos',costo:'wkCosto',unidades:'wkUnidades'}[m];
-      var weekly = promoGran==='semanal'
-        ? D.weeks.map(function(_,w){ var s=0; rows.forEach(function(r){ s+=r[wkKey][w]; }); return s; })
-        : granSplit(rows.reduce(function(s,r){return s+r[m];},0), promoGran, 'promoV:'+m);
-      var barWeekly=promoLabs.map(function(_,w){ var s=0,wt=0; rows.forEach(function(r){ var arr=promoBucketsPct('promo-'+(promoBar==='osa'?'osa':'ins')+':'+r.label, promoBar==='osa'?r.osa:r.instock); s+=arr[w]*r.pesos; wt+=r.pesos; }); return wt?s/wt:0; });
+      /* Mixto: barras del indicador elegido (eje derecho) + línea de venta (eje
+         izquierdo), ambos sobre los buckets reales que devolvió el backend. */
+      var serie=CART.serie||[];
+      var promoLabs=(CART.weeks||[]).slice();
+      var wkKey={pesos:'pesos',costo:'costo',unidades:'unidades'}[m];
+      var weekly=serie.map(function(s){ return Number(s[wkKey]||0); });
+      var barKey={doh:'doh',instock:'instock'}[promoBar];
+      var barWeekly=serie.map(function(s){ return s[barKey]==null?null:Number(s[barKey]); });
+      var esPct=(promoBar!=='doh');
       var c=new Chart(document.getElementById('promo-line'), { data:{ labels:promoLabs, datasets:[
         { type:'bar', label:B_LABEL[promoBar], data:barWeekly, backgroundColor:'rgba(90,13,116,0.45)', borderColor:'#5A0D74', borderWidth:1, borderRadius:5, maxBarThickness:40, yAxisID:'yB', order:2 },
         { type:'line', label:M_LABEL[m], data:weekly, borderColor:'#E0561C', backgroundColor:'transparent', tension:0, borderWidth:2.6, pointRadius:0, pointHoverRadius:5, yAxisID:'yL', order:1 }
       ]}, options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
         plugins:{ legend:{display:true,position:'top',align:'end',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8,padding:14,font:{weight:'600'}}},
-          tooltip:{callbacks:{label:function(ctx){ return ctx.dataset.yAxisID==='yB' ? ctx.dataset.label+': '+ctx.parsed.y.toFixed(1)+'%' : ctx.dataset.label+': '+M_FMT_FULL[m](ctx.parsed.y); }}} },
+          tooltip:{callbacks:{label:function(ctx){
+            if(ctx.dataset.yAxisID!=='yB') return ctx.dataset.label+': '+M_FMT_FULL[m](ctx.parsed.y);
+            if(ctx.parsed.y==null) return ctx.dataset.label+': sin datos';
+            return ctx.dataset.label+': '+(esPct?ctx.parsed.y.toFixed(1)+'%':ctx.parsed.y.toFixed(1)+' días');
+          }}} },
         scales:{ x:{grid:{display:false}},
           yL:{position:'left',grid:{color:'rgba(36,16,38,0.06)'},ticks:{callback:function(v){return M_FMT[m](v);}}},
-          yB:{position:'right',min:70,max:100,grid:{display:false},ticks:{callback:function(v){return v+'%';}}} } } });
+          yB:Object.assign({position:'right',grid:{display:false}}, esPct?{min:0,max:100,ticks:{callback:function(v){return v+'%';}}}:{ticks:{callback:function(v){return v.toFixed(0)+'d';}}}) } } });
       charts.push(c);
       renderPromoMatrix();
       document.getElementById('promoSw').addEventListener('click', function(e){ var b=e.target.closest('button'); if(!b)return; promoMetric=b.getAttribute('data-m'); destroyCharts(); panelPromociones(); });
@@ -3737,53 +3789,54 @@
     }
     function renderPromoMatrix(){
       var m=promoMetric;
-      var M_LABEL={pesos:'Venta pesos',costo:'Venta costo',unidades:'Venta unidades'};
-      var M_FMT_FULL={pesos:clp,costo:clp,unidades:num};
-      var B_LABEL={osa:'OSA',instock:'Instock'};
       var level=promoDrill.length;
       var curAp=level?promoDrill[level-1].ap:promoApertura;
       var usedAps=[promoApertura].concat(promoDrill.map(function(p){return p.ap;}));
-      var terminal=(curAp==='producto');
+      var terminal=(curAp==='producto'||curAp==='codprod'||curAp==='descriptor');
       var rows, firstCol, sub, back='';
       if(level===0){
-        rows=promoRows().map(function(r,i){ return Object.assign({}, r, {key:r.label, cidx:i, drill:!terminal}); });
+        rows=cartRows().map(function(r,i){ return Object.assign({}, r, {key:r.rawLabel||r.label, cidx:i, drill:!terminal}); });
         firstCol={key:'label',label:drillName(curAp),type:'text',thLeft:true,get:function(r){return r.label;},cell:function(r){return '<td><span class="cell-chain"><span class="cell-dot" style="background:'+chartColor(r.cidx)+'"></span>'+r.label+'</span>'+(r.drill?drillCueHtml(r.key):'')+'</td>';}};
-        sub='Indicadores promocionales por '+drillName(curAp).toLowerCase()+' · abre otra apertura con la flecha';
+        sub='Ejecución de cartelería por '+drillName(curAp).toLowerCase()+' · abre otra apertura con la flecha';
       } else {
         var last=promoDrill[level-1];
-        var seed=promoDrill.map(function(p){return p.label;}).join('>');
-        rows=drillChildren(last.ap, seed).map(function(o){
-          var pesos=last.row.pesos*o.frac*(0.9+(o.h%20)/100);
-          var costo=last.row.costo*o.frac*(0.9+((o.h>>3)%20)/100);
-          var unidades=Math.max(1, Math.round(last.row.unidades*o.frac*(0.9+((o.h>>5)%20)/100)));
-          var jit=function(base,sh){ return Math.min(99.5, Math.max(55, base+(((o.h>>sh)%600)/100-3))); };
-          return {key:o.cod||o.label, label:o.label, cod:o.cod, impl:jit(last.row.impl,2), osa:jit(last.row.osa,4), instock:jit(last.row.instock,6), pesos:pesos, costo:costo, unidades:unidades, precio:unidades?pesos/unidades:0, drill:!terminal};
-        });
+        var hijos=cartDrillRows(function(){ renderPromoMatrix(); });
+        if(hijos===null){
+          document.getElementById('promoWrap').innerHTML='<div class="panel-card full" id="promoMatrix"><div class="pc-head"><div><div class="pc-title">Matriz de datos · Cartelería</div><div class="pc-sub">Cargando apertura…</div></div></div></div>';
+          return;
+        }
+        rows=hijos.map(function(r,i){ return Object.assign({}, r, {key:r.rawLabel||r.label, cidx:i, cod:(curAp==='codlocal'?(r.rawLabel||r.label):null), drill:!terminal}); });
         firstCol={key:'label',label:drillName(curAp),type:'text',thLeft:true,get:function(r){return r.label;},cell:function(r){return '<td>'+r.label+(r.drill?drillCueHtml(r.key):'')+'</td>';}};
         sub=last.label+' · apertura por '+drillName(curAp).toLowerCase();
         back=drillBackHtml('promoBack', level>1?promoDrill[level-2].ap:promoApertura);
       }
       var promoByKey={}; rows.forEach(function(r){ promoByKey[r.key]=r; });
-      var tot={pesos:0,costo:0,unidades:0,implW:0,osaW:0,insW:0};
-      rows.forEach(function(r){ tot.pesos+=r.pesos; tot.costo+=r.costo; tot.unidades+=r.unidades; tot.implW+=r.impl*r.pesos; tot.osaW+=r.osa*r.pesos; tot.insW+=r.instock*r.pesos; });
-      var implT=tot.pesos?tot.implW/tot.pesos:0, osaT=tot.pesos?tot.osaW/tot.pesos:0, insT=tot.pesos?tot.insW/tot.pesos:0, precioT=tot.unidades?tot.pesos/tot.unidades:0;
+      var tot={evaluadas:0,implementadas:0,pesos:0,costo:0,unidades:0};
+      rows.forEach(function(r){ tot.evaluadas+=r.evaluadas||0; tot.implementadas+=r.implementadas||0; tot.pesos+=r.pesos||0; tot.costo+=r.costo||0; tot.unidades+=r.unidades||0; });
+      var implT=tot.evaluadas?tot.implementadas/tot.evaluadas*100:null;
+      var precioT=tot.unidades?tot.pesos/tot.unidades:0;
       var cols=[ firstCol,
-        {key:'impl',label:'% Implementación',type:'num',get:function(r){return r.impl;},cell:function(r){return '<td><span class="'+(r.impl>=90?'pos':'neg')+'">'+pct(r.impl)+'</span></td>';}},
-        {key:'vp',label:'Venta pesos',type:'num',get:function(r){return r.pesos;},cell:function(r){return '<td>'+clp(r.pesos)+'</td>';}},
-        {key:'vc',label:'Venta costo',type:'num',get:function(r){return r.costo;},cell:function(r){return '<td>'+clp(r.costo)+'</td>';}},
-        {key:'vu',label:'Venta unidades',type:'num',get:function(r){return r.unidades;},cell:function(r){return '<td>'+num(r.unidades)+'</td>';}},
-        {key:'osa',label:'OSA',type:'num',get:function(r){return r.osa;},cell:function(r){return '<td><span class="'+(r.osa>=95?'pos':'neg')+'">'+pct(r.osa)+'</span></td>';}},
-        {key:'ins',label:'Instock',type:'num',get:function(r){return r.instock;},cell:function(r){return '<td><span class="'+(r.instock>=95?'pos':'neg')+'">'+pct(r.instock)+'</span></td>';}},
-        {key:'precio',label:'Precio promedio',type:'num',get:function(r){return r.precio;},cell:function(r){return '<td>'+clp(r.precio)+'</td>';}}
+        {key:'impl',label:'% Implementación',type:'num',get:function(r){return r.implementacion==null?-1:r.implementacion;},cell:function(r){return cartPctCell(r.implementacion, 90);}},
+        // Conteos detrás del porcentaje: sin ellos un 100% sobre 1 cartel se lee
+        // igual que un 100% sobre 200, y el drill no se puede auditar.
+        {key:'ev',label:'Carteles evaluados',type:'num',get:function(r){return r.evaluadas||0;},cell:function(r){return '<td>'+num(r.evaluadas||0)+'</td>';}},
+        {key:'im',label:'Implementados',type:'num',get:function(r){return r.implementadas||0;},cell:function(r){return '<td>'+num(r.implementadas||0)+'</td>';}},
+        {key:'vp',label:'Venta pesos',type:'num',get:function(r){return r.pesos||0;},cell:function(r){return '<td>'+clp(r.pesos||0)+'</td>';}},
+        {key:'vc',label:'Venta costo',type:'num',get:function(r){return r.costo||0;},cell:function(r){return '<td>'+clp(r.costo||0)+'</td>';}},
+        {key:'vu',label:'Venta unidades',type:'num',get:function(r){return r.unidades||0;},cell:function(r){return '<td>'+num(r.unidades||0)+'</td>';}},
+        {key:'doh',label:'DOH',type:'num',get:function(r){return r.doh==null?-1:r.doh;},cell:function(r){return r.doh==null?'<td style="color:var(--muted)">-</td>':'<td>'+cartDoh(r.doh)+'</td>';}},
+        {key:'ins',label:'Instock',type:'num',get:function(r){return r.instock==null?-1:r.instock;},cell:function(r){return cartPctCell(r.instock, 95);}},
+        {key:'precio',label:'Precio promedio',type:'num',get:function(r){return r.precio||0;},cell:function(r){return '<td>'+clp(r.precio||0)+'</td>';}}
       ];
-      var body=smSortRows(cols,rows,promoSort).map(function(r){ return '<tr>'+cols.map(function(c){return c.cell(r);}).join('')+'</tr>'; }).join('');
+      var body=smSortRows(cols,rows,promoSort).map(function(r){ return '<tr'+(r.drill?' class="clickable" data-key="'+r.key+'"':'')+'>'+cols.map(function(c){return c.cell(r);}).join('')+'</tr>'; }).join('');
+      if(!rows.length) body='<tr><td colspan="'+cols.length+'" style="text-align:center;color:var(--muted);padding:26px">Sin cartelería evaluada para esta apertura y período</td></tr>';
       var tblClass=level>0?'matrix matrix-left':'matrix';
-      document.getElementById('promoWrap').innerHTML='<div class="panel-card full" id="promoMatrix"><div class="pc-head"><div><div class="pc-title">Matriz de datos · Promociones</div><div class="pc-sub">'+sub+'</div></div>'+back+'</div>'
+      document.getElementById('promoWrap').innerHTML='<div class="panel-card full" id="promoMatrix"><div class="pc-head"><div><div class="pc-title">Matriz de datos · Cartelería</div><div class="pc-sub">'+sub+'</div></div>'+back+'</div>'
         + '<div class="table-scroll"><table class="'+tblClass+'"><thead>'+smThead(cols,promoSort)+'</thead><tbody>'+body+'</tbody>'
-        + '<tfoot><tr><td>Total</td><td>'+pct(implT)+'</td><td>'+clp(tot.pesos)+'</td><td>'+clp(tot.costo)+'</td><td>'+num(tot.unidades)+'</td><td>'+pct(osaT)+'</td><td>'+pct(insT)+'</td><td>'+clp(precioT)+'</td></tr></tfoot></table></div></div>';
+        + '<tfoot><tr><td>Total</td><td>'+cartPct(implT)+'</td><td>'+num(tot.evaluadas)+'</td><td>'+num(tot.implementadas)+'</td><td>'+clp(tot.pesos)+'</td><td>'+clp(tot.costo)+'</td><td>'+num(tot.unidades)+'</td><td>'+cartDoh(CART&&CART.totales?CART.totales.doh:null)+'</td><td>'+cartPct(CART&&CART.totales?CART.totales.instock:null)+'</td><td>'+clp(precioT)+'</td></tr></tfoot></table></div></div>';
       smWire('#promoMatrix', cols, promoSort, renderPromoMatrix);
       var back2=document.getElementById('promoBack'); if(back2){ back2.addEventListener('click', function(){ promoDrill.pop(); renderPromoMatrix(); }); }
-      wireDrillMenu('#promoMatrix', promoByKey, curAp, usedAps, function(ap,row){ promoDrill.push({ap:ap,label:row.label,row:row}); renderPromoMatrix(); });
+      wireDrillMenu('#promoMatrix', promoByKey, curAp, usedAps, function(ap,row){ promoDrill.push({ap:ap,label:row.label,rawLabel:row.rawLabel||row.label,row:row}); renderPromoMatrix(); });
     }
 
     /* ---- Inmovilizados ---- */
@@ -4104,7 +4157,7 @@
     /* ---- Multi-select filtros (visual) ---- */
     var FILTER_DEFS={
       locales:[['Cadena',['Cencosud','Walmart','SMU','Tottus']],['Formato',['Jumbo','Santa Isabel','Hiper Líder','Líder Express','Unimarc','Hiper Tottus']],['Región',['R. Metropolitana','Valparaíso','Biobío','Maule','Coquimbo']],['Código Local',['J101','U101','L101','T101']],['Nombre Local',['Jumbo Peñalolén','Hiper Líder Ñuñoa','Unimarc Peñalolén']]],
-      productos:[['Categoría',['Alimentos','Bebidas','Limpieza','Cuidado Personal','Hogar']],['Marca',['Adclean','Bekys','Café Haití','Kuna Foods','Olisur','Prater']],['Código Producto',['SKU1001','SKU1002','SKU1003']],['Descriptor Producto',['Aceite 1L','Detergente 3kg','Café 250g','Shampoo 400ml']]]
+      productos:[['Categoría',['Alimentos','Bebidas','Limpieza','Cuidado Personal','Hogar']],['Marca',['Adclean','Bekys','Café Haití','Kuna Foods','Olisur','Prater']],['Código Producto',['SKU1001','SKU1002','SKU1003']],['Descriptor Producto',['Aceite 1L','Detergente 3kg','Café 250g','Shampoo 400ml']],['Estado',['activo','inactivo']]]
     };
     var gFilters={ locales:{}, productos:{} };
     function ms2Esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
