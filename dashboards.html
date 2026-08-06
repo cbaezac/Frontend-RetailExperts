@@ -565,7 +565,6 @@
     // Modo demo para la publicación Netlify: sólo esta página usa datos ficticios.
     // El resto del sitio conserva sus integraciones reales sin cambios.
     var HAS_METAS = true;
-    var HAS_OPS = true;
     var D = window.DASH_DEMO;
     if(!D) throw new Error('No se pudieron cargar los datos demo del dashboard');
     function setDataBadge(ok){
@@ -2539,7 +2538,12 @@
     var resMetric = 'vp';
     var RES_MET = { vp:{label:'Venta pesos', fmtFull:clp, ly:'vpLy', meta:'mVp'}, vc:{label:'Venta costo', fmtFull:clp, ly:'vcLy', meta:'mVc'}, vu:{label:'Venta unidades', fmtFull:num, ly:'vuLy', meta:'mVu'} };
     function secTitle(txt, icon, bg, color, first){ return '<div class="sec-title'+(first?' first':'')+'"><span class="sec-ico" style="background:'+bg+';color:'+color+'">'+icon+'</span>'+txt+'</div>'; }
-    function resTotals(){ var t={vp:0,vc:0,vu:0,vpLy:0,vcLy:0,vuLy:0,mVp:0,mVc:0,mVu:0,osa:0,ins:0,doh:0,qb:0}; FL().forEach(function(l){ ['vp','vc','vu','vpLy','vcLy','vuLy','mVp','mVc','mVu'].forEach(function(k){t[k]+=l[k];}); t.osa+=l.osa*l.vp; t.ins+=l.ins*l.vp; t.doh+=l.doh*l.vp; t.qb+=l.qb*l.vp; }); var W=t.vp||1; t.osa/=W; t.ins/=W; t.doh/=W; t.qb/=W; return t; }
+    // Totales de VENTA (y metas) del scope. Los indicadores operacionales (instock/
+    // DOH/quiebre) NO se agregan aquí: se toman ya agregados del backend (RES_OPS,
+    // Σstock/Σvpd). Antes se ponderaban por venta pesos, lo que daba un DOH mal
+    // calculado (promedio ponderado de DOH ≠ Σstock/Σvpd); se eliminó para no arriesgar
+    // mostrar un indicador erróneo si el flujo de datos cambia a futuro.
+    function resTotals(){ var t={vp:0,vc:0,vu:0,vpLy:0,vcLy:0,vuLy:0,mVp:0,mVc:0,mVu:0}; FL().forEach(function(l){ ['vp','vc','vu','vpLy','vcLy','vuLy','mVp','mVc','mVu'].forEach(function(k){t[k]+=l[k];}); }); return t; }
     function pctDelta(now,prev){ return prev?(now/prev-1)*100:0; }
     /* Umbrales de color para indicadores operacionales y metas */
     function clsMeta(v){ return v>=100?'pos':'neg'; }
@@ -2582,8 +2586,9 @@
         .then(function(r){ RES_OPS=(r&&r.totales)||null; })
         .catch(function(){ RES_OPS=null; });
     }
-    // Indicadores reales por LOCAL: alimentan Top 50 (Negocio) y las aperturas
-    // formato/región/local de Cadena (que agregan desde RES.locales).
+    // Indicadores reales por LOCAL (apertura=codlocal): alimentan el Top 50 de Negocio
+    // (parchean RES.locales). Cadena ya NO los agrega en el cliente: pide cada apertura
+    // directo al backend (ver cadenaDimRows/dimRowsReal).
     function loadResumenOpsLocales(){
       var p=DEFAULT_PERIODS.mtd;
       var params=withCliente(Object.assign({apertura:'codlocal', desde:p.start, hasta:p.end}, fbFilterParams()));
@@ -2607,7 +2612,6 @@
           };
           VENTA_REAL = true;
           HAS_METAS = false;
-          HAS_OPS = false;
           setDataBadge(true);
           refreshFilterOptionsFromResumen();
           // Todos los filtros (locales y productos) con valores DISTINCT reales de la DB.
@@ -2641,19 +2645,13 @@
     var cadenaAp='categoria';
     var CADENA_DIMS={formato:{label:'Formato'},region:{label:'Región'},codlocal:{label:'Código Local'},nomlocal:{label:'Nombre Local'},categoria:{label:'Categoría'},marca:{label:'Marca'},codprod:{label:'Código Producto'},producto:{label:'Producto'}};
     function cadenaDimRows(ap){
-      if(ap==='formato'||ap==='region'||ap==='codlocal'||ap==='nomlocal'){
-        var getK, getLbl;
-        if(ap==='formato'){ getK=function(l){return l.fmt;}; getLbl=getK; }
-        else if(ap==='region'){ getK=function(l){return l.region;}; getLbl=getK; }
-        else if(ap==='codlocal'){ getK=function(l){return l.cod;}; getLbl=getK; }
-        else { getK=function(l){return l.cod;}; getLbl=function(l){return l.cod+' · '+l.nom;}; }
-        // Venta real agregada desde RES.locales (resumen-mtd); indicadores reales por
-        // local (RES_OPS_LOC) ponderados por venta, contando sólo locales con dato.
-        var agg={};
-        FL().forEach(function(l){ var k=getK(l); if(!k)return; if(!agg[k])agg[k]={label:getLbl(l),vp:0,vc:0,vu:0,vpLy:0,vcLy:0,vuLy:0,insW:0,insWt:0,dohW:0,dohWt:0,qbW:0,qbWt:0}; var a=agg[k]; a.vp+=l.vp;a.vc+=l.vc;a.vu+=l.vu;a.vpLy+=l.vpLy;a.vcLy+=l.vcLy;a.vuLy+=l.vuLy; if(l.ins!=null){a.insW+=l.ins*l.vp;a.insWt+=l.vp;} if(l.doh!=null){a.dohW+=l.doh*l.vp;a.dohWt+=l.vp;} if(l.qb!=null){a.qbW+=l.qb*l.vp;a.qbWt+=l.vp;} });
-        return Object.keys(agg).map(function(k){ var a=agg[k]; return {label:a.label, vp:a.vp,vc:a.vc,vu:a.vu, varp:(resMetric==='vp'?(a.vpLy?(a.vp/a.vpLy-1)*100:0):resMetric==='vc'?(a.vcLy?(a.vc/a.vcLy-1)*100:0):(a.vuLy?(a.vu/a.vuLy-1)*100:0)), osa:null, ins:a.insWt?a.insW/a.insWt:null, doh:a.dohWt?a.dohW/a.dohWt:null, qb:a.qbWt?a.qbW/a.qbWt:null}; });
-      }
-      // Aperturas de producto/taxonomía (categoría/marca/código/producto): datos reales.
+      // TODAS las aperturas de Cadena (formato/región/local y taxonomía de producto)
+      // piden el dato agregado directo al backend (/web/dashboard/abastecimiento por
+      // apertura). Antes formato/región/local se agregaban en el cliente desde
+      // RES.locales ponderando instock/DOH/quiebre por venta pesos, lo que descuadraba
+      // el DOH: DOH agregado = Σstock/Σvpd (venta_prom_diaria_28d), NUNCA promedio (ni
+      // ponderado) de DOH por local. El backend ya lo calcula así (mismo criterio que
+      // categoría/marca), por eso se unifica todo por esta vía.
       return dimRowsReal(ap);
     }
     function renderCadenaFormatoDonuts(){
@@ -2702,12 +2700,14 @@
           return;
         }
       }
-      // Datos reales por dimensión: Local siempre; Cadena sólo aperturas de producto/taxonomía
-      // (formato/región/local se agregan desde RES.locales, ya cargado).
-      var needAp = isLocalArea ? localAp : (isCadenaArea && ['categoria','marca','codprod','producto'].indexOf(cadenaAp)>=0 ? cadenaAp : null);
-      if(needAp && !DIM_AP[dimApKey(needAp)]){
+      // Datos reales por dimensión desde el backend: Local su apertura; Cadena la
+      // apertura activa + 'formato' (los donuts de Cadena siempre reparten por formato).
+      var needAps = isLocalArea ? [localAp] : (isCadenaArea ? [cadenaAp, 'formato'] : []);
+      needAps = needAps.filter(function(ap,i){ return ap && needAps.indexOf(ap)===i; });
+      var missing = needAps.filter(function(ap){ return !DIM_AP[dimApKey(ap)]; });
+      if(missing.length){
         host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--muted)">Cargando datos…</div>';
-        loadGerDim(needAp).then(panelResumen).catch(function(){ DIM_AP[needAp]={rows:[]}; panelResumen(); });
+        Promise.all(missing.map(function(ap){ return loadGerDim(ap).catch(function(){ DIM_AP[dimApKey(ap)]={rows:[]}; }); })).then(panelResumen);
         return;
       }
       var html='';
@@ -2724,13 +2724,15 @@
         + '</div>';
       // Indicadores Operacionales (sin variación)
       html+=secTitle('Indicadores Operacionales', IC.box, 'var(--purple-soft)', 'var(--purple)');
-      // Instock/DOH/Quiebres reales (RES_OPS, tabla indicadores_abastecimiento_diario);
-      // si no hay datos reales se usa el demo (HAS_OPS) o se muestra '-'.
-      var opsIns = (RES_OPS&&RES_OPS.instock!=null) ? RES_OPS.instock : (HAS_OPS?t.ins:null);
-      var opsDoh = (RES_OPS&&RES_OPS.doh!=null) ? RES_OPS.doh : (HAS_OPS?t.doh:null);
-      var opsQb  = (RES_OPS&&RES_OPS.quiebre!=null) ? RES_OPS.quiebre : (HAS_OPS?t.qb:null);
+      // Instock/DOH/Quiebres SOLO desde el backend (RES_OPS, tabla
+      // indicadores_abastecimiento_diario, agregado como Σstock/Σvpd). Sin fallback
+      // ponderado por pesos: si no hay dato real se muestra '-' (nunca un DOH mal
+      // agregado). OSA no la entrega el backend -> siempre '-'.
+      var opsIns = (RES_OPS&&RES_OPS.instock!=null) ? RES_OPS.instock : null;
+      var opsDoh = (RES_OPS&&RES_OPS.doh!=null) ? RES_OPS.doh : null;
+      var opsQb  = (RES_OPS&&RES_OPS.quiebre!=null) ? RES_OPS.quiebre : null;
       html+='<div class="kpis">'
-        + kpiCard({label:'OSA', value: HAS_OPS?pct(t.osa):'-', valueColor: HAS_OPS?COLVAR[clsOSA(t.osa)]:'var(--muted)', icon:IC.check, tone:'green'})
+        + kpiCard({label:'OSA', value:'-', valueColor:'var(--muted)', icon:IC.check, tone:'green'})
         + kpiCard({label:'Instock', value: opsIns==null?'-':pct(opsIns), valueColor: opsIns==null?'var(--muted)':COLVAR[clsIns(opsIns)], icon:IC.check, tone:'green'})
         + kpiCard({label:'DOH (días)', value: opsDoh==null?'-':opsDoh.toFixed(1), icon:IC.clock, tone:'purple'})
         + kpiCard({label:'Quiebres', value: opsQb==null?'-':pct(opsQb), valueColor: opsQb==null?'var(--muted)':COLVAR[clsQb(opsQb)], icon:IC.lost, tone:'accent'})
@@ -3914,15 +3916,75 @@
     }
     function panelLocal(){
       var selL=(gFilters.locales['Código Local']||[]).concat(gFilters.locales['Nombre Local']||[]);
-      if(!selL.length){
-        destroyCharts();
-        host.innerHTML='<div class="panel-card full" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:70px 24px;text-align:center">'
-          +'<svg viewBox="0 0 24 24" fill="none" style="width:44px;height:44px;color:var(--purple)"><path d="M4 9.5 5.2 4h13.6L20 9.5M4 9.5v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-10M4 9.5h16M9.5 20.5v-6h5v6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'
-          +'<div style="font-family:var(--font-display);font-weight:800;font-size:1.15rem;color:var(--ink)">Selecciona un local</div>'
-          +'<div style="font-size:.9rem;color:var(--muted);max-width:460px">Elige un local en los filtros de <strong>Código Local</strong> o <strong>Nombre Local</strong> y presiona “Aplicar filtros” para ver su información.</div></div>';
+      if(!selL.length){ destroyCharts(); renderLocalPicker(); return; }
+      panelResumen();
+    }
+    // Opciones del selector central: pares código·nombre reales del cliente (RES.locales).
+    function localPickerOptions(){
+      var seen={}, out=[];
+      ((RES&&RES.locales)||[]).forEach(function(l){
+        if(!l.cod || seen[l.cod]) return; seen[l.cod]=1;
+        out.push({cod:String(l.cod), nom:String(l.nom||'')});
+      });
+      out.sort(function(a,b){ return (a.nom||a.cod).localeCompare(b.nom||b.cod,'es'); });
+      return out;
+    }
+    // Al elegir un local en el selector central se setea el filtro de arriba (Código
+    // Local) y se re-renderiza -- misma acción que "Aplicar filtros", para que el
+    // selector y la barra de filtros queden siempre sincronizados.
+    function localPickerPick(cod){
+      gFilters.locales['Código Local']=[cod];
+      gFilters.locales['Nombre Local']=[];
+      buildMultiFilters();
+      RES=null; RES_OPS=null; RES_OPS_LOC=null; cadDrill=[]; topDrill=null; topProdCache={}; topProdOps={};
+      showArea('local');
+    }
+    function ensureLocalPickerCss(){
+      if(document.getElementById('lpCss')) return;
+      var s=document.createElement('style'); s.id='lpCss';
+      s.textContent='.lp-box{width:100%;max-width:440px;margin-top:4px}'
+        +'.lp-search{width:100%;font-family:var(--font-body);font-size:.9rem;color:var(--ink);background:#fff;border:1.4px solid var(--line);border-radius:10px;padding:10px 14px;outline:none;transition:border-color .15s;box-sizing:border-box}'
+        +'.lp-search:focus{border-color:var(--purple)}'
+        +'.lp-list{margin-top:10px;max-height:280px;overflow-y:auto;border:1.4px solid var(--line);border-radius:12px;text-align:left}'
+        +'.lp-item{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--line);padding:11px 14px;font-family:var(--font-body);font-size:.9rem;color:var(--ink);cursor:pointer;transition:background .12s}'
+        +'.lp-item:last-child{border-bottom:0}'
+        +'.lp-item:hover{background:var(--purple-soft)}'
+        +'.lp-item-nom{font-weight:600}'
+        +'.lp-item-cod{font-size:.78rem;color:var(--muted);font-family:var(--font-display);letter-spacing:.02em;flex:0 0 auto}'
+        +'.lp-empty,.lp-none{padding:16px;text-align:center;color:var(--muted);font-size:.85rem}';
+      document.head.appendChild(s);
+    }
+    function renderLocalPicker(){
+      if(!RES){
+        host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--muted)">Cargando locales…</div>';
+        loadResumen().then(panelLocal).catch(function(){ host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--red)">No se pudieron cargar los locales.</div>'; });
         return;
       }
-      panelResumen();
+      ensureLocalPickerCss();
+      var opts=localPickerOptions();
+      var listHtml = opts.length
+        ? opts.map(function(o){
+            return '<button type="button" class="lp-item" data-cod="'+ms2Esc(o.cod)+'" data-text="'+ms2Esc((o.nom+' '+o.cod).toLowerCase())+'">'
+              +'<span class="lp-item-nom">'+ms2Esc(o.nom?nomPropio(o.nom):o.cod)+'</span>'
+              +(o.nom?'<span class="lp-item-cod">'+ms2Esc(o.cod)+'</span>':'')+'</button>';
+          }).join('') + '<div class="lp-none" id="lpNone" style="display:none">Sin coincidencias</div>'
+        : '<div class="lp-empty">No hay locales disponibles para este cliente.</div>';
+      host.innerHTML='<div class="panel-card full" style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:52px 24px">'
+        +'<svg viewBox="0 0 24 24" fill="none" style="width:44px;height:44px;color:var(--purple)"><path d="M4 9.5 5.2 4h13.6L20 9.5M4 9.5v10a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-10M4 9.5h16M9.5 20.5v-6h5v6" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'
+        +'<div style="font-family:var(--font-display);font-weight:800;font-size:1.15rem;color:var(--ink)">Elige un local</div>'
+        +'<div style="font-size:.9rem;color:var(--muted);max-width:420px;text-align:center">Búscalo por código o nombre y selecciónalo para ver su detalle.</div>'
+        +'<div class="lp-box"><input type="search" id="lpSearch" class="lp-search" placeholder="Buscar local…" autocomplete="off" /><div class="lp-list" id="lpList">'+listHtml+'</div></div>'
+        +'</div>';
+      var search=document.getElementById('lpSearch'), list=document.getElementById('lpList');
+      if(search){
+        search.addEventListener('input', function(){
+          var q=(this.value||'').trim().toLowerCase(), shown=0;
+          list.querySelectorAll('.lp-item').forEach(function(it){ var ok=!q||(it.getAttribute('data-text')||'').indexOf(q)>=0; it.style.display=ok?'':'none'; if(ok)shown++; });
+          var none=document.getElementById('lpNone'); if(none) none.style.display=shown?'none':'';
+        });
+        setTimeout(function(){ search.focus(); }, 30);
+      }
+      list.querySelectorAll('.lp-item').forEach(function(it){ it.addEventListener('click', function(){ localPickerPick(it.getAttribute('data-cod')); }); });
     }
     var RENDER = {
       resumen:panelResumen,
