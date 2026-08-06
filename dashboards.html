@@ -2582,8 +2582,9 @@
         .then(function(r){ RES_OPS=(r&&r.totales)||null; })
         .catch(function(){ RES_OPS=null; });
     }
-    // Indicadores reales por LOCAL: alimentan Top 50 (Negocio) y las aperturas
-    // formato/región/local de Cadena (que agregan desde RES.locales).
+    // Indicadores reales por LOCAL (apertura=codlocal): alimentan el Top 50 de Negocio
+    // (parchean RES.locales). Cadena ya NO los agrega en el cliente: pide cada apertura
+    // directo al backend (ver cadenaDimRows/dimRowsReal).
     function loadResumenOpsLocales(){
       var p=DEFAULT_PERIODS.mtd;
       var params=withCliente(Object.assign({apertura:'codlocal', desde:p.start, hasta:p.end}, fbFilterParams()));
@@ -2641,19 +2642,13 @@
     var cadenaAp='categoria';
     var CADENA_DIMS={formato:{label:'Formato'},region:{label:'Región'},codlocal:{label:'Código Local'},nomlocal:{label:'Nombre Local'},categoria:{label:'Categoría'},marca:{label:'Marca'},codprod:{label:'Código Producto'},producto:{label:'Producto'}};
     function cadenaDimRows(ap){
-      if(ap==='formato'||ap==='region'||ap==='codlocal'||ap==='nomlocal'){
-        var getK, getLbl;
-        if(ap==='formato'){ getK=function(l){return l.fmt;}; getLbl=getK; }
-        else if(ap==='region'){ getK=function(l){return l.region;}; getLbl=getK; }
-        else if(ap==='codlocal'){ getK=function(l){return l.cod;}; getLbl=getK; }
-        else { getK=function(l){return l.cod;}; getLbl=function(l){return l.cod+' · '+l.nom;}; }
-        // Venta real agregada desde RES.locales (resumen-mtd); indicadores reales por
-        // local (RES_OPS_LOC) ponderados por venta, contando sólo locales con dato.
-        var agg={};
-        FL().forEach(function(l){ var k=getK(l); if(!k)return; if(!agg[k])agg[k]={label:getLbl(l),vp:0,vc:0,vu:0,vpLy:0,vcLy:0,vuLy:0,insW:0,insWt:0,dohW:0,dohWt:0,qbW:0,qbWt:0}; var a=agg[k]; a.vp+=l.vp;a.vc+=l.vc;a.vu+=l.vu;a.vpLy+=l.vpLy;a.vcLy+=l.vcLy;a.vuLy+=l.vuLy; if(l.ins!=null){a.insW+=l.ins*l.vp;a.insWt+=l.vp;} if(l.doh!=null){a.dohW+=l.doh*l.vp;a.dohWt+=l.vp;} if(l.qb!=null){a.qbW+=l.qb*l.vp;a.qbWt+=l.vp;} });
-        return Object.keys(agg).map(function(k){ var a=agg[k]; return {label:a.label, vp:a.vp,vc:a.vc,vu:a.vu, varp:(resMetric==='vp'?(a.vpLy?(a.vp/a.vpLy-1)*100:0):resMetric==='vc'?(a.vcLy?(a.vc/a.vcLy-1)*100:0):(a.vuLy?(a.vu/a.vuLy-1)*100:0)), osa:null, ins:a.insWt?a.insW/a.insWt:null, doh:a.dohWt?a.dohW/a.dohWt:null, qb:a.qbWt?a.qbW/a.qbWt:null}; });
-      }
-      // Aperturas de producto/taxonomía (categoría/marca/código/producto): datos reales.
+      // TODAS las aperturas de Cadena (formato/región/local y taxonomía de producto)
+      // piden el dato agregado directo al backend (/web/dashboard/abastecimiento por
+      // apertura). Antes formato/región/local se agregaban en el cliente desde
+      // RES.locales ponderando instock/DOH/quiebre por venta pesos, lo que descuadraba
+      // el DOH: DOH agregado = Σstock/Σvpd (venta_prom_diaria_28d), NUNCA promedio (ni
+      // ponderado) de DOH por local. El backend ya lo calcula así (mismo criterio que
+      // categoría/marca), por eso se unifica todo por esta vía.
       return dimRowsReal(ap);
     }
     function renderCadenaFormatoDonuts(){
@@ -2702,12 +2697,14 @@
           return;
         }
       }
-      // Datos reales por dimensión: Local siempre; Cadena sólo aperturas de producto/taxonomía
-      // (formato/región/local se agregan desde RES.locales, ya cargado).
-      var needAp = isLocalArea ? localAp : (isCadenaArea && ['categoria','marca','codprod','producto'].indexOf(cadenaAp)>=0 ? cadenaAp : null);
-      if(needAp && !DIM_AP[dimApKey(needAp)]){
+      // Datos reales por dimensión desde el backend: Local su apertura; Cadena la
+      // apertura activa + 'formato' (los donuts de Cadena siempre reparten por formato).
+      var needAps = isLocalArea ? [localAp] : (isCadenaArea ? [cadenaAp, 'formato'] : []);
+      needAps = needAps.filter(function(ap,i){ return ap && needAps.indexOf(ap)===i; });
+      var missing = needAps.filter(function(ap){ return !DIM_AP[dimApKey(ap)]; });
+      if(missing.length){
         host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--muted)">Cargando datos…</div>';
-        loadGerDim(needAp).then(panelResumen).catch(function(){ DIM_AP[needAp]={rows:[]}; panelResumen(); });
+        Promise.all(missing.map(function(ap){ return loadGerDim(ap).catch(function(){ DIM_AP[dimApKey(ap)]={rows:[]}; }); })).then(panelResumen);
         return;
       }
       var html='';
