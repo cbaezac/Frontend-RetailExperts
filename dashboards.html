@@ -3854,6 +3854,10 @@
        "Maestra activa" NO es lo_gestionamos de maestra_local_producto: es la misma regla
        del filtro Estado (producto activo + venta en los últimos 60 días) a nivel
        local × producto. El % es la porción de esa maestra que está inmovilizada.
+       OJO: el período solo decide QUIÉN entra a la lista. Los "días sin venta" de cada
+       fila son el corrido real desde su última venta (normalmente > que el período), y
+       el potencial de venta es ese corrido × venta promedio diaria × precio. El KPI de
+       potencial es la suma de la columna.
        Todos los filtros de la barra + el switch de semanas viajan al backend; el caché
        se invalida por firma, así "Aplicar filtros" siempre refetchea con el scope nuevo.
        Ver WebDataService.dashboardInmovilizados. */
@@ -3929,7 +3933,7 @@
         {key:'sku',label:'Código Producto',type:'str',get:function(r){return r.codigo_producto||'';},cell:function(r){return '<td>'+(r.codigo_producto||'')+'</td>';}},
         {key:'prod',label:'Producto',type:'str',get:function(r){return r.producto||'';},cell:function(r){return inmoTd(r.producto);}},
         {key:'stock',label:'Stock',type:'num',get:function(r){return r.stock||0;},cell:function(r){return '<td>'+num(r.stock||0)+'</td>';}},
-        {key:'dias',label:'Días inmovilizado',type:'num',get:function(r){return r.dias||0;},cell:function(r){return '<td>'+(r.dias||0)+'</td>';}},
+        {key:'dias',label:'Días sin venta',type:'num',get:function(r){return r.dias_sin_venta||0;},cell:function(r){return '<td>'+num(r.dias_sin_venta||0)+'</td>';}},
         {key:'pot',label:'Potencial de Venta',type:'num',get:function(r){return r.potencial||0;},cell:function(r){return '<td>'+clp(r.potencial||0)+'</td>';}}
       ];
       var body=smSortRows(cols,rows,inmoSort).map(function(r){ return '<tr>'+cols.map(function(c){return c.cell(r);}).join('')+'</tr>'; }).join('');
