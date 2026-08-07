@@ -2710,10 +2710,8 @@
       if(isCadenaArea){
         var selCad=(gFilters.locales['Cadena']||[]);
         if(!selCad.length){
-          host.innerHTML='<div class="panel-card full" style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:70px 24px;text-align:center">'
-            +'<svg viewBox="0 0 24 24" fill="none" style="width:44px;height:44px;color:var(--purple)"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-5h6v5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>'
-            +'<div style="font-family:var(--font-display);font-weight:800;font-size:1.15rem;color:var(--ink)">Selecciona una cadena</div>'
-            +'<div style="font-size:.9rem;color:var(--muted);max-width:460px">Elige una cadena en el filtro de <strong>Cadena</strong> y presiona “Aplicar filtros” para ver su información.</div></div>';
+          destroyCharts();
+          renderCadenaPicker();
           return;
         }
       }
@@ -4038,6 +4036,68 @@
         setTimeout(function(){ search.focus(); }, 30);
       }
       list.querySelectorAll('.lp-item').forEach(function(it){ it.addEventListener('click', function(){ localPickerPick(it.getAttribute('data-cod')); }); });
+    }
+    // Opciones del selector central de Cadena: sin fetch propio, sin lista fija
+    // de 4 cadenas hardcodeada (un cliente puede no operar las 4, ej. kunafoods
+    // no tiene SMU). A DIFERENCIA de localPickerOptions() (que si puede leer
+    // RES.locales porque codigo_local nunca se reformatea), Cadena SI se
+    // reformatea para mostrar (fmtCadDash/nomPropio: "cencosud"->"Cencosud") --
+    // por eso el VALOR no puede salir de RES.locales/l.cad: no coincidiria con
+    // los checkboxes reales del dropdown "Cadena" (FILTER_DEFS.locales, valores
+    // crudos en minuscula desde /web/dashboard/atributos, ej. "cencosud", misma
+    // fuente dinamica que usa refreshFilterOptionsFromResumen() como fallback).
+    // Se lee la MISMA fuente que usa buildMultiFilters() para pintar esos
+    // checkboxes, asi el valor elegido siempre matchea exacto (bug real
+    // detectado 2026-08-07: el filtro funcionaba -- el backend compara sin
+    // importar mayusculas -- pero el checkbox quedaba sin marcar al volver a
+    // abrir el dropdown).
+    function cadenaPickerOptions(){
+      var def=(FILTER_DEFS.locales||[]).filter(function(d){ return d[0]==='Cadena'; })[0];
+      var raw=(def && def[1]) || [];
+      return raw.slice().sort(function(a,b){ return fmtCadDash(a).localeCompare(fmtCadDash(b),'es'); });
+    }
+    // Al elegir una cadena en el selector central se setea el filtro de arriba
+    // (Cadena) y se re-renderiza -- mismo patron que localPickerPick(). A diferencia
+    // de Local, Cadena no tiene un filtro "par" (codigo/nombre) que limpiar. "cad"
+    // llega crudo (data-cad, ver cadenaPickerOptions) -- coincide exacto con el
+    // value de los checkboxes del dropdown, asi el buildMultiFilters() de abajo
+    // los marca bien.
+    function cadenaPickerPick(cad){
+      gFilters.locales['Cadena']=[cad];
+      buildMultiFilters();
+      RES=null; RES_OPS=null; RES_OPS_LOC=null; cadDrill=[]; topDrill=null; topProdCache={}; topProdOps={};
+      showArea('cadena');
+    }
+    function renderCadenaPicker(){
+      if(!RES){
+        host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--muted)">Cargando cadenas…</div>';
+        loadResumen().then(panelResumen).catch(function(){ host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--red)">No se pudieron cargar las cadenas.</div>'; });
+        return;
+      }
+      ensureLocalPickerCss();
+      var opts=cadenaPickerOptions();
+      var listHtml = opts.length
+        ? opts.map(function(cad){
+            return '<button type="button" class="lp-item" data-cad="'+ms2Esc(cad)+'" data-text="'+ms2Esc(fmtCadDash(cad).toLowerCase())+'">'
+              +'<span class="lp-item-nom">'+ms2Esc(fmtCadDash(cad))+'</span></button>';
+          }).join('') + '<div class="lp-none" id="cpNone" style="display:none">Sin coincidencias</div>'
+        : '<div class="lp-empty">No hay cadenas disponibles para este cliente.</div>';
+      host.innerHTML='<div class="panel-card full" style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:52px 24px">'
+        +'<svg viewBox="0 0 24 24" fill="none" style="width:44px;height:44px;color:var(--purple)"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-5h6v5" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>'
+        +'<div style="font-family:var(--font-display);font-weight:800;font-size:1.15rem;color:var(--ink)">Elige una cadena</div>'
+        +'<div style="font-size:.9rem;color:var(--muted);max-width:420px;text-align:center">Búscala por nombre y selecciónala para ver su detalle.</div>'
+        +'<div class="lp-box"><input type="search" id="cpSearch" class="lp-search" placeholder="Buscar cadena…" autocomplete="off" /><div class="lp-list" id="cpList">'+listHtml+'</div></div>'
+        +'</div>';
+      var search=document.getElementById('cpSearch'), list=document.getElementById('cpList');
+      if(search){
+        search.addEventListener('input', function(){
+          var q=(this.value||'').trim().toLowerCase(), shown=0;
+          list.querySelectorAll('.lp-item').forEach(function(it){ var ok=!q||(it.getAttribute('data-text')||'').indexOf(q)>=0; it.style.display=ok?'':'none'; if(ok)shown++; });
+          var none=document.getElementById('cpNone'); if(none) none.style.display=shown?'none':'';
+        });
+        setTimeout(function(){ search.focus(); }, 30);
+      }
+      list.querySelectorAll('.lp-item').forEach(function(it){ it.addEventListener('click', function(){ cadenaPickerPick(it.getAttribute('data-cad')); }); });
     }
     var RENDER = {
       resumen:panelResumen,
