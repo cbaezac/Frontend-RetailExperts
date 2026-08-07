@@ -4119,7 +4119,7 @@
       else if(area==='levantamientos'){ wireLevFilter(); }
       else if(area==='promociones'){ onSeg('promoApSeg', function(v){ promoApertura=v; promoSort={key:null,dir:1}; }); onSeg('promoGranSeg', function(v){ promoGran=v; }); }
     }
-    var MAPA_FIELDS={'Cadena':1,'Formato':1,'Categoría':1,'Marca':1,'Descriptor Producto':1};
+    var MAPA_FIELDS={'Cadena':1,'Formato':1,'Categoría':1,'Marca':1,'Descriptor Producto':1,'Estado':1};
     var LOCAL_LOC_FIELDS={'Código Local':1,'Nombre Local':1};
     function applyFieldVisibility(area){
       document.querySelectorAll('#fgLocales .fb-field, #fgProductos .fb-field').forEach(function(f){
@@ -4223,6 +4223,7 @@
     };
     var gFilters={ locales:{}, productos:{} };
     function ms2Esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+    function displayText(label, o){ return label==='Estado' ? o.charAt(0).toUpperCase()+o.slice(1) : o; }
     function buildMultiFilters(){
       ['locales','productos'].forEach(function(grp){
         var host2=document.getElementById(grp==='locales'?'fgLocales':'fgProductos'); if(!host2) return; host2.innerHTML='';
@@ -4231,10 +4232,10 @@
           if(!gFilters[grp][label]) gFilters[grp][label]=[];
           var f=document.createElement('div'); f.className='fb-field';
           var ph='Todos';
-          f.innerHTML='<label>'+label+'</label><div class="ms2"><button type="button" class="ms2-btn"><span class="ms2-txt">'+ph+'</span><span class="ms2-cv"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button><div class="ms2-pop"><input type="search" class="ms2-search" placeholder="Buscar" autocomplete="off" /><div class="ms2-list">'+opts.map(function(o){return '<label class="ms2-item" data-text="'+ms2Esc(o).toLowerCase()+'"><input type="checkbox" value="'+ms2Esc(o)+'"><span>'+ms2Esc(o)+'</span></label>';}).join('')+'</div><div class="ms2-empty">Sin coincidencias</div></div></div>';
+          f.innerHTML='<label>'+label+'</label><div class="ms2"><button type="button" class="ms2-btn"><span class="ms2-txt">'+ph+'</span><span class="ms2-cv"><svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8l3.5-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span></button><div class="ms2-pop"><input type="search" class="ms2-search" placeholder="Buscar" autocomplete="off" /><div class="ms2-list">'+opts.map(function(o){return '<label class="ms2-item" data-text="'+ms2Esc(o).toLowerCase()+'"><input type="checkbox" value="'+ms2Esc(o)+'"><span>'+ms2Esc(displayText(label,o))+'</span></label>';}).join('')+'</div><div class="ms2-empty">Sin coincidencias</div></div></div>';
           host2.appendChild(f);
           var btn=f.querySelector('.ms2-btn'), pop=f.querySelector('.ms2-pop'), txt=f.querySelector('.ms2-txt'), search=f.querySelector('.ms2-search'), empty=f.querySelector('.ms2-empty');
-          function syncTxt(){ var sel=gFilters[grp][label]; txt.textContent = sel.length===0?ph:(sel.length===1?sel[0]:sel.length+' seleccionados'); }
+          function syncTxt(){ var sel=gFilters[grp][label]; txt.textContent = sel.length===0?ph:(sel.length===1?displayText(label,sel[0]):sel.length+' seleccionados'); }
           function syncItems(){
             var q=(search.value||'').trim().toLowerCase();
             var shown=0;
