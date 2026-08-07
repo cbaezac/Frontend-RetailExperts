@@ -254,7 +254,12 @@
   table#cpfrOcTable thead th:not(:first-child), table#cpfrOcTable tbody td:not(:first-child){ min-width:0; }
   #cpfrOcMatrix .table-scroll{ overflow-x:hidden; max-height:350px; overflow-y:auto; }
   #inmoTable thead th:not(:first-child), #inmoTable tbody td:not(:first-child){ min-width:0; }
-  #inmoMatrix .table-scroll{ overflow-x:hidden; }
+  /* table-layout:fixed + nombres largos (local/producto): sin recorte el texto se
+     desborda encima de la celda vecina. */
+  #inmoTable tbody td{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* Los levantamientos pueden ser miles: la tabla scrollea (sin paginación) con el
+     encabezado sticky que ya trae table.matrix. */
+  #inmoMatrix .table-scroll{ overflow-x:hidden; max-height:620px; overflow-y:auto; }
   #levMatrix table.matrix thead th{ white-space:normal; line-height:1.15; word-break:break-word; overflow:visible; text-overflow:clip; }
   #levMatrix .table-scroll{ overflow-x:hidden; }
   #levKpis .kpi .k-top{ justify-content:center; }
@@ -3841,67 +3846,99 @@
       wireDrillMenu('#promoMatrix', promoByKey, curAp, usedAps, function(ap,row){ promoDrill.push({ap:ap,label:row.label,rawLabel:row.rawLabel||row.label,row:row}); renderPromoMatrix(); });
     }
 
-    /* ---- Inmovilizados ---- */
-    var inmoWeeks=1, inmoSort={key:'diasSin',dir:-1};
-    var CATS=['Bebida','Galleta','Detergente','Shampoo','Arroz','Aceite','Yogurt','Café','Pasta'];
+    /* ---------- Panel: Inmovilizados (local × producto sin rotación) ----------
+       Datos REALES desde /web/dashboard/inmovilizados (indicadores_abastecimiento_diario).
+       Un par local × producto entra a la tabla cuando cumple LAS DOS condiciones del
+       período medido (1/2/4 semanas): el stock del primer día es igual al del último
+       día, y la venta acumulada es cero o negativa.
+       "Maestra activa" NO es lo_gestionamos de maestra_local_producto: es la misma regla
+       del filtro Estado (producto activo + venta en los últimos 60 días) a nivel
+       local × producto. El % es la porción de esa maestra que está inmovilizada.
+       Todos los filtros de la barra + el switch de semanas viajan al backend; el caché
+       se invalida por firma, así "Aplicar filtros" siempre refetchea con el scope nuevo.
+       Ver WebDataService.dashboardInmovilizados. */
+    var inmoWeeks=1, inmoSort={key:'pot',dir:-1};
+    var INMO=null, INMO_ERR=null, INMO_SIG=null;
+    var INMO_MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+    /* Leyenda del período: mientras no hay datos se estima desde ayer; con datos usa el
+       rango real que devolvió el backend (ancla = último día con stock calculado). */
     function inmoPeriodTxt(){
-      var MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+      function dm(d){ return d.getDate()+' de '+INMO_MES[d.getMonth()]; }
+      function dmISO(s){ var p=String(s).split('-'); return dm(new Date(+p[0], +p[1]-1, +p[2])); }
+      var per=INMO&&INMO.periodo;
+      // Solo si el período cargado corresponde al switch actual: si el usuario cambió
+      // de semanas y aún no aprieta "Aplicar filtros", la leyenda vuelve al estimado.
+      if(per&&per.desde&&per.hasta&&Number(per.semanas)===inmoWeeks) return 'Reporte considera los casos desde el '+dmISO(per.desde)+' al '+dmISO(per.hasta);
       var end=new Date(YESTERDAY.getTime());
       var start=new Date(end.getTime()-(inmoWeeks*7-1)*86400000);
-      function dm(d){ return d.getDate()+' de '+MES[d.getMonth()]; }
       return 'Reporte considera los casos desde el '+dm(start)+' al '+dm(end);
     }
-    function inmoRows(){
-      var out=[];
-      FL().forEach(function(l){
-        var pv=COM.aperturas.descriptor?COM.aperturas.descriptor.values:[];
-        var nP=1+(hashN(l.cod+'inmn')%3);
-        for(var i=0;i<nP;i++){
-          var pi=hashN(l.cod+'inm'+i)%(pv.length||8);
-          var prod=pv.length?pv[pi].label:('Producto '+(pi+1));
-          var cat=(pv.length&&pv[pi].cat)?pv[pi].cat:CATS[hashN(l.cod+'c'+i)%CATS.length];
-          var sku='SKU'+(1001+pi);
-          var h=hashN(l.cod+':'+sku+':inmo');
-          var dias=inmoWeeks*7 + (h%14);
-          var stock=40+(h%520);
-          out.push({cad:l.cad, cod:l.cod, nom:l.nom, cat:cat, sku:sku, prod:prod, stock:stock, diasSin:dias});
-        }
-      });
-      return out;
+    function fetchInmovilizados(){
+      var params=withCliente(Object.assign({semanas:inmoWeeks}, fbFilterParams()));
+      return window.RetailAPI.requestJson('/web/dashboard/inmovilizados'+window.RetailAPI.buildQuery(params));
+    }
+    function inmoSig(){ try{ return JSON.stringify([inmoWeeks, withCliente(fbFilterParams())]); }catch(e){ return ''; } }
+    function inmoInvalidateIfStale(){
+      var s=inmoSig();
+      if(INMO_SIG!==s){ INMO_SIG=s; INMO=null; INMO_ERR=null; }
+    }
+    function loadInmovilizados(){
+      INMO_ERR=null;
+      return fetchInmovilizados().then(function(r){
+        INMO={ periodo:(r&&r.periodo)||null, totales:(r&&r.totales)||{}, rows:(r&&r.rows)||[], truncado:!!(r&&r.truncado) };
+      }).catch(function(e){ INMO=null; INMO_ERR=apiErrMsg(e); });
     }
     function panelInmovilizados(){
-      if(needsData('inmovilizados', 'descriptor', panelInmovilizados)) return;
-      var rows=inmoRows();
-      rows.forEach(function(r){ r.pot=r.stock*(120+(hashN(r.sku+'pv')%880)); });
-      var pot=rows.reduce(function(s,r){return s+r.pot;},0);
-      var stockTot=rows.reduce(function(s,r){return s+r.stock;},0);
-      var pctMaestra=(rows.length?(8+(hashN('inmpm'+inmoWeeks)%12)+(hashN('inmpm2')%10)/10):0);
-      var html='<div class="kpis" style="grid-template-columns:repeat(4,1fr)">'
-        + kpiCard({label:'Total combinaciones', value:num(rows.length), valueColor:'#5A0D74', icon:IC.box, tone:'purple'})
-        + kpiCard({label:'Stock total inmovilizado', value:num(stockTot), valueColor:'#5A0D74', icon:IC.box, tone:'purple'})
-        + kpiCard({label:'% sobre maestra activa', value:pctMaestra.toFixed(1)+'%', valueColor:'#C0392B', icon:IC.tag, tone:'accent'})
-        + kpiCard({label:'Potencial de venta', value:clp(pot), valueColor:'#1F8A4C', icon:IC.money, tone:'green'})
+      inmoInvalidateIfStale();
+      if(INMO_ERR){ host.innerHTML=errPanel(INMO_ERR); return; }
+      if(!INMO){
+        host.innerHTML='<div class="panel-card full" style="padding:40px;text-align:center;color:var(--muted)">Cargando inmovilizados…</div>';
+        loadInmovilizados().then(panelInmovilizados);
+        return;
+      }
+      var t=INMO.totales||{}, rows=INMO.rows||[];
+      // Sin maestra activa bajo estos filtros no hay porcentaje: "-" en vez de 0%.
+      var pctTxt=(t.pct_maestra==null)?'-':Number(t.pct_maestra).toFixed(1)+'%';
+      var html='<div class="kpis">'
+        + kpiCard({label:'Total combinaciones', value:num(t.combinaciones||0), valueColor:'#5A0D74', icon:IC.box, tone:'purple'})
+        + kpiCard({label:'Combinaciones con maestra activa', value:num(t.combinaciones_activas||0), valueColor:'#5A0D74', icon:IC.check, tone:'purple'})
+        + kpiCard({label:'Stock total inmovilizado', value:num(Math.round(t.stock||0)), valueColor:'#5A0D74', icon:IC.box, tone:'purple'})
+        + kpiCard({label:'% sobre maestra activa', value:pctTxt, valueColor:'#C0392B', icon:IC.tag, tone:'accent'})
+        + kpiCard({label:'Potencial de venta', value:clp(t.potencial||0), valueColor:'#1F8A4C', icon:IC.money, tone:'green'})
         + '</div>';
       html+='<div id="inmoWrap"></div>';
       host.innerHTML=html;
       var kb=host.querySelector('.kpis'); if(kb){ kb.id='inmoKpis'; }
+      // La leyenda vive en la barra de filtros (fuera de host): se actualiza al llegar
+      // el período real del backend.
+      var pt=document.getElementById('inmoPeriodTxt'); if(pt) pt.textContent=inmoPeriodTxt();
       renderInmoMatrix(rows);
+    }
+    // Celda de texto largo: se recorta con ellipsis (CSS) y el valor completo queda
+    // en el title para verlo al pasar el mouse.
+    function inmoTd(v){
+      var t=String(v==null?'':v).replace(/</g,'&lt;');
+      return '<td title="'+t.replace(/"/g,'&quot;')+'">'+t+'</td>';
     }
     function renderInmoMatrix(rows){
       var cols=[
-        {key:'cad',label:'Cadena',type:'str',get:function(r){return r.cad;},cell:function(r){return '<td>'+r.cad+'</td>';}},
-        {key:'cod',label:'Código Local',type:'str',get:function(r){return r.cod;},cell:function(r){return '<td>'+r.cod+'</td>';}},
-        {key:'nom',label:'Local',type:'str',get:function(r){return r.nom;},cell:function(r){return '<td>'+r.nom+'</td>';}},
-        {key:'cat',label:'Categoría',type:'str',get:function(r){return r.cat;},cell:function(r){return '<td>'+r.cat+'</td>';}},
-        {key:'sku',label:'Código Producto',type:'str',get:function(r){return r.sku;},cell:function(r){return '<td>'+r.sku+'</td>';}},
-        {key:'prod',label:'Producto',type:'str',get:function(r){return r.prod;},cell:function(r){return '<td>'+r.prod+'</td>';}},
-        {key:'stock',label:'Stock',type:'num',get:function(r){return r.stock;},cell:function(r){return '<td>'+num(r.stock)+'</td>';}},
-        {key:'diasSin',label:'Días inmovilizado',type:'num',get:function(r){return r.diasSin;},cell:function(r){return '<td>'+r.diasSin+'</td>';}},
-        {key:'pot',label:'Potencial de Venta',type:'num',get:function(r){return r.pot||0;},cell:function(r){return '<td>'+clp(r.pot||0)+'</td>';}}
+        {key:'cad',label:'Cadena',type:'str',get:function(r){return r.cadena||'';},cell:function(r){return '<td>'+(r.cadena||'')+'</td>';}},
+        {key:'cod',label:'Código Local',type:'str',get:function(r){return r.codigo_local||'';},cell:function(r){return '<td>'+(r.codigo_local||'')+'</td>';}},
+        {key:'nom',label:'Local',type:'str',get:function(r){return r.nombre_local||'';},cell:function(r){return inmoTd(r.nombre_local);}},
+        {key:'cat',label:'Categoría',type:'str',get:function(r){return r.categoria||'';},cell:function(r){return inmoTd(r.categoria);}},
+        {key:'sku',label:'Código Producto',type:'str',get:function(r){return r.codigo_producto||'';},cell:function(r){return '<td>'+(r.codigo_producto||'')+'</td>';}},
+        {key:'prod',label:'Producto',type:'str',get:function(r){return r.producto||'';},cell:function(r){return inmoTd(r.producto);}},
+        {key:'stock',label:'Stock',type:'num',get:function(r){return r.stock||0;},cell:function(r){return '<td>'+num(r.stock||0)+'</td>';}},
+        {key:'dias',label:'Días inmovilizado',type:'num',get:function(r){return r.dias||0;},cell:function(r){return '<td>'+(r.dias||0)+'</td>';}},
+        {key:'pot',label:'Potencial de Venta',type:'num',get:function(r){return r.potencial||0;},cell:function(r){return '<td>'+clp(r.potencial||0)+'</td>';}}
       ];
       var body=smSortRows(cols,rows,inmoSort).map(function(r){ return '<tr>'+cols.map(function(c){return c.cell(r);}).join('')+'</tr>'; }).join('');
       if(!rows.length) body='<tr><td colspan="'+cols.length+'" style="text-align:center;color:var(--muted);padding:26px">Sin casos para los filtros seleccionados</td></tr>';
-      document.getElementById('inmoWrap').innerHTML='<div class="panel-card full" id="inmoMatrix"><div class="pc-head"><div><div class="pc-title">Productos inmovilizados · Local / Producto</div><div class="pc-sub">Sin venta durante '+inmoWeeks+' semana'+(inmoWeeks===1?'':'s')+' o más</div></div></div>'
+      var dias=(INMO&&INMO.periodo&&INMO.periodo.dias)||inmoWeeks*7;
+      var sub='Stock sin movimiento y venta ≤ 0 durante los '+dias+' días del período'
+        + (rows.length?(' · '+num(rows.length)+' combinacion'+(rows.length===1?'':'es')):'')
+        + ((INMO&&INMO.truncado)?' · se muestran las de mayor potencial':'');
+      document.getElementById('inmoWrap').innerHTML='<div class="panel-card full" id="inmoMatrix"><div class="pc-head"><div><div class="pc-title">Productos inmovilizados · Local / Producto</div><div class="pc-sub">'+sub+'</div></div></div>'
         + '<div class="table-scroll"><table class="matrix" id="inmoTable" style="font-size:.7rem;table-layout:fixed;width:100%"><colgroup><col style="width:10%"><col style="width:9%"><col style="width:14%"><col style="width:11%"><col style="width:10%"><col style="width:14%"><col style="width:7%"><col style="width:11%"><col style="width:14%"></colgroup><thead>'+smThead(cols,inmoSort)+'</thead><tbody>'+body+'</tbody></table></div></div>';
       smWire('#inmoMatrix', cols, inmoSort, function(){ renderInmoMatrix(rows); });
     }
