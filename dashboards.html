@@ -729,12 +729,18 @@
       buildMultiFilters();
     }
     /* Opciones de TODOS los filtros desde la DB real (SELECT DISTINCT de local/producto). */
+    /* ATRIB_OK: las opciones de locales ya vienen de /atributos. Como esta consulta y
+       resumen-mtd corren en paralelo, el orden de llegada no está garantizado y sin esta
+       marca refreshFilterOptionsFromResumen() podría pisar las opciones buenas (las de la
+       DB) con las derivadas de la venta del mes. Gana siempre /atributos, llegue cuando llegue. */
+    var ATRIB_OK=false;
     function loadAtributos(){
       if(!window.RetailAPI) return Promise.resolve();
       return window.RetailAPI.requestJson('/web/dashboard/atributos'+window.RetailAPI.buildQuery(withCliente({}))).then(function(a){
         a=a||{}; function arr(x){ return Array.isArray(x)?x:[]; }
         if(arr(a.cadenas).length||arr(a.formatos).length){
           FILTER_DEFS.locales=[['Cadena',arr(a.cadenas)],['Formato',arr(a.formatos)],['Región',arr(a.regiones)],['Código Local',arr(a.codigos_local)],['Nombre Local',arr(a.nombres_local)]];
+          ATRIB_OK=true;
         }
         FILTER_DEFS.productos=[['Categoría',arr(a.categorias)],['Marca',arr(a.marcas)],['Código Producto',arr(a.codigos_producto)],['Descriptor Producto',arr(a.descriptores)],['Estado',ESTADO_OPCIONES.slice()]];
         buildMultiFilters();
@@ -2605,7 +2611,16 @@
       if(!RES||!RES_OPS_LOC) return;
       RES.locales.forEach(function(l){ var o=RES_OPS_LOC[opsKey(l.cod)]; if(o){ l.ins=o.ins; l.doh=o.doh; l.qb=o.qb; } });
     }
+    /* RENDIMIENTO: las tres consultas de apoyo NO dependen del resultado de resumen-mtd
+       (solo del cliente y de los filtros, que ya se conocen), así que se disparan JUNTO
+       con ella y no después. Encadenadas, el usuario esperaba resumen-mtd + abastecimiento
+       en serie; en paralelo espera el más lento de los dos. */
     function loadResumen(){
+      loadAtributos();
+      // Indicadores (abastecimiento) EN SEGUNDO PLANO: no bloquean el render de la venta;
+      // al llegar parchean RES.locales/RES_OPS y refrescan el panel.
+      loadResumenOps().then(rerenderGerencial);
+      loadResumenOpsLocales().then(rerenderGerencial);
       return window.RetailAPI.requestJson('/web/dashboard/resumen-mtd'+window.RetailAPI.buildQuery(withCliente(fbFilterParams())))
         .then(function(r){
           RES = {
@@ -2618,15 +2633,12 @@
           VENTA_REAL = true;
           HAS_METAS = false;
           setDataBadge(true);
-          refreshFilterOptionsFromResumen();
-          // Todos los filtros (locales y productos) con valores DISTINCT reales de la DB.
-          loadAtributos();
-          // Indicadores (abastecimiento) EN SEGUNDO PLANO: no bloquean el render de la
-          // venta; al llegar parchean RES.locales/RES_OPS y refrescan el panel.
-          loadResumenOps().then(rerenderGerencial);
-          loadResumenOpsLocales().then(rerenderGerencial);
+          if(!ATRIB_OK) refreshFilterOptionsFromResumen();
+          // Los indicadores pueden haber llegado ANTES que la venta: ahí applyResOpsLocales()
+          // se salió sin hacer nada porque aún no existía RES. Se re-aplica acá.
+          applyResOpsLocales();
         })
-        .catch(function(){ RES = RES_DEMO; VENTA_REAL = false; setDataBadge(true); refreshFilterOptionsFromResumen(); });
+        .catch(function(){ RES = RES_DEMO; VENTA_REAL = false; setDataBadge(true); if(!ATRIB_OK) refreshFilterOptionsFromResumen(); });
     }
     var localAp='categoria';
     var LOCAL_DIMS={
