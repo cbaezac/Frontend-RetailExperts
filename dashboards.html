@@ -1662,8 +1662,10 @@
     // de dashboard-supply-views.js (archivo ya no cargado por este HTML, ver
     // Papelera/dashboards_20260729_prev_reemplazo.html) -- withCliente()
     // agrega cliente_id solo si el usuario es interno/admin, fbFilterParams()
-    // reusa los filtros de la barra general, se borra "estado" (es el estado
-    // de producto de la barra global, no aplica al estado del caso CPFR).
+    // reusa los filtros de la barra general. "estado" SI viaja (Fase 2):
+    // ahora significa vigencia (dashboard_vigencia, activo/inactivo), no
+    // producto.estado -- no se confunde con el estado del caso CPFR, que
+    // usa un parametro con nombre distinto (estado_caso).
     // Mapea cada fila real al shape que ya esperan panelCpfr()/renderCpfrMatrix()
     // (fecha/cad/nom/sku/prod/tipo/dias/resuelto) -- sin "cod" (codigo_local):
     // el endpoint real no lo trae, solo nombre de local (ver renderCpfrMatrix).
@@ -1675,7 +1677,6 @@
     async function cpfrCasos(){
       var de=document.getElementById('f-desde'), ha=document.getElementById('f-hasta');
       var params=withCliente(Object.assign({limit:5000, desde:de&&de.value, hasta:ha&&ha.value}, fbFilterParams()));
-      delete params.estado;
       var r=await window.RetailAPI.requestJson('/web/dashboard/cpfr/detalle'+window.RetailAPI.buildQuery(params));
       var casosCrudos=(r&&r.casos)||[];
       return casosCrudos.map(function(c){
@@ -1691,7 +1692,6 @@
     async function cpfrOcCasos(){
       var de=document.getElementById('f-desde'), ha=document.getElementById('f-hasta');
       var params=withCliente(Object.assign({desde:de&&de.value, hasta:ha&&ha.value}, fbFilterParams()));
-      delete params.estado;
       var r=await window.RetailAPI.requestJson('/web/dashboard/cpfr/oc'+window.RetailAPI.buildQuery(params));
       var casosCrudos=(r&&r.casos)||[];
       return casosCrudos.map(function(c){
